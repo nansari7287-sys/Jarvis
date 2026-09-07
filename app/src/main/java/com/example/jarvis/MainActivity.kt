@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
         rv.adapter = adapter
 
         // =====================================================
-        // SEND
+        // SEND MESSAGE
         // =====================================================
 
         send.setOnClickListener {
@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // MICROPHONE
+        // MICROPHONE / VOICE
         // =====================================================
 
         mic.setOnClickListener {
@@ -110,9 +110,11 @@ class MainActivity : ComponentActivity() {
                     runOnUiThread {
 
                         input.setText(text)
-                        input.setSelection(input.length)
 
-                        // Voice result ko automatically process karo.
+                        input.setSelection(
+                            input.length()
+                        )
+
                         processUserCommand(text)
                     }
                 },
@@ -226,9 +228,7 @@ class MainActivity : ComponentActivity() {
             R.id.youtubeButton
         ).setOnClickListener {
 
-            openUrl(
-                "https://www.youtube.com"
-            )
+            openYouTube()
         }
 
         findViewById<TextView>(
@@ -292,12 +292,13 @@ class MainActivity : ComponentActivity() {
         val normalized = command
             .lowercase(Locale.getDefault())
             .replace("hey jarvis", "")
+            .replace("hey, jarvis", "")
             .replace("jarvis", "")
             .trim()
 
         // =====================================================
         // FAST PATH
-        // Simple app-opening commands do NOT need Gemini.
+        // Simple commands Gemini ke bina execute honge.
         // =====================================================
 
         when {
@@ -356,7 +357,7 @@ class MainActivity : ComponentActivity() {
 
         // =====================================================
         // COMPLEX COMMAND
-        // Gemini + Parser + Executor
+        // Gemini ke paas bhejo.
         // =====================================================
 
         vm.send(
@@ -385,6 +386,7 @@ class MainActivity : ComponentActivity() {
 
         input.hint = "Paste Gemini API key"
         input.setSingleLine(true)
+
         input.setText(
             prefs.getApiKey()
         )
@@ -484,7 +486,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // MENU
+    // MAIN MENU
     // =========================================================
 
     private fun showMenu() {
@@ -731,14 +733,14 @@ class MainActivity : ComponentActivity() {
 
         try {
 
-            val appIntent = Intent(
+            val intent = Intent(
                 Intent.ACTION_VIEW,
                 Uri.parse(
                     "instagram://user?username=drakoxnaeem"
                 )
             )
 
-            startActivity(appIntent)
+            startActivity(intent)
 
         } catch (_: Exception) {
 
@@ -781,14 +783,14 @@ class MainActivity : ComponentActivity() {
 
         try {
 
-            val appIntent = Intent(
+            val intent = Intent(
                 Intent.ACTION_VIEW,
                 Uri.parse(
                     "whatsapp://"
                 )
             )
 
-            startActivity(appIntent)
+            startActivity(intent)
 
         } catch (_: Exception) {
 
@@ -799,12 +801,16 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // URL
+    // OPEN URL
     // =========================================================
 
     private fun openUrl(
         url: String
     ) {
+
+        if (url.isBlank()) {
+            return
+        }
 
         try {
 
