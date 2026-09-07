@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAllMask"
-    android:accessibilityFeedbackType="feedbackGeneric"
-    android:notificationTimeout="100"
-    android:canRetrieveWindowContent="true"
-    android:canPerformGestures="true"
-    android:description="@string/accessibility_service_description" />
+<resources>
+
+    <string name="app_name">JARVIS</string>
+
+    <string name="accessibility_service_description">
+        JARVIS screen control and automation service
+    </string>
+
+</resources>
