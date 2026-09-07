@@ -1,1 +1,20 @@
-<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/messageText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end" android:layout_marginStart="48dp" android:layout_marginTop="6dp" android:layout_marginBottom="6dp" android:background="@drawable/bg_message" android:textColor="@color/jarvis_text_primary" android:textSize="16sp" android:padding="12dp"/>
+<?xml version="1.0" encoding="utf-8"?>
+
+<TextView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/messageText"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="end"
+    android:layout_marginStart="55dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginTop="7dp"
+    android:layout_marginBottom="7dp"
+    android:background="@drawable/bg_message"
+    android:textColor="@color/jarvis_text_primary"
+    android:textSize="16sp"
+    android:lineSpacingExtra="3dp"
+    android:paddingStart="16dp"
+    android:paddingTop="13dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="13dp"/>
