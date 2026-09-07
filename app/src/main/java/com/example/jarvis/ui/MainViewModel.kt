@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.jarvis.ai.AIRequest
 import com.example.jarvis.ai.GeminiClient
 import com.example.jarvis.models.Message
+import com.example.jarvis.network.ApiResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,9 @@ class MainViewModel : ViewModel() {
     fun send(text: String, apiKey: String) {
         val message = text.trim()
 
-        if (message.isBlank()) return
+        if (message.isBlank()) {
+            return
+        }
 
         val currentMessages = _ui.value.messages.toMutableList()
 
@@ -33,7 +36,8 @@ class MainViewModel : ViewModel() {
 
         _ui.value = _ui.value.copy(
             messages = currentMessages,
-            isLoading = true
+            isThinking = true,
+            error = null
         )
 
         viewModelScope.launch {
@@ -49,7 +53,7 @@ class MainViewModel : ViewModel() {
 
             when (result) {
 
-                is com.example.jarvis.network.ApiResult.Success -> {
+                is ApiResult.Success -> {
                     updatedMessages.add(
                         Message(
                             text = result.data.text,
@@ -58,7 +62,7 @@ class MainViewModel : ViewModel() {
                     )
                 }
 
-                is com.example.jarvis.network.ApiResult.Error -> {
+                is ApiResult.Error -> {
                     updatedMessages.add(
                         Message(
                             text = result.message,
@@ -70,7 +74,7 @@ class MainViewModel : ViewModel() {
 
             _ui.value = _ui.value.copy(
                 messages = updatedMessages,
-                isLoading = false
+                isThinking = false
             )
         }
     }
