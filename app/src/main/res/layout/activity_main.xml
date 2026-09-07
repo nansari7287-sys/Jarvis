@@ -12,7 +12,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="76dp"
+        android:layout_height="78dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="12dp"
@@ -23,7 +23,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/jarvis_logo"
-            android:contentDescription="@string/assistant_name"/>
+            android:contentDescription="JARVIS"/>
 
         <LinearLayout
             android:layout_width="0dp"
@@ -54,20 +54,51 @@
                 android:text="● ONLINE • READY TO ASSIST"
                 android:textColor="@color/jarvis_success"
                 android:textSize="9sp"/>
+
         </LinearLayout>
+
+        <!-- SEARCH -->
+
+        <TextView
+            android:id="@+id/searchButton"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:gravity="center"
+            android:text="⌕"
+            android:textColor="@color/jarvis_accent"
+            android:textSize="28sp"
+            android:background="@drawable/bg_neon_button"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <!-- HISTORY -->
+
+        <TextView
+            android:id="@+id/historyButton"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="6dp"
+            android:gravity="center"
+            android:text="◷"
+            android:textColor="@color/jarvis_accent"
+            android:textSize="24sp"
+            android:background="@drawable/bg_neon_button"
+            android:clickable="true"
+            android:focusable="true"/>
 
         <!-- SETTINGS -->
 
         <ImageButton
             android:id="@+id/settingsButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="6dp"
             android:background="@drawable/bg_neon_button"
             android:src="@drawable/ic_settings"
-            android:padding="10dp"
+            android:padding="9dp"
             android:clickable="true"
             android:focusable="true"
-            android:contentDescription="@string/settings"/>
+            android:contentDescription="Settings"/>
 
     </LinearLayout>
 
@@ -76,47 +107,64 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="55dp"
         android:orientation="horizontal"
         android:gravity="center"
         android:padding="5dp">
 
+        <!-- CHAT -->
+
         <TextView
+            android:id="@+id/chatTab"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="43dp"
             android:layout_weight="1"
             android:gravity="center"
             android:text="⌂  Chat"
             android:textColor="@color/jarvis_text_primary"
             android:textSize="13sp"
-            android:background="@drawable/bg_neon_button"/>
+            android:background="@drawable/bg_neon_button"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <!-- TOOLS -->
 
         <TextView
+            android:id="@+id/toolsTab"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="43dp"
             android:layout_weight="1"
             android:layout_marginStart="5dp"
             android:gravity="center"
             android:text="▦  Tools"
             android:textColor="@color/jarvis_text_primary"
             android:textSize="13sp"
-            android:background="@drawable/bg_neon_button"/>
+            android:background="@drawable/bg_neon_button"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <!-- ASSIST -->
 
         <TextView
+            android:id="@+id/assistTab"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="43dp"
             android:layout_weight="1"
             android:layout_marginStart="5dp"
             android:gravity="center"
             android:text="✦  Assist"
             android:textColor="@color/jarvis_text_primary"
             android:textSize="13sp"
-            android:background="@drawable/bg_neon_button"/>
+            android:background="@drawable/bg_neon_button"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <!-- MENU -->
 
         <TextView
             android:id="@+id/menuButton"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="43dp"
             android:layout_weight="1"
             android:layout_marginStart="5dp"
             android:gravity="center"
@@ -174,7 +222,7 @@
 
     <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="76dp"
+        android:layout_height="78dp"
         android:scrollbars="none"
         android:paddingStart="8dp"
         android:paddingEnd="8dp">
@@ -184,54 +232,94 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical">
 
+            <!-- WEB -->
+
             <TextView
+                android:id="@+id/webButton"
                 android:layout_width="82dp"
-                android:layout_height="62dp"
+                android:layout_height="63dp"
                 android:gravity="center"
                 android:text="◎&#10;Web"
                 android:textColor="@color/jarvis_text_primary"
                 android:textSize="12sp"
-                android:background="@drawable/bg_neon_button"/>
+                android:background="@drawable/bg_neon_button"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <!-- YOUTUBE -->
 
             <TextView
+                android:id="@+id/youtubeButton"
                 android:layout_width="82dp"
-                android:layout_height="62dp"
+                android:layout_height="63dp"
                 android:layout_marginStart="6dp"
                 android:gravity="center"
                 android:text="▶&#10;YouTube"
                 android:textColor="@color/jarvis_text_primary"
                 android:textSize="12sp"
-                android:background="@drawable/bg_neon_button"/>
+                android:background="@drawable/bg_neon_button"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <!-- INSTAGRAM -->
 
             <TextView
+                android:id="@+id/instagramButton"
                 android:layout_width="82dp"
-                android:layout_height="62dp"
+                android:layout_height="63dp"
                 android:layout_marginStart="6dp"
                 android:gravity="center"
                 android:text="◎&#10;Instagram"
                 android:textColor="@color/jarvis_text_primary"
                 android:textSize="12sp"
-                android:background="@drawable/bg_neon_button"/>
+                android:background="@drawable/bg_neon_button"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <!-- WHATSAPP -->
 
             <TextView
+                android:id="@+id/whatsappButton"
                 android:layout_width="82dp"
-                android:layout_height="62dp"
+                android:layout_height="63dp"
                 android:layout_marginStart="6dp"
                 android:gravity="center"
                 android:text="◉&#10;WhatsApp"
                 android:textColor="@color/jarvis_text_primary"
                 android:textSize="12sp"
-                android:background="@drawable/bg_neon_button"/>
+                android:background="@drawable/bg_neon_button"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <!-- APPS -->
 
             <TextView
+                android:id="@+id/appsButton"
                 android:layout_width="82dp"
-                android:layout_height="62dp"
+                android:layout_height="63dp"
                 android:layout_marginStart="6dp"
                 android:gravity="center"
                 android:text="▦&#10;Apps"
                 android:textColor="@color/jarvis_text_primary"
                 android:textSize="12sp"
-                android:background="@drawable/bg_neon_button"/>
+                android:background="@drawable/bg_neon_button"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <!-- MORE -->
+
+            <TextView
+                android:id="@+id/moreButton"
+                android:layout_width="82dp"
+                android:layout_height="63dp"
+                android:layout_marginStart="6dp"
+                android:gravity="center"
+                android:text="•••&#10;More"
+                android:textColor="@color/jarvis_text_primary"
+                android:textSize="12sp"
+                android:background="@drawable/bg_neon_button"
+                android:clickable="true"
+                android:focusable="true"/>
 
         </LinearLayout>
 
@@ -255,13 +343,15 @@
             android:layout_height="54dp"
             android:layout_weight="1"
             android:background="@drawable/bg_input"
-            android:hint="@string/hint_message"
+            android:hint="Ask JARVIS anything..."
             android:textColor="@color/jarvis_text_primary"
             android:textColorHint="@color/jarvis_text_secondary"
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
             android:paddingStart="16dp"
             android:paddingEnd="10dp"/>
+
+        <!-- MICROPHONE -->
 
         <ImageButton
             android:id="@+id/micButton"
@@ -270,7 +360,9 @@
             android:layout_marginStart="4dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_mic"
-            android:contentDescription="@string/microphone"/>
+            android:contentDescription="Microphone"/>
+
+        <!-- SEND -->
 
         <ImageButton
             android:id="@+id/sendButton"
@@ -279,7 +371,7 @@
             android:layout_marginStart="2dp"
             android:background="@drawable/bg_neon_button"
             android:src="@drawable/ic_send"
-            android:contentDescription="@string/send"/>
+            android:contentDescription="Send"/>
 
     </LinearLayout>
 
