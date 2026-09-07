@@ -31,7 +31,7 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * JARVIS ke screen-level actions yahan handle honge.
+     * JARVIS screen-level actions.
      */
     fun performJarvisAction(
         action: String,
@@ -39,7 +39,7 @@ class JarvisAccessibilityService : AccessibilityService() {
         value: String? = null
     ): Boolean {
 
-        return when (action.uppercase()) {
+        return when (action.trim().uppercase()) {
 
             "BACK" -> {
                 performGlobalAction(GLOBAL_ACTION_BACK)
@@ -54,11 +54,15 @@ class JarvisAccessibilityService : AccessibilityService() {
             }
 
             "SCROLL_UP" -> {
-                scrollWindow(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                scrollWindow(
+                    AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                )
             }
 
             "SCROLL_DOWN" -> {
-                scrollWindow(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                scrollWindow(
+                    AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                )
             }
 
             "CLICK" -> {
@@ -76,14 +80,19 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Kisi visible text ko click karta hai.
+     * Visible text ko click karta hai.
      */
     fun clickText(text: String): Boolean {
 
-        if (text.isBlank()) return false
+        if (text.isBlank()) {
+            return false
+        }
+
+        val root = rootInActiveWindow
+            ?: return false
 
         val node = AccessibilityHelper.findText(
-            rootInActiveWindow,
+            root,
             text
         )
 
@@ -91,20 +100,26 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Target text/content-description ko find karke click karta hai.
+     * Target text ko find karke click karta hai.
      */
     private fun clickTarget(target: String?): Boolean {
 
-        if (target.isNullOrBlank()) return false
+        if (target.isNullOrBlank()) {
+            return false
+        }
 
-        val root = rootInActiveWindow ?: return false
+        val root = rootInActiveWindow
+            ?: return false
 
-        // Pehle exact visible text try karo.
-        val textNodes =
+        val nodes =
             root.findAccessibilityNodeInfosByText(target)
 
-        for (node in textNodes) {
-            if (node.isClickable && node.isVisibleToUser) {
+        for (node in nodes) {
+
+            if (
+                node.isVisibleToUser &&
+                node.isClickable
+            ) {
                 return node.performAction(
                     AccessibilityNodeInfo.ACTION_CLICK
                 )
@@ -113,7 +128,11 @@ class JarvisAccessibilityService : AccessibilityService() {
             var parent = node.parent
 
             while (parent != null) {
-                if (parent.isClickable && parent.isVisibleToUser) {
+
+                if (
+                    parent.isVisibleToUser &&
+                    parent.isClickable
+                ) {
                     return parent.performAction(
                         AccessibilityNodeInfo.ACTION_CLICK
                     )
@@ -123,29 +142,80 @@ class JarvisAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Content description bhi try karo.
-        return clickByContentDescription(root, target)
+        return clickByContentDescription(
+            root,
+            target
+        )
     }
 
+    /**
+     * Content description se button/action find karta hai.
+     */
     private fun clickByContentDescription(
         root: AccessibilityNodeInfo,
         target: String
     ): Boolean {
 
-        val nodes = root.findAccessibilityNodeInfosByText(target)
+        val targetLower = target.trim().lowercase()
 
-        for (node in nodes) {
-            val description =
-                node.contentDescription?.toString()
+        return findNodeByDescription(
+            root,
+            targetLower
+        )
+    }
 
-            if (
-                description != null &&
-                description.equals(target, ignoreCase = true) &&
-                node.isVisibleToUser
-            ) {
+    private fun findNodeByDescription(
+        node: AccessibilityNodeInfo,
+        target: String
+    ): Boolean {
+
+        val description =
+            node.contentDescription
+                ?.toString()
+                ?.trim()
+                ?.lowercase()
+
+        if (
+            !description.isNullOrBlank() &&
+            description.contains(target) &&
+            node.isVisibleToUser
+        ) {
+
+            if (node.isClickable) {
                 return node.performAction(
                     AccessibilityNodeInfo.ACTION_CLICK
                 )
+            }
+
+            var parent = node.parent
+
+            while (parent != null) {
+
+                if (
+                    parent.isVisibleToUser &&
+                    parent.isClickable
+                ) {
+                    return parent.performAction(
+                        AccessibilityNodeInfo.ACTION_CLICK
+                    )
+                }
+
+                parent = parent.parent
+            }
+        }
+
+        for (i in 0 until node.childCount) {
+
+            val child = node.getChild(i)
+                ?: continue
+
+            if (
+                findNodeByDescription(
+                    child,
+                    target
+                )
+            ) {
+                return true
             }
         }
 
@@ -153,33 +223,36 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Currently focused text field me text enter karta hai.
-     *
-     * Agar target diya gaya hai to pehle target field
-     * find karne ki koshish karta hai.
+     * Text field me value enter karta hai.
      */
     private fun typeText(
         target: String?,
         value: String?
     ): Boolean {
 
-        if (value.isNullOrBlank()) return false
-
-        val root = rootInActiveWindow ?: return false
-
-        val node = if (!target.isNullOrBlank()) {
-            findEditableNode(root, target)
-                ?: findFocusedEditableNode(root)
-        } else {
-            findFocusedEditableNode(root)
+        if (value.isNullOrBlank()) {
+            return false
         }
 
-        ?: return false
+        val root = rootInActiveWindow
+            ?: return false
+
+        val node =
+            if (!target.isNullOrBlank()) {
+                findEditableNode(
+                    root,
+                    target
+                ) ?: findFocusedEditableNode(root)
+            } else {
+                findFocusedEditableNode(root)
+            }
+            ?: return false
 
         val arguments = Bundle()
 
         arguments.putCharSequence(
-            AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+            AccessibilityNodeInfo
+                .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
             value
         )
 
@@ -190,7 +263,7 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Focused editable field find karta hai.
+     * Currently focused editable field find karta hai.
      */
     private fun findFocusedEditableNode(
         root: AccessibilityNodeInfo
@@ -206,9 +279,11 @@ class JarvisAccessibilityService : AccessibilityService() {
 
         for (i in 0 until root.childCount) {
 
-            val child = root.getChild(i) ?: continue
+            val child = root.getChild(i)
+                ?: continue
 
-            val result = findFocusedEditableNode(child)
+            val result =
+                findFocusedEditableNode(child)
 
             if (result != null) {
                 return result
@@ -219,32 +294,35 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Target ke naam/text se editable field find karta hai.
+     * Target ke text/content-description se
+     * editable field find karta hai.
      */
     private fun findEditableNode(
         root: AccessibilityNodeInfo,
         target: String
     ): AccessibilityNodeInfo? {
 
+        val targetLower =
+            target.trim().lowercase()
+
         if (
             root.isEditable &&
             root.isVisibleToUser
         ) {
+
             val text =
-                root.text?.toString()
+                root.text
+                    ?.toString()
+                    ?.lowercase()
 
             val description =
-                root.contentDescription?.toString()
+                root.contentDescription
+                    ?.toString()
+                    ?.lowercase()
 
             if (
-                text?.contains(
-                    target,
-                    ignoreCase = true
-                ) == true ||
-                description?.contains(
-                    target,
-                    ignoreCase = true
-                ) == true
+                text?.contains(targetLower) == true ||
+                description?.contains(targetLower) == true
             ) {
                 return root
             }
@@ -252,10 +330,14 @@ class JarvisAccessibilityService : AccessibilityService() {
 
         for (i in 0 until root.childCount) {
 
-            val child = root.getChild(i) ?: continue
+            val child = root.getChild(i)
+                ?: continue
 
             val result =
-                findEditableNode(child, target)
+                findEditableNode(
+                    child,
+                    target
+                )
 
             if (result != null) {
                 return result
@@ -266,22 +348,24 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Active window me scrollable node ko scroll karta hai.
+     * Active screen ka scrollable node find karke scroll karta hai.
      */
     private fun scrollWindow(
         action: Int
     ): Boolean {
 
-        val root = rootInActiveWindow ?: return false
+        val root = rootInActiveWindow
+            ?: return false
 
         val scrollable =
             findScrollableNode(root)
+                ?: return false
 
-        return scrollable?.performAction(action) == true
+        return scrollable.performAction(action)
     }
 
     /**
-     * Pehla visible scrollable node find karta hai.
+     * First visible scrollable node find karta hai.
      */
     private fun findScrollableNode(
         root: AccessibilityNodeInfo
@@ -296,7 +380,8 @@ class JarvisAccessibilityService : AccessibilityService() {
 
         for (i in 0 until root.childCount) {
 
-            val child = root.getChild(i) ?: continue
+            val child = root.getChild(i)
+                ?: continue
 
             val result =
                 findScrollableNode(child)
