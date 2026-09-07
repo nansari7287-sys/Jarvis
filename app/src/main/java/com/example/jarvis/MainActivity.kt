@@ -7,8 +7,8 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,38 +28,44 @@ class MainActivity : ComponentActivity() {
     private lateinit var speech: SpeechRecognizerManager
     private lateinit var tts: TextToSpeechManager
 
+    companion object {
+        private const val INSTAGRAM_URL =
+            "https://www.instagram.com/drakoxnaeem?stkn=MWVrdmh1NXFneDdxNg=="
+
+        private const val FACEBOOK_URL =
+            "https://www.facebook.com/share/1BsGJAatqh/"
+
+        private const val WEBSITE_URL =
+            "https://frexxy-portfolio-3dri.vercel.app/#projects"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
 
         vm = ViewModelProvider(this)[MainViewModel::class.java]
-
         prefs = PreferencesManager(this)
-
         speech = SpeechRecognizerManager(this)
-
         tts = TextToSpeechManager(this)
 
         val input = findViewById<EditText>(R.id.messageInput)
-
         val send = findViewById<ImageButton>(R.id.sendButton)
-
         val mic = findViewById<ImageButton>(R.id.micButton)
 
-        val rv =
-            findViewById<androidx.recyclerview.widget.RecyclerView>(
-                R.id.messageRecyclerView
-            )
+        val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(
+            R.id.messageRecyclerView
+        )
 
         adapter = ChatAdapter()
 
         rv.layoutManager = LinearLayoutManager(this)
-
         rv.adapter = adapter
 
+        // =========================
+        // SEND MESSAGE
+        // =========================
 
-        // SEND
         send.setOnClickListener {
 
             val text = input.text.toString().trim()
@@ -75,8 +81,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // =========================
+        // MICROPHONE / VOICE
+        // =========================
 
-        // MICROPHONE
         mic.setOnClickListener {
 
             if (!PermissionHelper.hasAudioPermission(this)) {
@@ -87,13 +95,14 @@ class MainActivity : ComponentActivity() {
             }
 
             speech.start(
+
                 { text ->
 
                     input.setText(text)
-
                     input.setSelection(input.length())
 
                 },
+
                 { error ->
 
                     Toast.makeText(
@@ -105,8 +114,10 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-
+        // =========================
         // SETTINGS
+        // =========================
+
         findViewById<TextView>(
             R.id.settingsButton
         ).setOnClickListener {
@@ -114,8 +125,10 @@ class MainActivity : ComponentActivity() {
             showSettings()
         }
 
-
+        // =========================
         // MENU
+        // =========================
+
         findViewById<TextView>(
             R.id.menuButton
         ).setOnClickListener {
@@ -123,21 +136,21 @@ class MainActivity : ComponentActivity() {
             showMenu()
         }
 
-
+        // =========================
         // SEARCH
+        // =========================
+
         findViewById<TextView>(
             R.id.searchButton
         ).setOnClickListener {
 
-            Toast.makeText(
-                this,
-                "JARVIS search ready",
-                Toast.LENGTH_SHORT
-            ).show()
+            showSearch()
         }
 
-
+        // =========================
         // HISTORY
+        // =========================
+
         findViewById<TextView>(
             R.id.historyButton
         ).setOnClickListener {
@@ -149,15 +162,17 @@ class MainActivity : ComponentActivity() {
             ).show()
         }
 
-
+        // =========================
         // TABS
+        // =========================
+
         findViewById<TextView>(
             R.id.chatTab
         ).setOnClickListener {
 
             Toast.makeText(
                 this,
-                "Chat",
+                "JARVIS Chat",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -180,8 +195,9 @@ class MainActivity : ComponentActivity() {
             ).show()
         }
 
-
+        // =========================
         // QUICK ACTIONS
+        // =========================
 
         findViewById<TextView>(
             R.id.webButton
@@ -201,14 +217,14 @@ class MainActivity : ComponentActivity() {
             R.id.instagramButton
         ).setOnClickListener {
 
-            openUrl("https://www.instagram.com")
+            openInstagram()
         }
 
         findViewById<TextView>(
             R.id.whatsappButton
         ).setOnClickListener {
 
-            openUrl("https://web.whatsapp.com")
+            openWhatsApp()
         }
 
         findViewById<TextView>(
@@ -225,8 +241,10 @@ class MainActivity : ComponentActivity() {
             showMore()
         }
 
-
+        // =========================
         // AI UI UPDATE
+        // =========================
+
         lifecycleScope.launch {
 
             vm.ui.collect { state ->
@@ -243,18 +261,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // =========================================================
+    // SETTINGS
+    // =========================================================
 
     private fun showSettings() {
 
         val input = EditText(this)
 
         input.hint = "Paste Gemini API key"
-
         input.setSingleLine(true)
-
-        input.setText(
-            prefs.getApiKey()
-        )
+        input.setText(prefs.getApiKey())
 
         val container =
             android.widget.FrameLayout(this)
@@ -268,10 +285,9 @@ class MainActivity : ComponentActivity() {
 
         container.addView(input)
 
-
         AlertDialog.Builder(this)
 
-            .setTitle("JARVIS Settings")
+            .setTitle("⚙ JARVIS SETTINGS")
 
             .setMessage(
                 "Configure your Gemini API key"
@@ -302,20 +318,66 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    // =========================================================
+    // SEARCH
+    // =========================================================
+
+    private fun showSearch() {
+
+        val input = EditText(this)
+
+        input.hint = "Search the web"
+        input.setSingleLine(true)
+
+        AlertDialog.Builder(this)
+
+            .setTitle("⌕ JARVIS SEARCH")
+
+            .setView(input)
+
+            .setPositiveButton(
+                "SEARCH"
+            ) { _, _ ->
+
+                val query =
+                    input.text.toString().trim()
+
+                if (query.isNotBlank()) {
+
+                    val url =
+                        "https://www.google.com/search?q=" +
+                                Uri.encode(query)
+
+                    openUrl(url)
+                }
+            }
+
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+
+            .show()
+    }
+
+    // =========================================================
+    // MAIN MENU
+    // =========================================================
 
     private fun showMenu() {
 
         val items = arrayOf(
-            "Settings",
-            "Tools",
-            "Assist",
-            "Apps",
-            "About JARVIS"
+            "⚙ Settings",
+            "🛠 Tools",
+            "◉ Assist",
+            "▣ Apps",
+            "◆ About JARVIS",
+            "✦ Developer"
         )
 
         AlertDialog.Builder(this)
 
-            .setTitle("JARVIS MENU")
+            .setTitle("✦ JARVIS MENU")
 
             .setItems(items) { _, which ->
 
@@ -325,40 +387,42 @@ class MainActivity : ComponentActivity() {
 
                     1 -> showTools()
 
-                    2 ->
+                    2 -> {
+
                         Toast.makeText(
                             this,
-                            "Assist mode",
+                            "Assist mode activated",
                             Toast.LENGTH_SHORT
                         ).show()
+                    }
 
                     3 -> showApps()
 
-                    4 ->
-                        Toast.makeText(
-                            this,
-                            "DrakoXNaeem • JARVIS AI Assistant",
-                            Toast.LENGTH_LONG
-                        ).show()
+                    4 -> showAbout()
+
+                    5 -> showDeveloper()
                 }
             }
 
             .show()
     }
 
+    // =========================================================
+    // TOOLS
+    // =========================================================
 
     private fun showTools() {
 
         AlertDialog.Builder(this)
 
-            .setTitle("JARVIS TOOLS")
+            .setTitle("✦ JARVIS TOOLS")
 
             .setItems(
                 arrayOf(
-                    "Web Search",
-                    "YouTube",
-                    "Instagram",
-                    "WhatsApp"
+                    "🌐 Web Search",
+                    "▶ YouTube",
+                    "◎ Instagram",
+                    "◈ WhatsApp"
                 )
             ) { _, which ->
 
@@ -372,48 +436,43 @@ class MainActivity : ComponentActivity() {
                         "https://www.youtube.com"
                     )
 
-                    2 -> openUrl(
-                        "https://www.instagram.com"
-                    )
+                    2 -> openInstagram()
 
-                    3 -> openUrl(
-                        "https://web.whatsapp.com"
-                    )
+                    3 -> openWhatsApp()
                 }
             }
 
             .show()
     }
 
+    // =========================================================
+    // APPS
+    // =========================================================
 
     private fun showApps() {
 
         AlertDialog.Builder(this)
 
-            .setTitle("JARVIS APPS")
+            .setTitle("✦ JARVIS APPS")
 
             .setItems(
                 arrayOf(
-                    "Instagram",
-                    "YouTube",
-                    "WhatsApp",
-                    "Google"
+                    "◎ Instagram",
+                    "▶ YouTube",
+                    "◈ WhatsApp",
+                    "G Google"
                 )
             ) { _, which ->
 
                 when (which) {
 
-                    0 -> openUrl(
-                        "https://www.instagram.com"
-                    )
+                    0 -> openInstagram()
 
                     1 -> openUrl(
                         "https://www.youtube.com"
                     )
 
-                    2 -> openUrl(
-                        "https://web.whatsapp.com"
-                    )
+                    2 -> openWhatsApp()
 
                     3 -> openUrl(
                         "https://www.google.com"
@@ -424,18 +483,22 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    // =========================================================
+    // MORE
+    // =========================================================
 
     private fun showMore() {
 
         AlertDialog.Builder(this)
 
-            .setTitle("MORE")
+            .setTitle("✦ MORE")
 
             .setItems(
                 arrayOf(
-                    "Settings",
-                    "History",
-                    "About JARVIS"
+                    "⚙ Settings",
+                    "◷ History",
+                    "◆ About JARVIS",
+                    "✦ Developer"
                 )
             ) { _, which ->
 
@@ -443,25 +506,139 @@ class MainActivity : ComponentActivity() {
 
                     0 -> showSettings()
 
-                    1 ->
-                        Toast.makeText(
-                            this,
-                            "History",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    1 -> {
 
-                    2 ->
                         Toast.makeText(
                             this,
-                            "DrakoXNaeem JARVIS",
+                            "Conversation History",
                             Toast.LENGTH_SHORT
                         ).show()
+                    }
+
+                    2 -> showAbout()
+
+                    3 -> showDeveloper()
                 }
             }
 
             .show()
     }
 
+    // =========================================================
+    // ABOUT
+    // =========================================================
+
+    private fun showAbout() {
+
+        AlertDialog.Builder(this)
+
+            .setTitle("◆ JARVIS")
+
+            .setMessage(
+                "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎\n\n" +
+                        "Personal AI Assistant\n\n" +
+                        "Voice • AI • Tools • Automation\n\n" +
+                        "Developed By 𝑵𝒂𝒆𝒆𝒎"
+            )
+
+            .setPositiveButton(
+                "CLOSE",
+                null
+            )
+
+            .show()
+    }
+
+    // =========================================================
+    // DEVELOPER / SOCIAL LINKS
+    // =========================================================
+
+    private fun showDeveloper() {
+
+        val items = arrayOf(
+            "◎ Instagram",
+            "f Facebook",
+            "⌂ Website"
+        )
+
+        AlertDialog.Builder(this)
+
+            .setTitle("✦ DEVELOPER")
+
+            .setMessage(
+                "Developed By 𝑵𝒂𝒆𝒆𝒎\n\n" +
+                        "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎"
+            )
+
+            .setItems(items) { _, which ->
+
+                when (which) {
+
+                    0 -> openInstagram()
+
+                    1 -> openUrl(
+                        FACEBOOK_URL
+                    )
+
+                    2 -> openUrl(
+                        WEBSITE_URL
+                    )
+                }
+            }
+
+            .setNegativeButton(
+                "CLOSE",
+                null
+            )
+
+            .show()
+    }
+
+    // =========================================================
+    // INSTAGRAM
+    // =========================================================
+
+    private fun openInstagram() {
+
+        try {
+
+            val appIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("instagram://user?username=drakoxnaeem")
+            )
+
+            startActivity(appIntent)
+
+        } catch (e: Exception) {
+
+            openUrl(INSTAGRAM_URL)
+        }
+    }
+
+    // =========================================================
+    // WHATSAPP
+    // =========================================================
+
+    private fun openWhatsApp() {
+
+        try {
+
+            val appIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("whatsapp://")
+            )
+
+            startActivity(appIntent)
+
+        } catch (e: Exception) {
+
+            openUrl("https://web.whatsapp.com")
+        }
+    }
+
+    // =========================================================
+    // OPEN URL
+    // =========================================================
 
     private fun openUrl(url: String) {
 
@@ -478,17 +655,19 @@ class MainActivity : ComponentActivity() {
 
             Toast.makeText(
                 this,
-                "Unable to open",
+                "Unable to open link",
                 Toast.LENGTH_SHORT
             ).show()
         }
     }
 
+    // =========================================================
+    // DESTROY
+    // =========================================================
 
     override fun onDestroy() {
 
         speech.destroy()
-
         tts.shutdown()
 
         super.onDestroy()
