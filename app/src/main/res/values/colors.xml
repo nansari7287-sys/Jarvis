@@ -1,16 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
 <resources>
 
+    <!-- ================= BACKGROUND ================= -->
+
     <color name="jarvis_background">#020811</color>
+
     <color name="jarvis_surface">#071522</color>
+
     <color name="jarvis_surface_2">#0B2030</color>
 
+
+    <!-- ================= NEON ================= -->
+
     <color name="jarvis_accent">#00E5FF</color>
-    <color name="jarvis_accent_2">#00A8FF</color>
+
+    <color name="jarvis_accent_2">#008CFF</color>
+
+    <color name="jarvis_neon_blue">#00BFFF</color>
+
+
+    <!-- ================= TEXT ================= -->
 
     <color name="jarvis_text_primary">#F2FBFF</color>
+
     <color name="jarvis_text_secondary">#8EA9BA</color>
 
+
+    <!-- ================= STATUS ================= -->
+
     <color name="jarvis_success">#35FF9A</color>
+
     <color name="jarvis_error">#FF5577</color>
+
+
+    <!-- ================= CHAT ================= -->
+
+    <color name="jarvis_user_message">#0A2235</color>
+
+    <color name="jarvis_ai_message">#071A29</color>
 
 </resources>
