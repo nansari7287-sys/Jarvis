@@ -3,15 +3,16 @@ package com.example.jarvis
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.jarvis.data.PreferencesManager
 import com.example.jarvis.ui.ChatAdapter
 import com.example.jarvis.ui.MainViewModel
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
     companion object {
 
         private const val INSTAGRAM_URL =
-            "https://www.instagram.com/drakoxnaeem?stkn=MWVrdmh1NXFneDdxNg=="
+            "https://www.instagram.com/drakoxnaeem"
 
         private const val FACEBOOK_URL =
             "https://www.facebook.com/share/1BsGJAatqh/"
@@ -47,6 +48,11 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.activity_main)
 
         vm = ViewModelProvider(this)[MainViewModel::class.java]
+
+        // IMPORTANT:
+        // CommandExecutor ko MainViewModel ke saath initialize karo.
+        vm.initializeExecutor(this)
+
         prefs = PreferencesManager(this)
         speech = SpeechRecognizerManager(this)
         tts = TextToSpeechManager(this)
@@ -63,7 +69,7 @@ class MainActivity : ComponentActivity() {
             R.id.micButton
         )
 
-        val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(
+        val rv = findViewById<RecyclerView>(
             R.id.messageRecyclerView
         )
 
@@ -132,9 +138,12 @@ class MainActivity : ComponentActivity() {
 
         // =====================================================
         // SETTINGS
+        // IMPORTANT:
+        // View use kiya hai, TextView nahi.
+        // Isse ImageButton/TextView dono safe hain.
         // =====================================================
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.settingsButton
         ).setOnClickListener {
 
@@ -145,7 +154,7 @@ class MainActivity : ComponentActivity() {
         // MENU
         // =====================================================
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.menuButton
         ).setOnClickListener {
 
@@ -156,7 +165,7 @@ class MainActivity : ComponentActivity() {
         // SEARCH
         // =====================================================
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.searchButton
         ).setOnClickListener {
 
@@ -167,7 +176,7 @@ class MainActivity : ComponentActivity() {
         // HISTORY
         // =====================================================
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.historyButton
         ).setOnClickListener {
 
@@ -182,7 +191,7 @@ class MainActivity : ComponentActivity() {
         // TABS
         // =====================================================
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.chatTab
         ).setOnClickListener {
 
@@ -193,14 +202,14 @@ class MainActivity : ComponentActivity() {
             ).show()
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.toolsTab
         ).setOnClickListener {
 
             showTools()
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.assistTab
         ).setOnClickListener {
 
@@ -215,7 +224,7 @@ class MainActivity : ComponentActivity() {
         // QUICK ACTIONS
         // =====================================================
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.webButton
         ).setOnClickListener {
 
@@ -224,35 +233,35 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.youtubeButton
         ).setOnClickListener {
 
             openYouTube()
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.instagramButton
         ).setOnClickListener {
 
             openInstagram()
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.whatsappButton
         ).setOnClickListener {
 
             openWhatsApp()
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.appsButton
         ).setOnClickListener {
 
             showApps()
         }
 
-        findViewById<TextView>(
+        findViewById<View>(
             R.id.moreButton
         ).setOnClickListener {
 
@@ -298,7 +307,6 @@ class MainActivity : ComponentActivity() {
 
         // =====================================================
         // FAST PATH
-        // Simple commands Gemini ke bina execute honge.
         // =====================================================
 
         when {
@@ -357,7 +365,7 @@ class MainActivity : ComponentActivity() {
 
         // =====================================================
         // COMPLEX COMMAND
-        // Gemini ke paas bhejo.
+        // Gemini
         // =====================================================
 
         vm.send(
