@@ -1,0 +1,3 @@
+package com.example.jarvis
+import com.example.jarvis.commands.*
+class CommandProcessor(private val router:CommandRouter=CommandRouter()){fun process(i:String):CommandResult=when(val c=router.route(i).type){CommandType.CHAT->CommandResult(false,"chat");CommandType.OPEN_APP->CommandResult(true,"Opening ${router.route(i).argument}");CommandType.WEB_SEARCH->CommandResult(true,"Searching ${router.route(i).argument}");CommandType.DEVICE->CommandResult(true,"Device command detected");CommandType.SYSTEM->CommandResult(true,"System command detected");CommandType.UNKNOWN->CommandResult(false,"I didn't understand that command.")}}

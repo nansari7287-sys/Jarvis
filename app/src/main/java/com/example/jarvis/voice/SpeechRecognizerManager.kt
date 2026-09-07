@@ -1,0 +1,6 @@
+package com.example.jarvis.voice
+import android.content.Context
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+class SpeechRecognizerManager(private val c:Context){private var r:SpeechRecognizer?=null;fun start(onResult:(String)->Unit,onError:(String)->Unit){if(!SpeechRecognizer.isRecognitionAvailable(c)){onError("Speech recognition is not available.");return};r?.destroy();r=SpeechRecognizer.createSpeechRecognizer(c).apply{setRecognitionListener(object:android.speech.RecognitionListener{override fun onResults(b:android.os.Bundle?){val t=b?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty();if(t.isBlank())onError("I couldn't hear that.")else onResult(t)};override fun onError(e:Int)=onError("Speech recognition error.");override fun onReadyForSpeech(b:android.os.Bundle?){};override fun onBeginningOfSpeech(){};override fun onRmsChanged(v:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onEndOfSpeech(){};override fun onPartialResults(b:android.os.Bundle?){};override fun onEvent(e:Int,b:android.os.Bundle?){} });startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM).putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1)}};fun destroy(){r?.destroy();r=null}}

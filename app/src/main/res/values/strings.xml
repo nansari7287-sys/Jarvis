@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎</string>
+    <string name="assistant_name">JARVIS</string>
+    <string name="hint_message">Ask JARVIS anything…</string>
+    <string name="send">Send</string>
+    <string name="microphone">Voice input</string>
+    <string name="settings">Settings</string>
+</resources>

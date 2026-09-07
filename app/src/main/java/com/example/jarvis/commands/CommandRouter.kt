@@ -1,0 +1,2 @@
+package com.example.jarvis.commands
+class CommandRouter{fun route(i:String):Command{val t=i.trim();val l=t.lowercase();return when{l.startsWith("open ")->Command(CommandType.OPEN_APP,t,t.removePrefix("open ").trim());l.startsWith("search ")->Command(CommandType.WEB_SEARCH,t,t.removePrefix("search ").trim());l.contains("wifi")||l.contains("bluetooth")->Command(CommandType.DEVICE,t);l.contains("settings")||l.contains("accessibility")->Command(CommandType.SYSTEM,t);t.isNotBlank()->Command(CommandType.CHAT,t);else->Command(CommandType.UNKNOWN,t)}}}
