@@ -1,8 +1,77 @@
 package com.example.jarvis.ui
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.jarvis.assistant.JarvisAssistant
+import com.example.jarvis.ai.AIRequest
+import com.example.jarvis.ai.GeminiClient
 import com.example.jarvis.models.Message
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-class MainViewModel:ViewModel(){private val assistant=JarvisAssistant();private val _ui=MutableStateFlow(UiState());val ui:StateFlow<UiState>=_ui.asStateFlow();fun send(t:String,k:String){if(t.isBlank())return;_ui.value=_ui.value.copy(messages=_ui.value.messages+Message(text=t,isUser=true),isThinking=true);viewModelScope.launch{val r=assistant.respond(t,k);_ui.value=_ui.value.copy(messages=_ui.value.messages+Message(text=r.text,isUser=false),isThinking=false)}}}
+
+class MainViewModel : ViewModel() {
+
+    private val geminiClient = GeminiClient()
+
+    private val _ui = MutableStateFlow(UiState())
+    val ui: StateFlow<UiState> = _ui.asStateFlow()
+
+    fun send(text: String, apiKey: String) {
+        val message = text.trim()
+
+        if (message.isBlank()) return
+
+        val currentMessages = _ui.value.messages.toMutableList()
+
+        currentMessages.add(
+            Message(
+                text = message,
+                isUser = true
+            )
+        )
+
+        _ui.value = _ui.value.copy(
+            messages = currentMessages,
+            isLoading = true
+        )
+
+        viewModelScope.launch {
+
+            val result = geminiClient.generate(
+                AIRequest(
+                    prompt = message,
+                    apiKey = apiKey
+                )
+            )
+
+            val updatedMessages = _ui.value.messages.toMutableList()
+
+            when (result) {
+
+                is com.example.jarvis.network.ApiResult.Success -> {
+                    updatedMessages.add(
+                        Message(
+                            text = result.data.text,
+                            isUser = false
+                        )
+                    )
+                }
+
+                is com.example.jarvis.network.ApiResult.Error -> {
+                    updatedMessages.add(
+                        Message(
+                            text = result.message,
+                            isUser = false
+                        )
+                    )
+                }
+            }
+
+            _ui.value = _ui.value.copy(
+                messages = updatedMessages,
+                isLoading = false
+            )
+        }
+    }
+}
