@@ -1,9 +1,11 @@
 package com.example.jarvis.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jarvis.ai.AIRequest
 import com.example.jarvis.ai.GeminiClient
+import com.example.jarvis.ai.JarvisCommand
 import com.example.jarvis.ai.JarvisCommandParser
 import com.example.jarvis.automation.CommandExecutor
 import com.example.jarvis.models.Message
@@ -17,80 +19,61 @@ class MainViewModel : ViewModel() {
 
     private val geminiClient = GeminiClient()
 
-    private val _ui = MutableStateFlow(UiState())
-    val ui: StateFlow<UiState> = _ui.asStateFlow()
+    private val _ui = MutableStateFlow(
+        UiState()
+    )
+
+    val ui: StateFlow<UiState> =
+        _ui.asStateFlow()
 
     private var commandExecutor: CommandExecutor? = null
 
-    fun initializeExecutor(context: android.content.Context) {
+    /**
+     * MainActivity se ek baar call karo.
+     */
+    fun initializeExecutor(
+        context: Context
+    ) {
+
         if (commandExecutor == null) {
-            commandExecutor = CommandExecutor(
-                context.applicationContext
-            )
+
+            commandExecutor =
+                CommandExecutor(
+                    context.applicationContext
+                )
         }
     }
 
+    /**
+     * User ka command process karta hai.
+     */
     fun send(
         text: String,
         apiKey: String
     ) {
 
-        val message = text.trim()
+        val message =
+            text.trim()
 
         if (message.isBlank()) {
             return
         }
 
-        val currentMessages =
-            _ui.value.messages.toMutableList()
+        addUserMessage(message)
 
-        currentMessages.add(
-            Message(
-                text = message,
-                isUser = true
-            )
-        )
-
-        _ui.value = _ui.value.copy(
-            messages = currentMessages,
-            isThinking = true,
-            error = null
-        )
+        setThinking(true)
 
         /*
-         * Simple commands ko Gemini ke paas bhejne ki zarurat nahi.
-         * Isse common commands fast execute honge.
+         * Simple commands ko Gemini ke paas bhejne ki
+         * zarurat nahi hai.
          */
-        val localCommand = detectLocalCommand(message)
+        val localCommand =
+            detectLocalCommand(message)
 
         if (localCommand != null) {
 
-            val executor = commandExecutor
-
-            if (executor != null) {
-
-                val executed = executor.execute(
-                    localCommand
-                )
-
-                val reply =
-                    if (executed) {
-                        "Done."
-                    } else {
-                        "Command execute nahi ho saka."
-                    }
-
-                addAssistantMessage(reply)
-
-            } else {
-
-                addAssistantMessage(
-                    "JARVIS executor ready nahi hai."
-                )
-            }
-
-            _ui.value = _ui.value.copy(
-                isThinking = false
+            executeCommand(
+                localCommand
             )
 
             return
@@ -107,88 +90,129 @@ class MainViewModel : ViewModel() {
                     "Gemini API key set nahi hai. Settings me API key add karo."
                 )
 
-                _ui.value = _ui.value.copy(
-                    isThinking = false
-                )
+                setThinking(false)
 
                 return@launch
             }
 
-            val result = geminiClient.generate(
-                AIRequest(
-                    prompt = buildJarvisPrompt(message),
-                    apiKey = apiKey
-                )
-            )
+            try {
 
-            when (result) {
-
-                is ApiResult.Success -> {
-
-                    val command =
-                        JarvisCommandParser.parse(
-                            result.data.text
+                val result =
+                    geminiClient.generate(
+                        AIRequest(
+                            prompt = message,
+                            apiKey = apiKey
                         )
+                    )
 
-                    if (command != null) {
+                when (result) {
 
-                        val executor =
-                            commandExecutor
+                    is ApiResult.Success -> {
 
-                        if (executor != null) {
+                        val command =
+                            JarvisCommandParser.parse(
+                                result.data.text
+                            )
 
-                            val executed =
-                                executor.execute(command)
+                        if (command != null) {
 
-                            if (executed) {
-                                addAssistantMessage(
-                                    "Done."
-                                )
-                            } else {
-                                addAssistantMessage(
-                                    "Command execute nahi ho saka."
-                                )
-                            }
+                            executeCommand(
+                                command
+                            )
 
                         } else {
 
                             addAssistantMessage(
-                                "JARVIS executor ready nahi hai."
+                                result.data.text
                             )
+
+                            setThinking(false)
                         }
+                    }
 
-                    } else {
+                    is ApiResult.Error -> {
 
-                        /*
-                         * Agar Gemini normal conversational
-                         * response deta hai to use chat me dikhao.
-                         */
                         addAssistantMessage(
-                            result.data.text
+                            result.message
                         )
+
+                        setThinking(false)
                     }
                 }
 
-                is ApiResult.Error -> {
+            } catch (e: Exception) {
 
-                    addAssistantMessage(
-                        result.message
-                    )
-                }
+                addAssistantMessage(
+                    "JARVIS error: ${
+                        e.message ?: "Unknown error"
+                    }"
+                )
+
+                setThinking(false)
             }
-
-            _ui.value = _ui.value.copy(
-                isThinking = false
-            )
         }
     }
 
     /**
-     * Common commands ke liye fast local detection.
+     * Command ko CommandExecutor tak bhejta hai.
+     */
+    private fun executeCommand(
+        command: JarvisCommand
+    ) {
+
+        val executor =
+            commandExecutor
+
+        if (executor == null) {
+
+            addAssistantMessage(
+                "JARVIS executor ready nahi hai."
+            )
+
+            setThinking(false)
+
+            return
+        }
+
+        viewModelScope.launch {
+
+            try {
+
+                val executed =
+                    executor.execute(command)
+
+                if (executed) {
+
+                    addAssistantMessage(
+                        "Done."
+                    )
+
+                } else {
+
+                    addAssistantMessage(
+                        "Command execute nahi ho saka."
+                    )
+                }
+
+            } catch (e: Exception) {
+
+                addAssistantMessage(
+                    "Command error: ${
+                        e.message ?: "Unknown error"
+                    }"
+                )
+            }
+
+            setThinking(false)
+        }
+    }
+
+    /**
+     * Common commands ke liye local fast detection.
      */
     private fun detectLocalCommand(
         text: String
-    ): com.example.jarvis.ai.JarvisCommand? {
+    ): JarvisCommand? {
 
         val command =
             text
@@ -196,70 +220,61 @@ class MainViewModel : ViewModel() {
                 .replace(",", " ")
                 .replace(".", " ")
                 .replace("!", " ")
+                .replace("?", " ")
                 .trim()
 
         return when {
 
-            command.contains("instagram") &&
-                (
-                    command.contains("open") ||
-                    command.contains("khol") ||
-                    command.contains("kholo")
-                ) -> {
+            isOpenCommand(
+                command,
+                "instagram"
+            ) -> {
 
-                com.example.jarvis.ai.JarvisCommand(
+                JarvisCommand(
                     action = "OPEN_APP",
                     target = "instagram"
                 )
             }
 
-            command.contains("youtube") &&
-                (
-                    command.contains("open") ||
-                    command.contains("khol") ||
-                    command.contains("kholo")
-                ) -> {
+            isOpenCommand(
+                command,
+                "youtube"
+            ) -> {
 
-                com.example.jarvis.ai.JarvisCommand(
+                JarvisCommand(
                     action = "OPEN_APP",
                     target = "youtube"
                 )
             }
 
-            command.contains("whatsapp") &&
-                (
-                    command.contains("open") ||
-                    command.contains("khol") ||
-                    command.contains("kholo")
-                ) -> {
+            isOpenCommand(
+                command,
+                "whatsapp"
+            ) -> {
 
-                com.example.jarvis.ai.JarvisCommand(
+                JarvisCommand(
                     action = "OPEN_APP",
                     target = "whatsapp"
                 )
             }
 
-            command.contains("chrome") &&
-                (
-                    command.contains("open") ||
-                    command.contains("khol") ||
-                    command.contains("kholo")
-                ) -> {
+            isOpenCommand(
+                command,
+                "chrome"
+            ) -> {
 
-                com.example.jarvis.ai.JarvisCommand(
+                JarvisCommand(
                     action = "OPEN_APP",
                     target = "chrome"
                 )
             }
 
-            command.contains("settings") &&
-                (
-                    command.contains("open") ||
-                    command.contains("khol") ||
-                    command.contains("kholo")
-                ) -> {
+            isOpenCommand(
+                command,
+                "settings"
+            ) -> {
 
-                com.example.jarvis.ai.JarvisCommand(
+                JarvisCommand(
                     action = "OPEN_APP",
                     target = "settings"
                 )
@@ -270,74 +285,54 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * Gemini ko strict structured response ke liye prompt.
+     * "Instagram open karo",
+     * "Instagram kholo",
+     * "open Instagram"
+     * jaise commands detect karta hai.
      */
-    private fun buildJarvisPrompt(
-        userMessage: String
-    ): String {
+    private fun isOpenCommand(
+        command: String,
+        appName: String
+    ): Boolean {
 
-        return """
-            You are JARVIS, a personal Android AI assistant.
+        if (!command.contains(appName)) {
+            return false
+        }
 
-            Understand the user's natural language command.
-
-            Return ONLY valid JSON.
-            Do not use markdown.
-            Do not use ```.
-
-            JSON format:
-
-            {
-              "action": "ACTION_NAME",
-              "target": "optional_target",
-              "value": "optional_value",
-              "steps": [],
-              "requiresConfirmation": false
-            }
-
-            For multiple actions use:
-
-            {
-              "action": "AUTOMATION",
-              "target": "optional_target",
-              "value": null,
-              "steps": [
-                {
-                  "action": "ACTION_NAME",
-                  "target": "optional_target",
-                  "value": "optional_value",
-                  "requiresConfirmation": false
-                }
-              ],
-              "requiresConfirmation": false
-            }
-
-            Allowed actions:
-
-            OPEN_APP
-            OPEN_URL
-            WEB_SEARCH
-            YOUTUBE
-            INSTAGRAM
-            WHATSAPP
-            BACK
-            HOME
-            RECENT_APPS
-            SCROLL_UP
-            SCROLL_DOWN
-            CLICK
-            TYPE
-            WAIT
-            NO_ACTION
-
-            Sensitive or external actions must set:
-            "requiresConfirmation": true
-
-            User command:
-            $userMessage
-        """.trimIndent()
+        return command.contains("open") ||
+                command.contains("khol") ||
+                command.contains("kholo") ||
+                command.contains("launch") ||
+                command.contains("chala")
     }
 
+    /**
+     * User message UI me add karta hai.
+     */
+    private fun addUserMessage(
+        text: String
+    ) {
+
+        val messages =
+            _ui.value.messages.toMutableList()
+
+        messages.add(
+            Message(
+                text = text,
+                isUser = true
+            )
+        )
+
+        _ui.value =
+            _ui.value.copy(
+                messages = messages,
+                error = null
+            )
+    }
+
+    /**
+     * JARVIS response UI me add karta hai.
+     */
     private fun addAssistantMessage(
         text: String
     ) {
@@ -352,8 +347,19 @@ class MainViewModel : ViewModel() {
             )
         )
 
-        _ui.value = _ui.value.copy(
-            messages = messages
-        )
+        _ui.value =
+            _ui.value.copy(
+                messages = messages
+            )
+    }
+
+    private fun setThinking(
+        thinking: Boolean
+    ) {
+
+        _ui.value =
+            _ui.value.copy(
+                isThinking = thinking
+            )
     }
 }
