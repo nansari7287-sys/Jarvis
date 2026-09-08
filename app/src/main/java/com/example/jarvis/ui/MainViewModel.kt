@@ -29,14 +29,20 @@ class MainViewModel : ViewModel() {
     private var commandExecutor: CommandExecutor? = null
 
     /**
+     * Last assistant response.
+     *
+     * MainActivity / VoiceSessionManager ise use kar sakte hain
+     * TTS ke liye.
+     */
+    private var responseListener: ((String) -> Unit)? = null
+
+    /**
      * MainActivity se ek baar call karo.
      */
     fun initializeExecutor(
         context: Context
     ) {
-
         if (commandExecutor == null) {
-
             commandExecutor =
                 CommandExecutor(
                     context.applicationContext
@@ -45,48 +51,52 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * User ka command process karta hai.
+     * Assistant response listener.
+     *
+     * Voice mode ke time TTS ke liye useful hai.
+     */
+    fun setResponseListener(
+        listener: ((String) -> Unit)?
+    ) {
+        responseListener = listener
+    }
+
+    /**
+     * User message process karta hai.
      */
     fun send(
         text: String,
         apiKey: String
     ) {
-
-        val message =
-            text.trim()
+        val message = text.trim()
 
         if (message.isBlank()) {
             return
         }
 
         addUserMessage(message)
-
         setThinking(true)
 
         /*
-         * Simple commands ko Gemini ke paas bhejne ki
-         * zarurat nahi hai.
+         * Common device commands ko Gemini ke paas
+         * bhejne ki zarurat nahi.
          */
         val localCommand =
             detectLocalCommand(message)
 
         if (localCommand != null) {
-
-            executeCommand(
-                localCommand
-            )
-
+            executeCommand(localCommand)
             return
         }
 
         /*
-         * Complex commands Gemini ko jayengi.
+         * Baaki request Gemini ko bhejo.
          */
         viewModelScope.launch {
 
             if (apiKey.isBlank()) {
 
-                addAssistantMessage(
+                respond(
                     "Gemini API key set nahi hai. Settings me API key add karo."
                 )
 
@@ -109,30 +119,14 @@ class MainViewModel : ViewModel() {
 
                     is ApiResult.Success -> {
 
-                        val command =
-                            JarvisCommandParser.parse(
-                                result.data.text
-                            )
-
-                        if (command != null) {
-
-                            executeCommand(
-                                command
-                            )
-
-                        } else {
-
-                            addAssistantMessage(
-                                result.data.text
-                            )
-
-                            setThinking(false)
-                        }
+                        handleGeminiResponse(
+                            result.data.text
+                        )
                     }
 
                     is ApiResult.Error -> {
 
-                        addAssistantMessage(
+                        respond(
                             result.message
                         )
 
@@ -142,7 +136,7 @@ class MainViewModel : ViewModel() {
 
             } catch (e: Exception) {
 
-                addAssistantMessage(
+                respond(
                     "JARVIS error: ${
                         e.message ?: "Unknown error"
                     }"
@@ -151,6 +145,59 @@ class MainViewModel : ViewModel() {
                 setThinking(false)
             }
         }
+    }
+
+    /**
+     * Gemini response ko command ya normal chat
+     * ke roop me safely handle karta hai.
+     */
+    private fun handleGeminiResponse(
+        response: String
+    ) {
+
+        val text = response.trim()
+
+        if (text.isBlank()) {
+
+            respond(
+                "Mujhe koi response nahi mila."
+            )
+
+            setThinking(false)
+
+            return
+        }
+
+        /*
+         * Sirf tab command parse karo jab response
+         * JSON object jaisa dikhe.
+         *
+         * Isse normal text ko galti se command
+         * nahi samjha jayega.
+         */
+        val looksLikeJson =
+            text.startsWith("{") &&
+                    text.endsWith("}")
+
+        if (looksLikeJson) {
+
+            val command =
+                JarvisCommandParser.parse(text)
+
+            if (command != null) {
+
+                executeCommand(command)
+
+                return
+            }
+        }
+
+        /*
+         * Normal conversational response.
+         */
+        respond(text)
+
+        setThinking(false)
     }
 
     /**
@@ -165,7 +212,7 @@ class MainViewModel : ViewModel() {
 
         if (executor == null) {
 
-            addAssistantMessage(
+            respond(
                 "JARVIS executor ready nahi hai."
             )
 
@@ -183,20 +230,21 @@ class MainViewModel : ViewModel() {
 
                 if (executed) {
 
-                    addAssistantMessage(
-                        "Done."
-                    )
+                    val response =
+                        commandResponse(command)
+
+                    respond(response)
 
                 } else {
 
-                    addAssistantMessage(
-                        "Command execute nahi ho saka."
+                    respond(
+                        "Ye command execute nahi ho saki."
                     )
                 }
 
             } catch (e: Exception) {
 
-                addAssistantMessage(
+                respond(
                     "Command error: ${
                         e.message ?: "Unknown error"
                     }"
@@ -204,6 +252,96 @@ class MainViewModel : ViewModel() {
             }
 
             setThinking(false)
+        }
+    }
+
+    /**
+     * Command complete hone ke baad natural response.
+     */
+    private fun commandResponse(
+        command: JarvisCommand
+    ): String {
+
+        return when (command.action.uppercase()) {
+
+            "OPEN_APP" -> {
+                val app =
+                    command.target
+                        ?.replaceFirstChar {
+                            it.uppercase()
+                        }
+                        ?: "app"
+
+                "$app open kar diya."
+            }
+
+            "OPEN_URL" -> {
+                "Website open kar di."
+            }
+
+            "WEB_SEARCH" -> {
+                "Search kar diya."
+            }
+
+            "YOUTUBE" -> {
+                if (!command.value.isNullOrBlank()) {
+                    "YouTube par ${command.value} search kar diya."
+                } else {
+                    "YouTube open kar diya."
+                }
+            }
+
+            "INSTAGRAM" -> {
+                "Instagram open kar diya."
+            }
+
+            "WHATSAPP" -> {
+                "WhatsApp open kar diya."
+            }
+
+            "BACK" -> {
+                "Back kar diya."
+            }
+
+            "HOME" -> {
+                "Home screen par aa gaya."
+            }
+
+            "RECENTS" -> {
+                "Recent apps open kar diye."
+            }
+
+            "SCROLL_UP" -> {
+                "Upar scroll kar diya."
+            }
+
+            "SCROLL_DOWN" -> {
+                "Neeche scroll kar diya."
+            }
+
+            "CLICK" -> {
+                "Click kar diya."
+            }
+
+            "TYPE" -> {
+                "Text enter kar diya."
+            }
+
+            "WAIT" -> {
+                "Theek hai."
+            }
+
+            "AUTOMATION" -> {
+                "Task complete kar diya."
+            }
+
+            "NO_ACTION" -> {
+                "Theek hai."
+            }
+
+            else -> {
+                "Done."
+            }
         }
     }
 
@@ -285,8 +423,8 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * "Instagram open karo",
-     * "Instagram kholo",
+     * "Instagram open karo"
+     * "Instagram kholo"
      * "open Instagram"
      * jaise commands detect karta hai.
      */
@@ -304,6 +442,29 @@ class MainViewModel : ViewModel() {
                 command.contains("kholo") ||
                 command.contains("launch") ||
                 command.contains("chala")
+    }
+
+    /**
+     * UI + response listener ko response deta hai.
+     */
+    private fun respond(
+        text: String
+    ) {
+
+        val cleanText =
+            text.trim()
+
+        if (cleanText.isBlank()) {
+            return
+        }
+
+        addAssistantMessage(
+            cleanText
+        )
+
+        responseListener?.invoke(
+            cleanText
+        )
     }
 
     /**
@@ -361,5 +522,12 @@ class MainViewModel : ViewModel() {
             _ui.value.copy(
                 isThinking = thinking
             )
+    }
+
+    override fun onCleared() {
+
+        responseListener = null
+
+        super.onCleared()
     }
 }
