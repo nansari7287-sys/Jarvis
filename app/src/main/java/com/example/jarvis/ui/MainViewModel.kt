@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jarvis.ai.AIRequest
+import com.example.jarvis.ai.ConversationManager
 import com.example.jarvis.ai.GeminiClient
 import com.example.jarvis.ai.JarvisCommand
 import com.example.jarvis.ai.JarvisCommandParser
@@ -19,9 +20,11 @@ class MainViewModel : ViewModel() {
 
     private val geminiClient = GeminiClient()
 
-    private val _ui = MutableStateFlow(
-        UiState()
-    )
+    private val conversationManager =
+        ConversationManager(maxMessages = 20)
+
+    private val _ui =
+        MutableStateFlow(UiState())
 
     val ui: StateFlow<UiState> =
         _ui.asStateFlow()
@@ -29,15 +32,13 @@ class MainViewModel : ViewModel() {
     private var commandExecutor: CommandExecutor? = null
 
     /**
-     * Last assistant response.
-     *
-     * MainActivity / VoiceSessionManager ise use kar sakte hain
-     * TTS ke liye.
+     * MainActivity / voice mode ke liye
+     * assistant response listener.
      */
     private var responseListener: ((String) -> Unit)? = null
 
     /**
-     * MainActivity se ek baar call karo.
+     * Command executor ko ek baar initialize karta hai.
      */
     fun initializeExecutor(
         context: Context
@@ -51,9 +52,7 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * Assistant response listener.
-     *
-     * Voice mode ke time TTS ke liye useful hai.
+     * Voice mode / TTS ke liye listener.
      */
     fun setResponseListener(
         listener: ((String) -> Unit)?
@@ -62,7 +61,7 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * User message process karta hai.
+     * User ka message process karta hai.
      */
     fun send(
         text: String,
@@ -75,11 +74,14 @@ class MainViewModel : ViewModel() {
         }
 
         addUserMessage(message)
+
+        conversationManager.addUserMessage(message)
+
         setThinking(true)
 
         /*
-         * Common device commands ko Gemini ke paas
-         * bhejne ki zarurat nahi.
+         * Common commands ko directly execute karo.
+         * Isse unnecessary Gemini request nahi jayegi.
          */
         val localCommand =
             detectLocalCommand(message)
@@ -107,10 +109,24 @@ class MainViewModel : ViewModel() {
 
             try {
 
+                /*
+                 * Previous conversation ko current
+                 * request ke saath Gemini ko bhejo.
+                 */
+                val previousContext =
+                    conversationManager
+                        .buildContext()
+
+                val prompt =
+                    buildPrompt(
+                        previousContext,
+                        message
+                    )
+
                 val result =
                     geminiClient.generate(
                         AIRequest(
-                            prompt = message,
+                            prompt = prompt,
                             apiKey = apiKey
                         )
                     )
@@ -148,14 +164,37 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * Gemini response ko command ya normal chat
-     * ke roop me safely handle karta hai.
+     * Gemini ke liye conversation context
+     * + current user request banata hai.
+     */
+    private fun buildPrompt(
+        previousContext: String,
+        currentMessage: String
+    ): String {
+
+        return buildString {
+
+            if (previousContext.isNotBlank()) {
+
+                append(previousContext)
+                append("\n")
+            }
+
+            append("Current user request:\n")
+            append(currentMessage)
+        }
+    }
+
+    /**
+     * Gemini response ko command ya normal
+     * conversation ke roop me handle karta hai.
      */
     private fun handleGeminiResponse(
         response: String
     ) {
 
-        val text = response.trim()
+        val text =
+            response.trim()
 
         if (text.isBlank()) {
 
@@ -169,11 +208,7 @@ class MainViewModel : ViewModel() {
         }
 
         /*
-         * Sirf tab command parse karo jab response
-         * JSON object jaisa dikhe.
-         *
-         * Isse normal text ko galti se command
-         * nahi samjha jayega.
+         * JSON response command ho sakta hai.
          */
         val looksLikeJson =
             text.startsWith("{") &&
@@ -193,7 +228,7 @@ class MainViewModel : ViewModel() {
         }
 
         /*
-         * Normal conversational response.
+         * Normal conversation.
          */
         respond(text)
 
@@ -201,7 +236,7 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * Command ko CommandExecutor tak bhejta hai.
+     * Command execute karta hai.
      */
     private fun executeCommand(
         command: JarvisCommand
@@ -214,6 +249,24 @@ class MainViewModel : ViewModel() {
 
             respond(
                 "JARVIS executor ready nahi hai."
+            )
+
+            setThinking(false)
+
+            return
+        }
+
+        /*
+         * Important action ke liye confirmation
+         * future UI/voice layer handle kar sakti hai.
+         *
+         * Abhi command executor ko direct pass
+         * nahi kar rahe agar confirmation required hai.
+         */
+        if (command.requiresConfirmation) {
+
+            respond(
+                "Ye action karne se pehle tumhari confirmation chahiye."
             )
 
             setThinking(false)
@@ -265,6 +318,7 @@ class MainViewModel : ViewModel() {
         return when (command.action.uppercase()) {
 
             "OPEN_APP" -> {
+
                 val app =
                     command.target
                         ?.replaceFirstChar {
@@ -284,9 +338,13 @@ class MainViewModel : ViewModel() {
             }
 
             "YOUTUBE" -> {
+
                 if (!command.value.isNullOrBlank()) {
+
                     "YouTube par ${command.value} search kar diya."
+
                 } else {
+
                     "YouTube open kar diya."
                 }
             }
@@ -346,7 +404,7 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * Common commands ke liye local fast detection.
+     * Common apps ke liye local command detection.
      */
     private fun detectLocalCommand(
         text: String
@@ -423,10 +481,7 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * "Instagram open karo"
-     * "Instagram kholo"
-     * "open Instagram"
-     * jaise commands detect karta hai.
+     * Open app commands detect karta hai.
      */
     private fun isOpenCommand(
         command: String,
@@ -445,7 +500,11 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * UI + response listener ko response deta hai.
+     * Assistant ka response:
+     *
+     * 1. UI me add
+     * 2. Conversation memory me save
+     * 3. Voice/TTS listener ko send
      */
     private fun respond(
         text: String
@@ -461,6 +520,11 @@ class MainViewModel : ViewModel() {
         addAssistantMessage(
             cleanText
         )
+
+        conversationManager
+            .addAssistantMessage(
+                cleanText
+            )
 
         responseListener?.invoke(
             cleanText
@@ -492,7 +556,7 @@ class MainViewModel : ViewModel() {
     }
 
     /**
-     * JARVIS response UI me add karta hai.
+     * Assistant message UI me add karta hai.
      */
     private fun addAssistantMessage(
         text: String
@@ -524,9 +588,25 @@ class MainViewModel : ViewModel() {
             )
     }
 
+    /**
+     * Conversation memory clear karta hai.
+     */
+    fun clearConversation() {
+
+        conversationManager.clear()
+
+        _ui.value =
+            _ui.value.copy(
+                messages = emptyList(),
+                error = null
+            )
+    }
+
     override fun onCleared() {
 
         responseListener = null
+
+        conversationManager.clear()
 
         super.onCleared()
     }
