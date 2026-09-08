@@ -8,12 +8,9 @@ import com.example.jarvis.ai.JarvisCommand
 import com.example.jarvis.ai.JarvisStep
 
 /**
- * JARVIS ke structured commands ko Android actions me convert karta hai.
+ * JARVIS structured commands ko Android actions me convert karta hai.
  *
- * IMPORTANT:
- * - Sirf allowed/safe actions execute kiye jaate hain.
- * - Sensitive actions ko confirmation ki zarurat ho sakti hai.
- * - Screen-level automation AccessibilityService karegi.
+ * Direct app actions + AccessibilityService actions ko handle karta hai.
  */
 class CommandExecutor(
     private val context: Context
@@ -21,35 +18,38 @@ class CommandExecutor(
 
     fun execute(command: JarvisCommand): Boolean {
 
+        // Important/external actions ko confirmation ke bina execute nahi karte.
         if (command.requiresConfirmation) {
             showConfirmationRequired(command)
             return false
         }
 
-        // Multi-step command
+        // Multi-step automation
         if (command.steps.isNotEmpty()) {
-            var success = true
 
             for (step in command.steps) {
+
                 if (step.requiresConfirmation) {
+
                     showConfirmationRequired(
                         JarvisCommand(
                             action = step.action,
                             target = step.target,
                             value = step.value,
+                            steps = emptyList(),
                             requiresConfirmation = true
                         )
                     )
+
                     return false
                 }
 
                 if (!executeStep(step)) {
-                    success = false
-                    break
+                    return false
                 }
             }
 
-            return success
+            return true
         }
 
         return executeAction(
@@ -59,7 +59,10 @@ class CommandExecutor(
         )
     }
 
-    private fun executeStep(step: JarvisStep): Boolean {
+    private fun executeStep(
+        step: JarvisStep
+    ): Boolean {
+
         return executeAction(
             action = step.action,
             target = step.target,
@@ -73,72 +76,191 @@ class CommandExecutor(
         value: String?
     ): Boolean {
 
-        return when (action.uppercase()) {
+        val normalizedAction =
+            action.trim().uppercase()
 
-            "OPEN_APP" -> openApp(target)
+        return when (normalizedAction) {
 
-            "OPEN_URL",
-            "WEB_SEARCH" -> openUrl(
-                if (action.uppercase() == "WEB_SEARCH") {
-                    "https://www.google.com/search?q=" +
-                        Uri.encode(value ?: target ?: "")
-                } else {
+            // =================================================
+            // APPS
+            // =================================================
+
+            "OPEN_APP" -> {
+                openApp(target)
+            }
+
+            // =================================================
+            // URL / SEARCH
+            // =================================================
+
+            "OPEN_URL" -> {
+
+                openUrl(
                     value ?: target ?: ""
-                }
-            )
+                )
+            }
 
-            "YOUTUBE" -> openUrl(
-                if (!value.isNullOrBlank()) {
-                    "https://www.youtube.com/results?search_query=" +
-                        Uri.encode(value)
+            "WEB_SEARCH" -> {
+
+                val query =
+                    value ?: target ?: ""
+
+                if (query.isBlank()) {
+                    false
                 } else {
-                    "https://www.youtube.com"
+
+                    openUrl(
+                        "https://www.google.com/search?q=" +
+                            Uri.encode(query)
+                    )
                 }
-            )
+            }
 
-            "INSTAGRAM" -> openUrl(
-                "https://www.instagram.com/"
-            )
+            // =================================================
+            // YOUTUBE
+            // =================================================
 
-            "WHATSAPP" -> openWhatsApp()
+            "YOUTUBE" -> {
 
-            "BACK" -> performAccessibilityAction("BACK")
+                if (value.isNullOrBlank()) {
 
-            "HOME" -> performAccessibilityAction("HOME")
+                    openUrl(
+                        "https://www.youtube.com"
+                    )
 
-            "RECENT_APPS" -> performAccessibilityAction("RECENTS")
+                } else {
 
-            "SCROLL_UP" -> performAccessibilityAction("SCROLL_UP")
+                    openUrl(
+                        "https://www.youtube.com/results?search_query=" +
+                            Uri.encode(value)
+                    )
+                }
+            }
 
-            "SCROLL_DOWN" -> performAccessibilityAction("SCROLL_DOWN")
+            // =================================================
+            // INSTAGRAM
+            // =================================================
+
+            "INSTAGRAM" -> {
+
+                openInstagram()
+            }
+
+            // =================================================
+            // WHATSAPP
+            // =================================================
+
+            "WHATSAPP" -> {
+
+                openWhatsApp()
+            }
+
+            // =================================================
+            // SYSTEM NAVIGATION
+            // =================================================
+
+            "BACK" -> {
+
+                performAccessibilityAction(
+                    action = "BACK"
+                )
+            }
+
+            "HOME" -> {
+
+                performAccessibilityAction(
+                    action = "HOME"
+                )
+            }
+
+            "RECENTS",
+            "RECENT_APPS" -> {
+
+                performAccessibilityAction(
+                    action = "RECENTS"
+                )
+            }
+
+            // =================================================
+            // SCROLL
+            // =================================================
+
+            "SCROLL_UP" -> {
+
+                performAccessibilityAction(
+                    action = "SCROLL_UP"
+                )
+            }
+
+            "SCROLL_DOWN" -> {
+
+                performAccessibilityAction(
+                    action = "SCROLL_DOWN"
+                )
+            }
+
+            // =================================================
+            // CLICK
+            // =================================================
 
             "CLICK" -> {
-                // AccessibilityService screen element ko handle karegi.
+
                 performAccessibilityAction(
-                    "CLICK",
-                    target,
-                    value
+                    action = "CLICK",
+                    target = target,
+                    value = value
                 )
             }
+
+            // =================================================
+            // TYPE
+            // =================================================
 
             "TYPE" -> {
-                // AccessibilityService text field me value enter karegi.
+
                 performAccessibilityAction(
-                    "TYPE",
-                    target,
-                    value
+                    action = "TYPE",
+                    target = target,
+                    value = value
                 )
             }
 
+            // =================================================
+            // WAIT
+            // =================================================
+
             "WAIT" -> {
-                // WAIT ko unrestricted delay ke roop me execute nahi karte.
-                // Accessibility layer timing handle karegi.
+
+                // Actual timing Accessibility/automation layer
+                // handle kar sakti hai.
                 true
             }
 
-            "NO_ACTION" -> true
+            // =================================================
+            // NO ACTION
+            // =================================================
+
+            "NO_ACTION" -> {
+                true
+            }
+
+            // =================================================
+            // AUTOMATION
+            // =================================================
+
+            "AUTOMATION" -> {
+
+                // Normally AUTOMATION ke steps command.steps
+                // ke through execute honge.
+                command.steps.isNotEmpty()
+            }
+
+            // =================================================
+            // UNKNOWN
+            // =================================================
 
             else -> {
+
                 Toast.makeText(
                     context,
                     "JARVIS: Action not supported: $action",
@@ -150,32 +272,46 @@ class CommandExecutor(
         }
     }
 
-    private fun openApp(target: String?): Boolean {
+    // =========================================================
+    // OPEN APP
+    // =========================================================
 
-        val packageName = when (target?.lowercase()) {
+    private fun openApp(
+        target: String?
+    ): Boolean {
 
-            "instagram" ->
+        val appName =
+            target
+                ?.trim()
+                ?.lowercase()
+                ?: return false
+
+        val packageName = when {
+
+            appName == "instagram" ->
                 "com.instagram.android"
 
-            "youtube" ->
+            appName == "youtube" ->
                 "com.google.android.youtube"
 
-            "whatsapp" ->
+            appName == "whatsapp" ->
                 "com.whatsapp"
 
-            "chrome" ->
+            appName == "chrome" ->
                 "com.android.chrome"
 
-            "google" ->
+            appName == "google" ->
                 "com.google.android.googlequicksearchbox"
 
-            "settings" ->
+            appName == "settings" ->
                 "com.android.settings"
 
-            else -> null
+            else ->
+                null
         }
 
         if (packageName == null) {
+
             Toast.makeText(
                 context,
                 "JARVIS: App not supported: $target",
@@ -188,9 +324,11 @@ class CommandExecutor(
         return try {
 
             val intent =
-                context.packageManager.getLaunchIntentForPackage(packageName)
+                context.packageManager
+                    .getLaunchIntentForPackage(packageName)
 
             if (intent == null) {
+
                 Toast.makeText(
                     context,
                     "App installed nahi hai: $target",
@@ -198,9 +336,13 @@ class CommandExecutor(
                 ).show()
 
                 false
+
             } else {
 
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+
                 context.startActivity(intent)
 
                 true
@@ -218,6 +360,41 @@ class CommandExecutor(
         }
     }
 
+    // =========================================================
+    // INSTAGRAM
+    // =========================================================
+
+    private fun openInstagram(): Boolean {
+
+        return try {
+
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(
+                    "instagram://user?username=drakoxnaeem"
+                )
+            )
+
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+
+            context.startActivity(intent)
+
+            true
+
+        } catch (_: Exception) {
+
+            openUrl(
+                "https://www.instagram.com/"
+            )
+        }
+    }
+
+    // =========================================================
+    // WHATSAPP
+    // =========================================================
+
     private fun openWhatsApp(): Boolean {
 
         return try {
@@ -227,20 +404,33 @@ class CommandExecutor(
                 Uri.parse("whatsapp://")
             )
 
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+
             context.startActivity(intent)
 
             true
 
         } catch (_: Exception) {
 
-            openUrl("https://web.whatsapp.com")
+            openUrl(
+                "https://web.whatsapp.com"
+            )
         }
     }
 
-    private fun openUrl(url: String): Boolean {
+    // =========================================================
+    // OPEN URL
+    // =========================================================
 
-        if (url.isBlank()) {
+    private fun openUrl(
+        url: String
+    ): Boolean {
+
+        val cleanUrl = url.trim()
+
+        if (cleanUrl.isBlank()) {
             return false
         }
 
@@ -248,10 +438,13 @@ class CommandExecutor(
 
             val intent = Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse(url)
+                Uri.parse(cleanUrl)
             )
 
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+
             context.startActivity(intent)
 
             true
@@ -268,12 +461,10 @@ class CommandExecutor(
         }
     }
 
-    /**
-     * AccessibilityService ke liye bridge.
-     *
-     * Actual screen automation JARVISAccessibilityService
-     * ke through hogi.
-     */
+    // =========================================================
+    // ACCESSIBILITY BRIDGE
+    // =========================================================
+
     private fun performAccessibilityAction(
         action: String,
         target: String? = null,
@@ -281,7 +472,8 @@ class CommandExecutor(
     ): Boolean {
 
         val service =
-            com.example.jarvis.accessibility.JarvisAccessibilityService.instance
+            com.example.jarvis.accessibility
+                .JarvisAccessibilityService.instance
 
         if (service == null) {
 
@@ -294,12 +486,29 @@ class CommandExecutor(
             return false
         }
 
-        return service.performJarvisAction(
-            action = action,
-            target = target,
-            value = value
-        )
+        return try {
+
+            service.performJarvisAction(
+                action = action,
+                target = target,
+                value = value
+            )
+
+        } catch (_: Exception) {
+
+            Toast.makeText(
+                context,
+                "Accessibility action failed",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            false
+        }
     }
+
+    // =========================================================
+    // CONFIRMATION
+    // =========================================================
 
     private fun showConfirmationRequired(
         command: JarvisCommand
