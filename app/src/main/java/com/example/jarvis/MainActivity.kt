@@ -19,6 +19,7 @@ import com.example.jarvis.ui.MainViewModel
 import com.example.jarvis.utils.PermissionHelper
 import com.example.jarvis.voice.SpeechRecognizerManager
 import com.example.jarvis.voice.TextToSpeechManager
+import com.example.jarvis.voice.VoiceSessionManager
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -29,6 +30,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
     private lateinit var speech: SpeechRecognizerManager
     private lateinit var tts: TextToSpeechManager
+    private lateinit var voiceSession: VoiceSessionManager
+
+    private lateinit var micButton: ImageButton
+    private lateinit var messageInput: EditText
 
     companion object {
 
@@ -49,23 +54,19 @@ class MainActivity : ComponentActivity() {
 
         vm = ViewModelProvider(this)[MainViewModel::class.java]
 
-        // IMPORTANT:
-        // CommandExecutor ko MainViewModel ke saath initialize karo.
         vm.initializeExecutor(this)
 
         prefs = PreferencesManager(this)
         speech = SpeechRecognizerManager(this)
         tts = TextToSpeechManager(this)
 
-        val input = findViewById<EditText>(
-            R.id.messageInput
-        )
+        messageInput = findViewById(R.id.messageInput)
 
         val send = findViewById<ImageButton>(
             R.id.sendButton
         )
 
-        val mic = findViewById<ImageButton>(
+        micButton = findViewById(
             R.id.micButton
         )
 
@@ -79,12 +80,105 @@ class MainActivity : ComponentActivity() {
         rv.adapter = adapter
 
         // =====================================================
+        // VOICE SESSION
+        // =====================================================
+
+        voiceSession = VoiceSessionManager(
+            context = this,
+            speechRecognizer = speech,
+            onText = { text ->
+
+                runOnUiThread {
+
+                    messageInput.setText(text)
+
+                    messageInput.setSelection(
+                        messageInput.length()
+                    )
+
+                    processUserCommand(text)
+                }
+            },
+            onStateChanged = { state ->
+
+                runOnUiThread {
+
+                    when (state) {
+
+                        VoiceSessionManager.State.IDLE -> {
+                            updateMicState(false)
+                        }
+
+                        VoiceSessionManager.State.LISTENING -> {
+                            updateMicState(true)
+                        }
+
+                        VoiceSessionManager.State.PROCESSING -> {
+                            updateMicState(true)
+                        }
+
+                        VoiceSessionManager.State.SPEAKING -> {
+                            updateMicState(true)
+                        }
+                    }
+                }
+            },
+            onError = { error ->
+
+                runOnUiThread {
+
+                    Toast.makeText(
+                        this,
+                        error,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
+
+        // =====================================================
+        // GEMINI RESPONSE → TTS
+        // =====================================================
+
+        vm.setResponseListener { response ->
+
+            if (voiceSession.isActive()) {
+
+                runOnUiThread {
+
+                    voiceSession.setSpeaking()
+
+                    tts.speak(
+                        response,
+                        onStarted = {
+                            runOnUiThread {
+                                voiceSession.setSpeaking()
+                            }
+                        },
+                        onFinished = {
+                            runOnUiThread {
+                                voiceSession.resumeListening()
+                            }
+                        }
+                    )
+                }
+
+            } else {
+
+                runOnUiThread {
+                    tts.speak(response)
+                }
+            }
+        }
+
+        // =====================================================
         // SEND MESSAGE
         // =====================================================
 
         send.setOnClickListener {
 
-            val text = input.text
+            val text = messageInput
+                .text
                 .toString()
                 .trim()
 
@@ -92,15 +186,18 @@ class MainActivity : ComponentActivity() {
 
                 processUserCommand(text)
 
-                input.text.clear()
+                messageInput.text.clear()
             }
         }
 
         // =====================================================
-        // MICROPHONE / VOICE
+        // MICROPHONE
+        //
+        // ONE TAP = VOICE MODE ON
+        // NEXT TAP = VOICE MODE OFF
         // =====================================================
 
-        mic.setOnClickListener {
+        micButton.setOnClickListener {
 
             if (!PermissionHelper.hasAudioPermission(this)) {
 
@@ -109,38 +206,18 @@ class MainActivity : ComponentActivity() {
                 return@setOnClickListener
             }
 
-            speech.start(
+            if (voiceSession.isActive()) {
 
-                { text ->
+                stopVoiceMode()
 
-                    runOnUiThread {
+            } else {
 
-                        input.setText(text)
-
-                        input.setSelection(
-                            input.length()
-                        )
-
-                        processUserCommand(text)
-                    }
-                },
-
-                { error ->
-
-                    Toast.makeText(
-                        this,
-                        error,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            )
+                startVoiceMode()
+            }
         }
 
         // =====================================================
         // SETTINGS
-        // IMPORTANT:
-        // View use kiya hai, TextView nahi.
-        // Isse ImageButton/TextView dono safe hain.
         // =====================================================
 
         findViewById<View>(
@@ -269,7 +346,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // AI UI UPDATE
+        // UI STATE
         // =====================================================
 
         lifecycleScope.launch {
@@ -291,6 +368,61 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
+    // START VOICE MODE
+    // =========================================================
+
+    private fun startVoiceMode() {
+
+        if (!PermissionHelper.hasAudioPermission(this)) {
+
+            PermissionHelper.requestAudioPermission(this)
+
+            return
+        }
+
+        voiceSession.start()
+
+        Toast.makeText(
+            this,
+            "JARVIS voice mode ON",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    // =========================================================
+    // STOP VOICE MODE
+    // =========================================================
+
+    private fun stopVoiceMode() {
+
+        voiceSession.stop()
+
+        tts.stop()
+
+        Toast.makeText(
+            this,
+            "JARVIS voice mode OFF",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    // =========================================================
+    // MIC UI
+    // =========================================================
+
+    private fun updateMicState(active: Boolean) {
+
+        if (active) {
+
+            micButton.alpha = 1.0f
+
+        } else {
+
+            micButton.alpha = 0.65f
+        }
+    }
+
+    // =========================================================
     // JARVIS COMMAND ROUTER
     // =========================================================
 
@@ -304,6 +436,21 @@ class MainActivity : ComponentActivity() {
             .replace("hey, jarvis", "")
             .replace("jarvis", "")
             .trim()
+
+        if (normalized.isBlank()) {
+
+            if (voiceSession.isActive()) {
+
+                tts.speak(
+                    "Yes, boss. Aaj kya karna hai?",
+                    onFinished = {
+                        voiceSession.resumeListening()
+                    }
+                )
+            }
+
+            return
+        }
 
         // =====================================================
         // FAST PATH
@@ -320,6 +467,11 @@ class MainActivity : ComponentActivity() {
             ) -> {
 
                 openInstagram()
+
+                speakCommandResult(
+                    "Instagram open kar diya."
+                )
+
                 return
             }
 
@@ -332,6 +484,11 @@ class MainActivity : ComponentActivity() {
             ) -> {
 
                 openYouTube()
+
+                speakCommandResult(
+                    "YouTube open kar diya."
+                )
+
                 return
             }
 
@@ -344,6 +501,11 @@ class MainActivity : ComponentActivity() {
             ) -> {
 
                 openWhatsApp()
+
+                speakCommandResult(
+                    "WhatsApp open kar diya."
+                )
+
                 return
             }
 
@@ -359,20 +521,63 @@ class MainActivity : ComponentActivity() {
                     "https://www.google.com"
                 )
 
+                speakCommandResult(
+                    "Google open kar diya."
+                )
+
                 return
             }
         }
 
         // =====================================================
-        // COMPLEX COMMAND
-        // Gemini
+        // COMPLEX COMMAND → GEMINI
         // =====================================================
+
+        if (voiceSession.isActive()) {
+            voiceSession.setProcessing()
+        }
 
         vm.send(
             command,
             prefs.getApiKey()
         )
     }
+
+    // =========================================================
+    // VOICE COMMAND RESULT
+    // =========================================================
+
+    private fun speakCommandResult(
+        text: String
+    ) {
+
+        if (!voiceSession.isActive()) {
+
+            tts.speak(text)
+
+            return
+        }
+
+        voiceSession.setSpeaking()
+
+        tts.speak(
+            text,
+            onStarted = {
+                runOnUiThread {
+                    voiceSession.setSpeaking()
+                }
+            },
+            onFinished = {
+                runOnUiThread {
+                    voiceSession.resumeListening()
+                }
+            }
+        )
+    }
+
+    // =========================================================
+    // PHRASE CHECK
+    // =========================================================
 
     private fun containsAny(
         text: String,
@@ -494,7 +699,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // MAIN MENU
+    // MENU
     // =========================================================
 
     private fun showMenu() {
@@ -845,8 +1050,22 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
 
-        speech.destroy()
-        tts.shutdown()
+        try {
+            voiceSession.destroy()
+        } catch (_: Exception) {
+        }
+
+        try {
+            speech.destroy()
+        } catch (_: Exception) {
+        }
+
+        try {
+            tts.shutdown()
+        } catch (_: Exception) {
+        }
+
+        vm.setResponseListener(null)
 
         super.onDestroy()
     }
