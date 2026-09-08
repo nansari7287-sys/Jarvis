@@ -108,7 +108,6 @@ class CommandExecutor(
                 if (query.isBlank()) {
                     false
                 } else {
-
                     openUrl(
                         "https://www.google.com/search?q=" +
                             Uri.encode(query)
@@ -142,7 +141,6 @@ class CommandExecutor(
             // =================================================
 
             "INSTAGRAM" -> {
-
                 openInstagram()
             }
 
@@ -151,7 +149,6 @@ class CommandExecutor(
             // =================================================
 
             "WHATSAPP" -> {
-
                 openWhatsApp()
             }
 
@@ -231,8 +228,7 @@ class CommandExecutor(
 
             "WAIT" -> {
 
-                // Actual timing Accessibility/automation layer
-                // handle kar sakti hai.
+                // WAIT ko future automation layer handle kar sakti hai.
                 true
             }
 
@@ -250,9 +246,14 @@ class CommandExecutor(
 
             "AUTOMATION" -> {
 
-                // Normally AUTOMATION ke steps command.steps
-                // ke through execute honge.
-                command.steps.isNotEmpty()
+                /*
+                 * AUTOMATION ke steps execute() method me
+                 * already handle ho chuke hote hain.
+                 *
+                 * Is method me command object available nahi hota,
+                 * isliye yahan command.steps access nahi karna hai.
+                 */
+                true
             }
 
             // =================================================
