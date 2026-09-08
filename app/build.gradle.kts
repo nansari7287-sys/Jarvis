@@ -39,6 +39,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // On-device wake-word inference
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.29.0")
+    // LiteRT / TensorFlow Lite runtime for the Hey Jarvis model
+    implementation("com.google.ai.edge.litert:litert:2.1.0")
 }
