@@ -21,7 +21,7 @@ class MainViewModel : ViewModel() {
     private val geminiClient = GeminiClient()
 
     private val conversationManager =
-        ConversationManager(maxMessages = 20)
+        ConversationManager()
 
     private val _ui =
         MutableStateFlow(UiState())
@@ -31,19 +31,18 @@ class MainViewModel : ViewModel() {
 
     private var commandExecutor: CommandExecutor? = null
 
-    /**
-     * MainActivity / voice mode ke liye
-     * assistant response listener.
-     */
     private var responseListener: ((String) -> Unit)? = null
 
-    /**
-     * Command executor ko ek baar initialize karta hai.
-     */
+    // =========================================================
+    // EXECUTOR
+    // =========================================================
+
     fun initializeExecutor(
         context: Context
     ) {
+
         if (commandExecutor == null) {
+
             commandExecutor =
                 CommandExecutor(
                     context.applicationContext
@@ -51,23 +50,28 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Voice mode / TTS ke liye listener.
-     */
+    // =========================================================
+    // RESPONSE LISTENER
+    // =========================================================
+
     fun setResponseListener(
         listener: ((String) -> Unit)?
     ) {
+
         responseListener = listener
     }
 
-    /**
-     * User ka message process karta hai.
-     */
+    // =========================================================
+    // SEND MESSAGE
+    // =========================================================
+
     fun send(
         text: String,
         apiKey: String
     ) {
-        val message = text.trim()
+
+        val message =
+            text.trim()
 
         if (message.isBlank()) {
             return
@@ -75,25 +79,31 @@ class MainViewModel : ViewModel() {
 
         addUserMessage(message)
 
-        conversationManager.addUserMessage(message)
+        conversationManager
+            .addUserMessage(message)
 
         setThinking(true)
 
-        /*
-         * Common commands ko directly execute karo.
-         * Isse unnecessary Gemini request nahi jayegi.
-         */
+        // -----------------------------------------------------
+        // Local commands
+        // -----------------------------------------------------
+
         val localCommand =
             detectLocalCommand(message)
 
         if (localCommand != null) {
-            executeCommand(localCommand)
+
+            executeCommand(
+                localCommand
+            )
+
             return
         }
 
-        /*
-         * Baaki request Gemini ko bhejo.
-         */
+        // -----------------------------------------------------
+        // Gemini
+        // -----------------------------------------------------
+
         viewModelScope.launch {
 
             if (apiKey.isBlank()) {
@@ -109,10 +119,6 @@ class MainViewModel : ViewModel() {
 
             try {
 
-                /*
-                 * Previous conversation ko current
-                 * request ke saath Gemini ko bhejo.
-                 */
                 val previousContext =
                     conversationManager
                         .buildContext()
@@ -163,10 +169,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Gemini ke liye conversation context
-     * + current user request banata hai.
-     */
+    // =========================================================
+    // BUILD GEMINI PROMPT
+    // =========================================================
+
     private fun buildPrompt(
         previousContext: String,
         currentMessage: String
@@ -174,21 +180,77 @@ class MainViewModel : ViewModel() {
 
         return buildString {
 
+            append(
+                """
+                You are JARVIS, the user's personal Android AI assistant.
+
+                Conversation behavior:
+                - Understand Hindi, Hinglish and English naturally.
+                - Remember the recent conversation context.
+                - Understand follow-up references like "haan", "woh", "usko",
+                  "pehle wala", "continue karo", etc.
+                - For normal questions and casual conversation, reply naturally.
+                - Do not return JSON for normal conversation.
+
+                Android control behavior:
+                - If the user asks you to control the Android device,
+                  return one valid JSON command.
+                - Use only supported actions.
+                - For multiple actions use AUTOMATION with steps.
+                - Important external actions must require confirmation.
+
+                Supported actions:
+                OPEN_APP
+                OPEN_URL
+                WEB_SEARCH
+                YOUTUBE
+                INSTAGRAM
+                WHATSAPP
+                BACK
+                HOME
+                RECENTS
+                SCROLL_UP
+                SCROLL_DOWN
+                CLICK
+                TYPE
+                WAIT
+                AUTOMATION
+                NO_ACTION
+
+                JSON format:
+                {
+                  "action": "ACTION_NAME",
+                  "target": "TARGET",
+                  "value": "VALUE",
+                  "steps": [],
+                  "requiresConfirmation": false
+                }
+
+                Never invent unsupported actions.
+
+                """.trimIndent()
+            )
+
+            append("\n\n")
+
             if (previousContext.isNotBlank()) {
 
                 append(previousContext)
                 append("\n")
             }
 
-            append("Current user request:\n")
+            append(
+                "CURRENT USER REQUEST:\n"
+            )
+
             append(currentMessage)
         }
     }
 
-    /**
-     * Gemini response ko command ya normal
-     * conversation ke roop me handle karta hai.
-     */
+    // =========================================================
+    // GEMINI RESPONSE
+    // =========================================================
+
     private fun handleGeminiResponse(
         response: String
     ) {
@@ -207,37 +269,38 @@ class MainViewModel : ViewModel() {
             return
         }
 
-        /*
-         * JSON response command ho sakta hai.
-         */
         val looksLikeJson =
-            text.startsWith("{") &&
-                    text.endsWith("}")
+            text.startsWith("{") ||
+                text.startsWith("```json") ||
+                text.startsWith("```")
 
         if (looksLikeJson) {
 
             val command =
-                JarvisCommandParser.parse(text)
+                JarvisCommandParser.parse(
+                    text
+                )
 
             if (command != null) {
 
-                executeCommand(command)
+                executeCommand(
+                    command
+                )
 
                 return
             }
         }
 
-        /*
-         * Normal conversation.
-         */
+        // Normal conversation
         respond(text)
 
         setThinking(false)
     }
 
-    /**
-     * Command execute karta hai.
-     */
+    // =========================================================
+    // EXECUTE COMMAND
+    // =========================================================
+
     private fun executeCommand(
         command: JarvisCommand
     ) {
@@ -256,13 +319,10 @@ class MainViewModel : ViewModel() {
             return
         }
 
-        /*
-         * Important action ke liye confirmation
-         * future UI/voice layer handle kar sakti hai.
-         *
-         * Abhi command executor ko direct pass
-         * nahi kar rahe agar confirmation required hai.
-         */
+        // -----------------------------------------------------
+        // Confirmation
+        // -----------------------------------------------------
+
         if (command.requiresConfirmation) {
 
             respond(
@@ -279,14 +339,17 @@ class MainViewModel : ViewModel() {
             try {
 
                 val executed =
-                    executor.execute(command)
+                    executor.execute(
+                        command
+                    )
 
                 if (executed) {
 
-                    val response =
-                        commandResponse(command)
-
-                    respond(response)
+                    respond(
+                        commandResponse(
+                            command
+                        )
+                    )
 
                 } else {
 
@@ -308,14 +371,17 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Command complete hone ke baad natural response.
-     */
+    // =========================================================
+    // COMMAND RESPONSE
+    // =========================================================
+
     private fun commandResponse(
         command: JarvisCommand
     ): String {
 
-        return when (command.action.uppercase()) {
+        return when (
+            command.action.uppercase()
+        ) {
 
             "OPEN_APP" -> {
 
@@ -339,7 +405,9 @@ class MainViewModel : ViewModel() {
 
             "YOUTUBE" -> {
 
-                if (!command.value.isNullOrBlank()) {
+                if (
+                    !command.value.isNullOrBlank()
+                ) {
 
                     "YouTube par ${command.value} search kar diya."
 
@@ -365,7 +433,8 @@ class MainViewModel : ViewModel() {
                 "Home screen par aa gaya."
             }
 
-            "RECENTS" -> {
+            "RECENTS",
+            "RECENT_APPS" -> {
                 "Recent apps open kar diye."
             }
 
@@ -403,9 +472,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Common apps ke liye local command detection.
-     */
+    // =========================================================
+    // LOCAL COMMAND DETECTION
+    // =========================================================
+
     private fun detectLocalCommand(
         text: String
     ): JarvisCommand? {
@@ -480,9 +550,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Open app commands detect karta hai.
-     */
+    // =========================================================
+    // OPEN COMMAND CHECK
+    // =========================================================
+
     private fun isOpenCommand(
         command: String,
         appName: String
@@ -493,19 +564,16 @@ class MainViewModel : ViewModel() {
         }
 
         return command.contains("open") ||
-                command.contains("khol") ||
-                command.contains("kholo") ||
-                command.contains("launch") ||
-                command.contains("chala")
+            command.contains("khol") ||
+            command.contains("kholo") ||
+            command.contains("launch") ||
+            command.contains("chala")
     }
 
-    /**
-     * Assistant ka response:
-     *
-     * 1. UI me add
-     * 2. Conversation memory me save
-     * 3. Voice/TTS listener ko send
-     */
+    // =========================================================
+    // RESPONSE
+    // =========================================================
+
     private fun respond(
         text: String
     ) {
@@ -531,9 +599,10 @@ class MainViewModel : ViewModel() {
         )
     }
 
-    /**
-     * User message UI me add karta hai.
-     */
+    // =========================================================
+    // USER MESSAGE UI
+    // =========================================================
+
     private fun addUserMessage(
         text: String
     ) {
@@ -555,9 +624,10 @@ class MainViewModel : ViewModel() {
             )
     }
 
-    /**
-     * Assistant message UI me add karta hai.
-     */
+    // =========================================================
+    // ASSISTANT MESSAGE UI
+    // =========================================================
+
     private fun addAssistantMessage(
         text: String
     ) {
@@ -578,6 +648,10 @@ class MainViewModel : ViewModel() {
             )
     }
 
+    // =========================================================
+    // THINKING STATE
+    // =========================================================
+
     private fun setThinking(
         thinking: Boolean
     ) {
@@ -588,9 +662,10 @@ class MainViewModel : ViewModel() {
             )
     }
 
-    /**
-     * Conversation memory clear karta hai.
-     */
+    // =========================================================
+    // CLEAR CONVERSATION
+    // =========================================================
+
     fun clearConversation() {
 
         conversationManager.clear()
@@ -598,9 +673,14 @@ class MainViewModel : ViewModel() {
         _ui.value =
             _ui.value.copy(
                 messages = emptyList(),
-                error = null
+                error = null,
+                isThinking = false
             )
     }
+
+    // =========================================================
+    // CLEANUP
+    // =========================================================
 
     override fun onCleared() {
 
