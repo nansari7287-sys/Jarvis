@@ -28,6 +28,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var vm: MainViewModel
     private lateinit var adapter: ChatAdapter
     private lateinit var prefs: PreferencesManager
+
     private lateinit var speech: SpeechRecognizerManager
     private lateinit var tts: TextToSpeechManager
     private lateinit var voiceSession: VoiceSessionManager
@@ -54,15 +55,18 @@ class MainActivity : ComponentActivity() {
 
         vm = ViewModelProvider(this)[MainViewModel::class.java]
 
+        // CommandExecutor ko Activity lifecycle se independent
+        // application context ke saath initialize karte hain.
         vm.initializeExecutor(this)
 
         prefs = PreferencesManager(this)
+
         speech = SpeechRecognizerManager(this)
         tts = TextToSpeechManager(this)
 
         messageInput = findViewById(R.id.messageInput)
 
-        val send = findViewById<ImageButton>(
+        val sendButton = findViewById<ImageButton>(
             R.id.sendButton
         )
 
@@ -70,14 +74,16 @@ class MainActivity : ComponentActivity() {
             R.id.micButton
         )
 
-        val rv = findViewById<RecyclerView>(
+        val recyclerView = findViewById<RecyclerView>(
             R.id.messageRecyclerView
         )
 
         adapter = ChatAdapter()
 
-        rv.layoutManager = LinearLayoutManager(this)
-        rv.adapter = adapter
+        recyclerView.layoutManager =
+            LinearLayoutManager(this)
+
+        recyclerView.adapter = adapter
 
         // =====================================================
         // VOICE SESSION
@@ -86,19 +92,32 @@ class MainActivity : ComponentActivity() {
         voiceSession = VoiceSessionManager(
             context = this,
             speechRecognizer = speech,
+
             onText = { text ->
 
                 runOnUiThread {
 
-                    messageInput.setText(text)
+                    val cleanText =
+                        text.trim()
+
+                    if (cleanText.isBlank()) {
+                        return@runOnUiThread
+                    }
+
+                    messageInput.setText(
+                        cleanText
+                    )
 
                     messageInput.setSelection(
                         messageInput.length()
                     )
 
-                    processUserCommand(text)
+                    processUserCommand(
+                        cleanText
+                    )
                 }
             },
+
             onStateChanged = { state ->
 
                 runOnUiThread {
@@ -123,15 +142,39 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             },
+
             onError = { error ->
 
                 runOnUiThread {
 
-                    Toast.makeText(
-                        this,
-                        error,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    /*
+                     * Continuous mode me temporary speech errors
+                     * ke liye Toast spam nahi karna.
+                     * VoiceSessionManager khud listening resume karta hai.
+                     */
+                    if (voiceSession.isActive()) {
+
+                        if (
+                            error.contains(
+                                "permission",
+                                ignoreCase = true
+                            )
+                        ) {
+                            Toast.makeText(
+                                this,
+                                error,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                    } else {
+
+                        Toast.makeText(
+                            this,
+                            error,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         )
@@ -142,45 +185,33 @@ class MainActivity : ComponentActivity() {
 
         vm.setResponseListener { response ->
 
-            if (voiceSession.isActive()) {
+            runOnUiThread {
 
-                runOnUiThread {
+                if (voiceSession.isActive()) {
 
-                    voiceSession.setSpeaking()
-
-                    tts.speak(
-                        response,
-                        onStarted = {
-                            runOnUiThread {
-                                voiceSession.setSpeaking()
-                            }
-                        },
-                        onFinished = {
-                            runOnUiThread {
-                                voiceSession.resumeListening()
-                            }
-                        }
+                    speakInVoiceMode(
+                        response
                     )
-                }
 
-            } else {
+                } else {
 
-                runOnUiThread {
+                    // Normal text/chat mode me bhi JARVIS response
+                    // voice me suna sakta hai.
                     tts.speak(response)
                 }
             }
         }
 
         // =====================================================
-        // SEND MESSAGE
+        // SEND BUTTON
         // =====================================================
 
-        send.setOnClickListener {
+        sendButton.setOnClickListener {
 
-            val text = messageInput
-                .text
-                .toString()
-                .trim()
+            val text =
+                messageInput.text
+                    .toString()
+                    .trim()
 
             if (text.isNotBlank()) {
 
@@ -193,15 +224,17 @@ class MainActivity : ComponentActivity() {
         // =====================================================
         // MICROPHONE
         //
-        // ONE TAP = VOICE MODE ON
-        // NEXT TAP = VOICE MODE OFF
+        // ONE TAP  = ON
+        // NEXT TAP = OFF
         // =====================================================
 
         micButton.setOnClickListener {
 
             if (!PermissionHelper.hasAudioPermission(this)) {
 
-                PermissionHelper.requestAudioPermission(this)
+                PermissionHelper.requestAudioPermission(
+                    this
+                )
 
                 return@setOnClickListener
             }
@@ -359,7 +392,7 @@ class MainActivity : ComponentActivity() {
 
                 if (state.messages.isNotEmpty()) {
 
-                    rv.scrollToPosition(
+                    recyclerView.scrollToPosition(
                         state.messages.lastIndex
                     )
                 }
@@ -375,12 +408,21 @@ class MainActivity : ComponentActivity() {
 
         if (!PermissionHelper.hasAudioPermission(this)) {
 
-            PermissionHelper.requestAudioPermission(this)
+            PermissionHelper.requestAudioPermission(
+                this
+            )
 
             return
         }
 
+        /*
+         * Previous TTS ko stop karke fresh voice session start.
+         */
+        tts.stop()
+
         voiceSession.start()
+
+        updateMicState(true)
 
         Toast.makeText(
             this,
@@ -397,7 +439,11 @@ class MainActivity : ComponentActivity() {
 
         voiceSession.stop()
 
+        speech.stop()
+
         tts.stop()
+
+        updateMicState(false)
 
         Toast.makeText(
             this,
@@ -407,10 +453,64 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
+    // SPEAK IN VOICE MODE
+    // =========================================================
+
+    private fun speakInVoiceMode(
+        text: String
+    ) {
+
+        if (!voiceSession.isActive()) {
+            return
+        }
+
+        voiceSession.setSpeaking()
+
+        /*
+         * Recognition ko TTS ke dauran active nahi rehna chahiye.
+         */
+        speech.stop()
+
+        tts.speak(
+            text,
+
+            onStarted = {
+
+                runOnUiThread {
+
+                    if (
+                        voiceSession.isActive()
+                    ) {
+                        voiceSession.setSpeaking()
+                    }
+                }
+            },
+
+            onFinished = {
+
+                runOnUiThread {
+
+                    if (
+                        voiceSession.isActive()
+                    ) {
+                        /*
+                         * JARVIS bolne ke baad automatically
+                         * next user input ke liye listen karega.
+                         */
+                        voiceSession.resumeListening()
+                    }
+                }
+            }
+        )
+    }
+
+    // =========================================================
     // MIC UI
     // =========================================================
 
-    private fun updateMicState(active: Boolean) {
+    private fun updateMicState(
+        active: Boolean
+    ) {
 
         if (active) {
 
@@ -430,22 +530,35 @@ class MainActivity : ComponentActivity() {
         command: String
     ) {
 
-        val normalized = command
-            .lowercase(Locale.getDefault())
-            .replace("hey jarvis", "")
-            .replace("hey, jarvis", "")
-            .replace("jarvis", "")
-            .trim()
+        val normalized =
+            command
+                .lowercase(
+                    Locale.getDefault()
+                )
+                .replace(
+                    "hey jarvis",
+                    ""
+                )
+                .replace(
+                    "hey, jarvis",
+                    ""
+                )
+                .replace(
+                    "jarvis",
+                    ""
+                )
+                .trim()
+
+        // -----------------------------------------------------
+        // Only wake phrase / "Jarvis"
+        // -----------------------------------------------------
 
         if (normalized.isBlank()) {
 
             if (voiceSession.isActive()) {
 
-                tts.speak(
-                    "Yes, boss. Aaj kya karna hai?",
-                    onFinished = {
-                        voiceSession.resumeListening()
-                    }
+                speakInVoiceMode(
+                    "Yes, boss. Aaj kya karna hai?"
                 )
             }
 
@@ -534,6 +647,7 @@ class MainActivity : ComponentActivity() {
         // =====================================================
 
         if (voiceSession.isActive()) {
+
             voiceSession.setProcessing()
         }
 
@@ -544,7 +658,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // VOICE COMMAND RESULT
+    // LOCAL COMMAND RESULT → TTS
     // =========================================================
 
     private fun speakCommandResult(
@@ -558,20 +672,8 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        voiceSession.setSpeaking()
-
-        tts.speak(
-            text,
-            onStarted = {
-                runOnUiThread {
-                    voiceSession.setSpeaking()
-                }
-            },
-            onFinished = {
-                runOnUiThread {
-                    voiceSession.resumeListening()
-                }
-            }
+        speakInVoiceMode(
+            text
         )
     }
 
@@ -597,7 +699,9 @@ class MainActivity : ComponentActivity() {
 
         val input = EditText(this)
 
-        input.hint = "Paste Gemini API key"
+        input.hint =
+            "Paste Gemini API key"
+
         input.setSingleLine(true)
 
         input.setText(
@@ -661,7 +765,9 @@ class MainActivity : ComponentActivity() {
 
         val input = EditText(this)
 
-        input.hint = "Search the web"
+        input.hint =
+            "Search the web"
+
         input.setSingleLine(true)
 
         AlertDialog.Builder(this)
@@ -685,7 +791,7 @@ class MainActivity : ComponentActivity() {
 
                     openUrl(
                         "https://www.google.com/search?q=" +
-                                Uri.encode(query)
+                            Uri.encode(query)
                     )
                 }
             }
@@ -876,9 +982,9 @@ class MainActivity : ComponentActivity() {
 
             .setMessage(
                 "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎\n\n" +
-                        "Personal AI Assistant\n\n" +
-                        "Voice • AI • Tools • Automation\n\n" +
-                        "Developed By 𝑵𝒂𝒆𝒆𝒎"
+                    "Personal AI Assistant\n\n" +
+                    "Voice • AI • Tools • Automation\n\n" +
+                    "Developed By 𝑵𝒂𝒆𝒆𝒎"
             )
 
             .setPositiveButton(
@@ -909,7 +1015,7 @@ class MainActivity : ComponentActivity() {
 
             .setMessage(
                 "Developed By 𝑵𝒂𝒆𝒆𝒎\n\n" +
-                        "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎"
+                    "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎"
             )
 
             .setItems(
