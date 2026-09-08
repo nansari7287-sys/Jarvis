@@ -29,7 +29,7 @@ class WakeWordEngine(
             running.set(true)
         } catch (e: Exception) {
             running.set(false)
-            onError("Wake word engine start failed.")
+            onError("Hey Jarvis engine start failed.")
         }
     }
 
@@ -37,67 +37,43 @@ class WakeWordEngine(
         running.set(false)
     }
 
-    fun isRunning(): Boolean {
-        return running.get()
-    }
+    fun isRunning(): Boolean = running.get()
 
-    /**
-     * Sends one audio frame to the wake-word model.
-     *
-     * This method is intentionally kept separate from microphone capture.
-     * AudioCaptureManager will provide PCM audio frames later.
-     */
     fun processAudio(pcmData: FloatArray) {
         if (!running.get()) return
 
         val model = interpreter ?: return
 
         try {
-            /*
-             * The exact input/output tensor shape of the supplied
-             * wake-word model must be verified before inference.
-             *
-             * We therefore do not make assumptions about the model
-             * tensor shape here.
-             */
             val inputTensor = model.getInputTensor(0)
-            val inputShape = inputTensor.shape()
 
-            if (inputShape.isEmpty()) return
+            // Model format must be verified before real inference.
+            // Do not assume audio tensor shape.
+            if (inputTensor.shape().isEmpty()) return
 
-            // Actual model-specific preprocessing/inference will be
-            // connected after the model tensor specification is verified.
-        } catch (e: Exception) {
-            onError("Wake word processing failed.")
+        } catch (_: Exception) {
+            onError("Hey Jarvis audio processing failed.")
         }
     }
 
     private fun loadModel() {
-        val assetManager = context.assets
+        val file = File(context.cacheDir, MODEL_NAME)
 
-        val tempFile = File(
-            context.cacheDir,
-            MODEL_NAME
-        )
-
-        if (!tempFile.exists()) {
-            assetManager.open(MODEL_NAME).use { input ->
-                FileOutputStream(tempFile).use { output ->
+        if (!file.exists()) {
+            context.assets.open(MODEL_NAME).use { input ->
+                FileOutputStream(file).use { output ->
                     input.copyTo(output)
                 }
             }
         }
 
-        modelFile = tempFile
+        modelFile = file
 
         val options = Interpreter.Options().apply {
             setNumThreads(2)
         }
 
-        interpreter = Interpreter(
-            tempFile,
-            options
-        )
+        interpreter = Interpreter(file, options)
     }
 
     fun release() {
