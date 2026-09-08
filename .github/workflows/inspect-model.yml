@@ -1,0 +1,76 @@
+name: Inspect Hey Jarvis Model
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install TensorFlow
+        run: |
+          python -m pip install --upgrade pip
+          pip install tensorflow==2.19.0
+
+      - name: Inspect TFLite model
+        run: |
+          python - <<'PY'
+          import tensorflow as tf
+          import os
+
+          model_path = "app/src/main/assets/hey_jarvis_v0.1.tflite"
+
+          print("=" * 60)
+          print("JARVIS WAKE WORD MODEL INSPECTION")
+          print("=" * 60)
+          print(f"Model: {model_path}")
+          print(f"Exists: {os.path.exists(model_path)}")
+
+          if not os.path.exists(model_path):
+              raise FileNotFoundError(
+                  f"Model not found: {model_path}"
+              )
+
+          interpreter = tf.lite.Interpreter(
+              model_path=model_path
+          )
+
+          interpreter.allocate_tensors()
+
+          print("\nINPUT TENSORS")
+          print("-" * 60)
+
+          for tensor in interpreter.get_input_details():
+              print("Name:", tensor["name"])
+              print("Shape:", tensor["shape"])
+              print("Shape Signature:", tensor["shape_signature"])
+              print("DType:", tensor["dtype"])
+              print("Quantization:", tensor["quantization"])
+
+          print("\nOUTPUT TENSORS")
+          print("-" * 60)
+
+          for tensor in interpreter.get_output_details():
+              print("Name:", tensor["name"])
+              print("Shape:", tensor["shape"])
+              print("Shape Signature:", tensor["shape_signature"])
+              print("DType:", tensor["dtype"])
+              print("Quantization:", tensor["quantization"])
+
+          print("\nMODEL DETAILS")
+          print("-" * 60)
+          print("Tensor count:", len(interpreter.get_tensor_details()))
+
+          print("\n" + "=" * 60)
+          print("INSPECTION COMPLETE")
+          print("=" * 60)
+          PY
