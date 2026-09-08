@@ -8,7 +8,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.example.jarvis.voice.WakeWordManager
+import com.example.jarvis.voice.BackgroundVoiceController
+import com.example.jarvis.voice.VoiceState
 
 class VoiceService : Service() {
 
@@ -38,18 +39,43 @@ class VoiceService : Service() {
         private const val NOTIFICATION_ID = 1001
     }
 
-    private lateinit var wakeWordManager: WakeWordManager
-
     private var serviceActive = false
     private var wakeModeEnabled = false
+
+    private lateinit var voiceController:
+            BackgroundVoiceController
 
     override fun onCreate() {
         super.onCreate()
 
-        wakeWordManager = WakeWordManager()
-
         createNotificationChannel()
+
+        voiceController =
+            BackgroundVoiceController(
+
+                context = applicationContext,
+
+                onStateChanged = { state ->
+                    handleVoiceState(state)
+                },
+
+                onWakeDetected = {
+                    handleWakeDetected()
+                },
+
+                onCommand = { command ->
+                    handleRecognizedCommand(command)
+                },
+
+                onError = { error ->
+                    handleVoiceError(error)
+                }
+            )
     }
+
+    // =========================================================
+    // SERVICE COMMANDS
+    // =========================================================
 
     override fun onStartCommand(
         intent: Intent?,
@@ -76,13 +102,19 @@ class VoiceService : Service() {
             }
 
             ACTION_VOICE_COMMAND -> {
+
                 val command =
-                    intent.getStringExtra(EXTRA_COMMAND)
+                    intent
+                        .getStringExtra(
+                            EXTRA_COMMAND
+                        )
                         ?.trim()
                         .orEmpty()
 
                 if (command.isNotBlank()) {
-                    handleVoiceCommand(command)
+                    handleRecognizedCommand(
+                        command
+                    )
                 }
             }
 
@@ -98,31 +130,31 @@ class VoiceService : Service() {
         }
     }
 
-    /**
-     * Start the foreground voice service.
-     *
-     * The service itself does not secretly activate the microphone.
-     * Actual microphone/wake listening will be connected separately.
-     */
+    // =========================================================
+    // START SERVICE
+    // =========================================================
+
     private fun startVoiceService() {
 
-        if (!serviceActive) {
-            startVoiceForeground()
-            serviceActive = true
-        } else {
-            updateNotification(
-                if (wakeModeEnabled) {
-                    "Hey Jarvis wake mode is active"
-                } else {
-                    "JARVIS voice service is active"
-                }
-            )
-        }
+        startVoiceForeground()
+
+        serviceActive = true
+
+        voiceController.start()
+
+        updateNotification(
+            if (wakeModeEnabled) {
+                "Hey Jarvis wake mode is active"
+            } else {
+                "JARVIS voice service is active"
+            }
+        )
     }
 
-    /**
-     * Enable the user's Voice Wake Mode.
-     */
+    // =========================================================
+    // ENABLE WAKE MODE
+    // =========================================================
+
     private fun enableWakeMode() {
 
         startVoiceForeground()
@@ -130,88 +162,193 @@ class VoiceService : Service() {
         serviceActive = true
         wakeModeEnabled = true
 
-        wakeWordManager.setEnabled(true)
+        voiceController.start()
+
+        voiceController.enableWakeMode()
 
         updateNotification(
             "Hey Jarvis wake mode is active"
         )
-
-        /*
-         * Actual wake-word/audio listener will be attached
-         * here in the next integration step.
-         */
     }
 
-    /**
-     * Disable Voice Wake Mode.
-     *
-     * The service is stopped completely because there is no
-     * reason to keep a microphone foreground service alive
-     * when the user has disabled background wake.
-     */
+    // =========================================================
+    // DISABLE WAKE MODE
+    // =========================================================
+
     private fun disableWakeMode() {
 
         wakeModeEnabled = false
 
-        wakeWordManager.setEnabled(false)
+        voiceController.disableWakeMode()
 
         stopVoiceService()
     }
 
-    /**
-     * Receive a recognized voice command.
-     *
-     * MainActivity / voice controller will consume this
-     * through the command-routing layer.
-     */
-    private fun handleVoiceCommand(command: String) {
+    // =========================================================
+    // WAKE DETECTED
+    // =========================================================
+
+    private fun handleWakeDetected() {
 
         if (!serviceActive) {
             return
         }
 
-        val cleanCommand = command.trim()
+        if (!wakeModeEnabled) {
+            return
+        }
+
+        updateNotification(
+            "JARVIS is listening..."
+        )
+
+        /*
+         * The controller now changes to LISTENING
+         * and waits for the user's command.
+         */
+    }
+
+    // =========================================================
+    // VOICE COMMAND
+    // =========================================================
+
+    private fun handleRecognizedCommand(
+        command: String
+    ) {
+
+        if (!serviceActive) {
+            return
+        }
+
+        if (!wakeModeEnabled) {
+            return
+        }
+
+        val cleanCommand =
+            command
+                .trim()
 
         if (cleanCommand.isBlank()) {
             return
         }
 
-        val commandIntent = Intent(
-            this,
-            MainActivity::class.java
-        ).apply {
+        voiceController.setProcessing()
 
-            action = ACTION_VOICE_COMMAND
+        updateNotification(
+            "JARVIS is processing..."
+        )
 
-            putExtra(
-                EXTRA_COMMAND,
-                cleanCommand
-            )
+        val commandIntent =
+            Intent(
+                this,
+                MainActivity::class.java
+            ).apply {
 
-            flags =
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+                action =
+                    ACTION_VOICE_COMMAND
+
+                putExtra(
+                    EXTRA_COMMAND,
+                    cleanCommand
+                )
+
+                flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
 
         try {
-            startActivity(commandIntent)
+
+            startActivity(
+                commandIntent
+            )
+
         } catch (_: Exception) {
+
             /*
-             * Do not crash the foreground service if Android
-             * refuses an activity launch.
+             * Keep the foreground service alive
+             * even if Android does not allow the
+             * Activity launch at that moment.
              */
+
+            voiceController.speechFinished()
         }
     }
 
-    /**
-     * Start microphone-type foreground service.
-     */
+    // =========================================================
+    // VOICE STATE
+    // =========================================================
+
+    private fun handleVoiceState(
+        state: VoiceState
+    ) {
+
+        if (!serviceActive) {
+            return
+        }
+
+        val notificationText =
+            when (state) {
+
+                VoiceState.IDLE ->
+                    "JARVIS voice wake is OFF"
+
+                VoiceState.STANDBY ->
+                    "Say Hey Jarvis"
+
+                VoiceState.LISTENING ->
+                    "JARVIS is listening..."
+
+                VoiceState.THINKING ->
+                    "JARVIS is thinking..."
+
+                VoiceState.EXECUTING ->
+                    "JARVIS is executing..."
+
+                VoiceState.SPEAKING ->
+                    "JARVIS is speaking..."
+            }
+
+        updateNotification(
+            notificationText
+        )
+    }
+
+    // =========================================================
+    // VOICE ERROR
+    // =========================================================
+
+    private fun handleVoiceError(
+        error: String
+    ) {
+
+        if (!serviceActive) {
+            return
+        }
+
+        if (!wakeModeEnabled) {
+            return
+        }
+
+        updateNotification(
+            "JARVIS voice standby"
+        )
+    }
+
+    // =========================================================
+    // FOREGROUND SERVICE
+    // =========================================================
+
     private fun startVoiceForeground() {
 
-        val notification = createNotification()
+        val notification =
+            createNotification()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.Q
+        ) {
 
             startForeground(
                 NOTIFICATION_ID,
@@ -230,20 +367,23 @@ class VoiceService : Service() {
         }
     }
 
-    /**
-     * Build persistent foreground-service notification.
-     */
-    private fun createNotification(): Notification {
+    // =========================================================
+    // NOTIFICATION
+    // =========================================================
 
-        val openIntent = Intent(
-            this,
-            MainActivity::class.java
-        ).apply {
+    private fun createNotification():
+            Notification {
 
-            flags =
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+        val openIntent =
+            Intent(
+                this,
+                MainActivity::class.java
+            ).apply {
+
+                flags =
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
 
         val pendingIntent =
             android.app.PendingIntent.getActivity(
@@ -254,9 +394,9 @@ class VoiceService : Service() {
                     pendingIntentFlags()
             )
 
-        val notificationText =
+        val text =
             if (wakeModeEnabled) {
-                "Hey Jarvis wake mode is active"
+                "Say Hey Jarvis"
             } else {
                 "JARVIS voice service is active"
             }
@@ -269,7 +409,7 @@ class VoiceService : Service() {
                 "JARVIS Voice Wake"
             )
             .setContentText(
-                notificationText
+                text
             )
             .setSmallIcon(
                 android.R.drawable.ic_btn_speak_now
@@ -287,9 +427,6 @@ class VoiceService : Service() {
             .build()
     }
 
-    /**
-     * Update the existing notification.
-     */
     private fun updateNotification(
         text: String
     ) {
@@ -299,15 +436,16 @@ class VoiceService : Service() {
                 NotificationManager::class.java
             )
 
-        val openIntent = Intent(
-            this,
-            MainActivity::class.java
-        ).apply {
+        val openIntent =
+            Intent(
+                this,
+                MainActivity::class.java
+            ).apply {
 
-            flags =
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+                flags =
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
 
         val pendingIntent =
             android.app.PendingIntent.getActivity(
@@ -353,7 +491,8 @@ class VoiceService : Service() {
     private fun pendingIntentFlags(): Int {
 
         return if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.M
         ) {
             android.app.PendingIntent.FLAG_IMMUTABLE
         } else {
@@ -361,17 +500,24 @@ class VoiceService : Service() {
         }
     }
 
-    /**
-     * Stop everything.
-     */
+    // =========================================================
+    // STOP SERVICE
+    // =========================================================
+
     private fun stopVoiceService() {
 
-        wakeModeEnabled = false
         serviceActive = false
+        wakeModeEnabled = false
 
-        wakeWordManager.setEnabled(false)
+        try {
+            voiceController.stop()
+        } catch (_: Exception) {
+        }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.N
+        ) {
 
             stopForeground(
                 STOP_FOREGROUND_REMOVE
@@ -386,34 +532,45 @@ class VoiceService : Service() {
         stopSelf()
     }
 
-    /**
-     * Notification channel for Android 8+.
-     */
+    // =========================================================
+    // NOTIFICATION CHANNEL
+    // =========================================================
+
     private fun createNotificationChannel() {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.O
+        ) {
             return
         }
 
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "JARVIS Voice Assistant",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
+        val channel =
+            NotificationChannel(
+                CHANNEL_ID,
+                "JARVIS Voice Assistant",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
 
-            description =
-                "JARVIS background voice assistant"
+                description =
+                    "JARVIS background voice assistant"
 
-            setShowBadge(false)
-        }
+                setShowBadge(false)
+            }
 
         val manager =
             getSystemService(
                 NotificationManager::class.java
             )
 
-        manager.createNotificationChannel(channel)
+        manager.createNotificationChannel(
+            channel
+        )
     }
+
+    // =========================================================
+    // BIND
+    // =========================================================
 
     override fun onBind(
         intent: Intent?
@@ -421,14 +578,24 @@ class VoiceService : Service() {
         return null
     }
 
+    // =========================================================
+    // DESTROY
+    // =========================================================
+
     override fun onDestroy() {
 
-        wakeModeEnabled = false
         serviceActive = false
+        wakeModeEnabled = false
 
-        wakeWordManager.setEnabled(false)
+        try {
+            voiceController.destroy()
+        } catch (_: Exception) {
+        }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.N
+        ) {
 
             stopForeground(
                 STOP_FOREGROUND_REMOVE
