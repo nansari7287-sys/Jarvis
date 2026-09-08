@@ -31,14 +31,16 @@ class GeminiClient(
                     "${JarvisConfig.DEFAULT_MODEL}:generateContent?key=${d.apiKey}"
 
             val systemInstruction = """
-                You are JARVIS, a fast Android personal assistant.
+                You are JARVIS, a fast, intelligent Android personal assistant.
 
-                Understand the user's natural language command.
+                You communicate naturally with the user.
 
-                If the user is asking JARVIS to perform an Android action,
-                return ONLY valid JSON. Do not use markdown or ```.
+                IMPORTANT:
+                The application can execute Android actions using structured
+                commands.
 
-                JSON format:
+                If the user's request requires controlling the Android device,
+                return ONLY one valid JSON object using this format:
 
                 {
                   "action": "ACTION_NAME",
@@ -48,24 +50,8 @@ class GeminiClient(
                   "requiresConfirmation": false
                 }
 
-                For multi-step commands use:
+                Supported actions:
 
-                {
-                  "action": "AUTOMATION",
-                  "target": "TARGET",
-                  "value": null,
-                  "steps": [
-                    {
-                      "action": "ACTION_NAME",
-                      "target": "TARGET",
-                      "value": "VALUE",
-                      "requiresConfirmation": false
-                    }
-                  ],
-                  "requiresConfirmation": false
-                }
-
-                Supported actions include:
                 OPEN_APP
                 OPEN_URL
                 WEB_SEARCH
@@ -81,6 +67,23 @@ class GeminiClient(
                 TYPE
                 WAIT
                 NO_ACTION
+
+                For multiple actions, use:
+
+                {
+                  "action": "AUTOMATION",
+                  "target": null,
+                  "value": null,
+                  "steps": [
+                    {
+                      "action": "ACTION_NAME",
+                      "target": "TARGET",
+                      "value": "VALUE",
+                      "requiresConfirmation": false
+                    }
+                  ],
+                  "requiresConfirmation": false
+                }
 
                 Examples:
 
@@ -133,92 +136,124 @@ class GeminiClient(
                   "requiresConfirmation": false
                 }
 
+                IMPORTANT SAFETY RULE:
+
+                Actions that send messages, publish/post content, delete
+                content, make purchases, change important account settings,
+                or otherwise create an important external effect must set:
+
+                "requiresConfirmation": true
+
                 Do not invent unsupported actions.
 
-                For actions that can send, publish, post, delete,
-                make purchases, or otherwise cause an important external
-                effect, set requiresConfirmation to true.
+                If the user is simply asking a question, having a conversation,
+                asking for an explanation, greeting you, or talking casually,
+                DO NOT return JSON.
 
-                If the user is asking a normal question rather than asking
-                JARVIS to control the device, respond normally in plain text.
+                For normal conversation, return a natural plain-text answer.
+
+                Be concise, helpful and conversational.
+
+                The user may speak Hindi, Hinglish or English.
+                Understand all three naturally.
             """.trimIndent()
 
-            val prompt = systemInstruction +
-                "\n\nUSER REQUEST:\n" +
-                d.prompt
+            val prompt =
+                systemInstruction +
+                    "\n\nUSER REQUEST:\n" +
+                    d.prompt
 
-            val body = JSONObject()
-                .put(
-                    "contents",
-                    JSONArray().put(
-                        JSONObject().put(
-                            "parts",
-                            JSONArray().put(
-                                JSONObject().put(
-                                    "text",
-                                    prompt
-                                )
-                            )
-                        )
-                    )
-                )
-                .put(
-                    "generationConfig",
+            val contents =
+                JSONArray().put(
                     JSONObject()
                         .put(
-                            "temperature",
-                            JarvisConfig.TEMPERATURE
+                            "role",
+                            "user"
                         )
                         .put(
-                            "maxOutputTokens",
-                            JarvisConfig.MAX_OUTPUT_TOKENS
+                            "parts",
+                            JSONArray().put(
+                                JSONObject()
+                                    .put(
+                                        "text",
+                                        prompt
+                                    )
+                            )
                         )
-                        .put(
-                            "responseMimeType",
-                            "application/json"
-                        )
-                )
-                .toString()
-                .toRequestBody(
-                    "application/json".toMediaType()
                 )
 
-            val request = Request.Builder()
-                .url(url)
-                .post(body)
-                .addHeader(
-                    "Content-Type",
-                    "application/json"
-                )
-                .build()
+            val generationConfig =
+                JSONObject()
+                    .put(
+                        "temperature",
+                        JarvisConfig.TEMPERATURE
+                    )
+                    .put(
+                        "maxOutputTokens",
+                        JarvisConfig.MAX_OUTPUT_TOKENS
+                    )
+
+            val body =
+                JSONObject()
+                    .put(
+                        "contents",
+                        contents
+                    )
+                    .put(
+                        "generationConfig",
+                        generationConfig
+                    )
+                    .toString()
+                    .toRequestBody(
+                        "application/json".toMediaType()
+                    )
+
+            val request =
+                Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .addHeader(
+                        "Content-Type",
+                        "application/json"
+                    )
+                    .build()
 
             client.newCall(request).execute().use { response ->
 
-                val raw = response.body?.string().orEmpty()
+                val raw =
+                    response.body
+                        ?.string()
+                        .orEmpty()
 
                 if (!response.isSuccessful) {
+
+                    val errorMessage =
+                        extractGeminiError(raw)
+
                     return@withContext ApiResult.Error(
-                        "Gemini request failed (${response.code})."
+                        "Gemini request failed (${response.code}): $errorMessage"
                     )
                 }
 
-                val text = JSONObject(raw)
-                    .optJSONArray("candidates")
-                    ?.optJSONObject(0)
-                    ?.optJSONObject("content")
-                    ?.optJSONArray("parts")
-                    ?.optJSONObject(0)
-                    ?.optString("text")
-                    .orEmpty()
-                    .trim()
+                val text =
+                    JSONObject(raw)
+                        .optJSONArray("candidates")
+                        ?.optJSONObject(0)
+                        ?.optJSONObject("content")
+                        ?.optJSONArray("parts")
+                        ?.optJSONObject(0)
+                        ?.optString("text")
+                        .orEmpty()
+                        .trim()
 
                 if (text.isBlank()) {
+
                     return@withContext ApiResult.Error(
                         "Gemini returned an empty response."
                     )
                 }
 
-                ApiResult.Success(
+                return@withContext ApiResult.Success(
                     AIResponse(
                         text = text,
                         raw = raw
@@ -228,10 +263,46 @@ class GeminiClient(
 
         } catch (e: Exception) {
 
-            ApiResult.Error(
-                "Network error: ${e.message}",
+            return@withContext ApiResult.Error(
+                "Network error: ${
+                    e.message ?: "Unknown network error"
+                }",
                 e
             )
+        }
+    }
+
+    private fun extractGeminiError(
+        raw: String
+    ): String {
+
+        if (raw.isBlank()) {
+            return "No error details returned by Gemini."
+        }
+
+        return try {
+
+            val json =
+                JSONObject(raw)
+
+            val error =
+                json.optJSONObject("error")
+
+            val message =
+                error
+                    ?.optString("message")
+                    ?.trim()
+                    .orEmpty()
+
+            if (message.isNotBlank()) {
+                message
+            } else {
+                raw.take(500)
+            }
+
+        } catch (_: Exception) {
+
+            raw.take(500)
         }
     }
 }
