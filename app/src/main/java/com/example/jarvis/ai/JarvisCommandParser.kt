@@ -6,11 +6,12 @@ import org.json.JSONObject
 /**
  * Gemini response ko JarvisCommand me convert karta hai.
  *
- * Supported response formats:
- * 1. Normal JSON
- * 2. ```json ... ```
- * 3. ``` ... ```
- * 4. JSON ke around extra text
+ * Supported:
+ * - Normal JSON
+ * - ```json ... ```
+ * - ``` ... ```
+ * - JSON ke around extra text
+ * - Multi-step AUTOMATION
  */
 object JarvisCommandParser {
 
@@ -24,6 +25,7 @@ object JarvisCommandParser {
         "BACK",
         "HOME",
         "RECENTS",
+        "RECENT_APPS",
         "SCROLL_UP",
         "SCROLL_DOWN",
         "CLICK",
@@ -33,48 +35,81 @@ object JarvisCommandParser {
         "NO_ACTION"
     )
 
-    fun parse(response: String): JarvisCommand? {
+    fun parse(
+        response: String
+    ): JarvisCommand? {
+
         if (response.isBlank()) {
             return null
         }
 
         return try {
-            val jsonText = cleanJson(response)
+
+            val jsonText =
+                cleanJson(response)
 
             if (jsonText.isBlank()) {
                 return null
             }
 
-            val json = JSONObject(jsonText)
+            val json =
+                JSONObject(jsonText)
 
-            val action = json
-                .optString("action", "")
-                .trim()
-                .uppercase()
+            val action =
+                json.optString(
+                    "action",
+                    ""
+                )
+                    .trim()
+                    .uppercase()
 
             if (action.isBlank()) {
                 return null
             }
 
-            // Unknown action ko execute mat karo.
             if (action !in supportedActions) {
                 return null
             }
 
-            JarvisCommand(
-                action = action,
-                target = json.optNullableString("target"),
-                value = json.optNullableString("value"),
-                steps = parseSteps(json.optJSONArray("steps")),
-                requiresConfirmation = json.optBoolean(
-                    "requiresConfirmation",
-                    false
+            val steps =
+                parseSteps(
+                    json.optJSONArray("steps")
                 )
+
+            // AUTOMATION ko steps ke bina execute
+            // nahi karna chahiye.
+            if (
+                action == "AUTOMATION" &&
+                steps.isEmpty()
+            ) {
+                return null
+            }
+
+            JarvisCommand(
+                action = normalizeAction(action),
+                target = json.optNullableString(
+                    "target"
+                ),
+                value = json.optNullableString(
+                    "value"
+                ),
+                steps = steps,
+                requiresConfirmation =
+                    json.optBoolean(
+                        "requiresConfirmation",
+                        false
+                    )
             )
+
         } catch (_: Exception) {
+
             null
         }
     }
+
+    // =========================================================
+    // PARSE AUTOMATION STEPS
+    // =========================================================
 
     private fun parseSteps(
         array: JSONArray?
@@ -84,106 +119,195 @@ object JarvisCommandParser {
             return emptyList()
         }
 
-        val result = mutableListOf<JarvisStep>()
+        val result =
+            mutableListOf<JarvisStep>()
 
         for (i in 0 until array.length()) {
 
             try {
-                val item = array.optJSONObject(i)
-                    ?: continue
 
-                val action = item
-                    .optString("action", "")
-                    .trim()
-                    .uppercase()
+                val item =
+                    array.optJSONObject(i)
+                        ?: continue
 
-                if (action.isBlank()) {
+                val rawAction =
+                    item.optString(
+                        "action",
+                        ""
+                    )
+                        .trim()
+                        .uppercase()
+
+                if (rawAction.isBlank()) {
                     continue
                 }
 
-                // Automation ke andar bhi unknown action allow nahi karna.
-                if (action !in supportedActions) {
+                if (
+                    rawAction !in supportedActions
+                ) {
                     continue
                 }
+
+                // Nested AUTOMATION avoid karo.
+                if (
+                    rawAction == "AUTOMATION"
+                ) {
+                    continue
+                }
+
+                val action =
+                    normalizeAction(
+                        rawAction
+                    )
 
                 result.add(
                     JarvisStep(
                         action = action,
-                        target = item.optNullableString("target"),
-                        value = item.optNullableString("value"),
-                        requiresConfirmation = item.optBoolean(
-                            "requiresConfirmation",
-                            false
-                        )
+                        target =
+                            item.optNullableString(
+                                "target"
+                            ),
+                        value =
+                            item.optNullableString(
+                                "value"
+                            ),
+                        requiresConfirmation =
+                            item.optBoolean(
+                                "requiresConfirmation",
+                                false
+                            )
                     )
                 )
 
             } catch (_: Exception) {
-                // Invalid step ko safely ignore karo.
+                // Invalid step safely ignore.
             }
         }
 
         return result
     }
 
-    /**
-     * Gemini response se actual JSON object nikalta hai.
-     */
-    private fun cleanJson(response: String): String {
+    // =========================================================
+    // NORMALIZE ACTION
+    // =========================================================
 
-        var text = response.trim()
+    private fun normalizeAction(
+        action: String
+    ): String {
 
-        // Markdown code fences remove.
-        text = text
-            .replaceFirst(
-                Regex("^```json\\s*", RegexOption.IGNORE_CASE),
-                ""
-            )
-            .replaceFirst(
-                Regex("^```\\s*"),
-                ""
-            )
-            .replaceFirst(
-                Regex("\\s*```$"),
-                ""
-            )
-            .trim()
+        return when (
+            action.trim().uppercase()
+        ) {
 
-        // Agar response me JSON ke bahar extra text hai,
-        // to first { se last } tak JSON extract karo.
-        val firstObject = text.indexOf('{')
-        val lastObject = text.lastIndexOf('}')
+            "RECENT_APPS" ->
+                "RECENTS"
+
+            else ->
+                action.trim().uppercase()
+        }
+    }
+
+    // =========================================================
+    // CLEAN JSON
+    // =========================================================
+
+    private fun cleanJson(
+        response: String
+    ): String {
+
+        var text =
+            response.trim()
+
+        // -----------------------------------------------------
+        // Markdown JSON fence
+        // -----------------------------------------------------
+
+        text = text.replaceFirst(
+            Regex(
+                "^```json\\s*",
+                RegexOption.IGNORE_CASE
+            ),
+            ""
+        )
+
+        text = text.replaceFirst(
+            Regex(
+                "^```\\s*"
+            ),
+            ""
+        )
+
+        text = text.replaceFirst(
+            Regex(
+                "\\s*```$"
+            ),
+            ""
+        )
+
+        text =
+            text.trim()
+
+        // -----------------------------------------------------
+        // Direct JSON
+        // -----------------------------------------------------
+
+        if (
+            text.startsWith("{") &&
+            text.endsWith("}")
+        ) {
+            return text
+        }
+
+        // -----------------------------------------------------
+        // JSON surrounded by text
+        // -----------------------------------------------------
+
+        val firstObject =
+            text.indexOf('{')
+
+        val lastObject =
+            text.lastIndexOf('}')
 
         if (
             firstObject >= 0 &&
             lastObject > firstObject
         ) {
-            text = text.substring(
-                firstObject,
-                lastObject + 1
-            )
+
+            text =
+                text.substring(
+                    firstObject,
+                    lastObject + 1
+                )
         }
 
         return text.trim()
     }
 
-    /**
-     * JSON string ko nullable String me convert karta hai.
-     */
+    // =========================================================
+    // NULLABLE JSON STRING
+    // =========================================================
+
     private fun JSONObject.optNullableString(
         key: String
     ): String? {
 
-        if (!has(key) || isNull(key)) {
+        if (
+            !has(key) ||
+            isNull(key)
+        ) {
             return null
         }
 
-        val value = optString(
-            key,
-            ""
-        ).trim()
+        val value =
+            optString(
+                key,
+                ""
+            )
+                .trim()
 
-        return if (value.isBlank()) {
+        return if (
+            value.isBlank()
+        ) {
             null
         } else {
             value
