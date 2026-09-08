@@ -2,13 +2,17 @@ package com.example.jarvis
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -16,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.jarvis.data.PreferencesManager
 import com.example.jarvis.ui.ChatAdapter
 import com.example.jarvis.ui.MainViewModel
+import com.example.jarvis.ui.VoiceOverlayManager
 import com.example.jarvis.utils.PermissionHelper
 import com.example.jarvis.voice.SpeechRecognizerManager
 import com.example.jarvis.voice.TextToSpeechManager
@@ -36,6 +41,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var micButton: ImageButton
     private lateinit var messageInput: EditText
 
+    private lateinit var voiceOverlay: VoiceOverlayManager
+
     companion object {
 
         private const val INSTAGRAM_URL =
@@ -55,16 +62,19 @@ class MainActivity : ComponentActivity() {
 
         vm = ViewModelProvider(this)[MainViewModel::class.java]
 
-        // CommandExecutor ko Activity lifecycle se independent
-        // application context ke saath initialize karte hain.
         vm.initializeExecutor(this)
 
         prefs = PreferencesManager(this)
 
         speech = SpeechRecognizerManager(this)
+
         tts = TextToSpeechManager(this)
 
-        messageInput = findViewById(R.id.messageInput)
+        voiceOverlay = VoiceOverlayManager(this)
+
+        messageInput = findViewById(
+            R.id.messageInput
+        )
 
         val sendButton = findViewById<ImageButton>(
             R.id.sendButton
@@ -126,18 +136,22 @@ class MainActivity : ComponentActivity() {
 
                         VoiceSessionManager.State.IDLE -> {
                             updateMicState(false)
+                            voiceOverlay.hide()
                         }
 
                         VoiceSessionManager.State.LISTENING -> {
                             updateMicState(true)
+                            voiceOverlay.show()
                         }
 
                         VoiceSessionManager.State.PROCESSING -> {
                             updateMicState(true)
+                            voiceOverlay.show()
                         }
 
                         VoiceSessionManager.State.SPEAKING -> {
                             updateMicState(true)
+                            voiceOverlay.show()
                         }
                     }
                 }
@@ -147,11 +161,6 @@ class MainActivity : ComponentActivity() {
 
                 runOnUiThread {
 
-                    /*
-                     * Continuous mode me temporary speech errors
-                     * ke liye Toast spam nahi karna.
-                     * VoiceSessionManager khud listening resume karta hai.
-                     */
                     if (voiceSession.isActive()) {
 
                         if (
@@ -195,15 +204,15 @@ class MainActivity : ComponentActivity() {
 
                 } else {
 
-                    // Normal text/chat mode me bhi JARVIS response
-                    // voice me suna sakta hai.
-                    tts.speak(response)
+                    tts.speak(
+                        response
+                    )
                 }
             }
         }
 
         // =====================================================
-        // SEND BUTTON
+        // SEND
         // =====================================================
 
         sendButton.setOnClickListener {
@@ -223,9 +232,6 @@ class MainActivity : ComponentActivity() {
 
         // =====================================================
         // MICROPHONE
-        //
-        // ONE TAP  = ON
-        // NEXT TAP = OFF
         // =====================================================
 
         micButton.setOnClickListener {
@@ -401,7 +407,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // START VOICE MODE
+    // START MANUAL VOICE MODE
     // =========================================================
 
     private fun startVoiceMode() {
@@ -415,9 +421,6 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        /*
-         * Previous TTS ko stop karke fresh voice session start.
-         */
         tts.stop()
 
         voiceSession.start()
@@ -432,7 +435,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // STOP VOICE MODE
+    // STOP MANUAL VOICE MODE
     // =========================================================
 
     private fun stopVoiceMode() {
@@ -444,6 +447,8 @@ class MainActivity : ComponentActivity() {
         tts.stop()
 
         updateMicState(false)
+
+        voiceOverlay.hide()
 
         Toast.makeText(
             this,
@@ -466,9 +471,6 @@ class MainActivity : ComponentActivity() {
 
         voiceSession.setSpeaking()
 
-        /*
-         * Recognition ko TTS ke dauran active nahi rehna chahiye.
-         */
         speech.stop()
 
         tts.speak(
@@ -493,10 +495,6 @@ class MainActivity : ComponentActivity() {
                     if (
                         voiceSession.isActive()
                     ) {
-                        /*
-                         * JARVIS bolne ke baad automatically
-                         * next user input ke liye listen karega.
-                         */
                         voiceSession.resumeListening()
                     }
                 }
@@ -512,18 +510,16 @@ class MainActivity : ComponentActivity() {
         active: Boolean
     ) {
 
-        if (active) {
-
-            micButton.alpha = 1.0f
-
-        } else {
-
-            micButton.alpha = 0.65f
-        }
+        micButton.alpha =
+            if (active) {
+                1.0f
+            } else {
+                0.65f
+            }
     }
 
     // =========================================================
-    // JARVIS COMMAND ROUTER
+    // COMMAND ROUTER
     // =========================================================
 
     private fun processUserCommand(
@@ -550,7 +546,7 @@ class MainActivity : ComponentActivity() {
                 .trim()
 
         // -----------------------------------------------------
-        // Only wake phrase / "Jarvis"
+        // WAKE PHRASE ONLY
         // -----------------------------------------------------
 
         if (normalized.isBlank()) {
@@ -643,7 +639,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // COMPLEX COMMAND → GEMINI
+        // GEMINI
         // =====================================================
 
         if (voiceSession.isActive()) {
@@ -658,7 +654,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // LOCAL COMMAND RESULT → TTS
+    // COMMAND RESULT
     // =========================================================
 
     private fun speakCommandResult(
@@ -697,28 +693,95 @@ class MainActivity : ComponentActivity() {
 
     private fun showSettings() {
 
-        val input = EditText(this)
-
-        input.hint =
-            "Paste Gemini API key"
-
-        input.setSingleLine(true)
-
-        input.setText(
-            prefs.getApiKey()
-        )
-
         val container =
-            android.widget.FrameLayout(this)
+            LinearLayout(this).apply {
 
-        container.setPadding(
-            35,
-            10,
-            35,
-            0
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    35,
+                    10,
+                    35,
+                    5
+                )
+            }
+
+        // -----------------------------------------------------
+        // GEMINI API KEY
+        // -----------------------------------------------------
+
+        val apiInput =
+            EditText(this).apply {
+
+                hint =
+                    "Paste Gemini API key"
+
+                setSingleLine(true)
+
+                setText(
+                    prefs.getApiKey()
+                )
+            }
+
+        container.addView(
+            apiInput,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
-        container.addView(input)
+        // -----------------------------------------------------
+        // VOICE WAKE MODE
+        // -----------------------------------------------------
+
+        val wakeSwitch =
+            Switch(this).apply {
+
+                text =
+                    "Voice Wake Mode"
+
+                textSize = 15f
+
+                isChecked =
+                    prefs.isVoiceWakeEnabled()
+
+                setPadding(
+                    0,
+                    25,
+                    0,
+                    10
+                )
+            }
+
+        container.addView(
+            wakeSwitch,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val wakeDescription =
+            android.widget.TextView(this).apply {
+
+                text =
+                    "ON karne par JARVIS background me " +
+                    "\"Hey Jarvis\" wake mode ke liye ready rahega."
+
+                textSize = 12f
+
+                alpha = 0.7f
+            }
+
+        container.addView(
+            wakeDescription,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         AlertDialog.Builder(this)
 
@@ -727,7 +790,7 @@ class MainActivity : ComponentActivity() {
             )
 
             .setMessage(
-                "Configure your Gemini API key"
+                "Configure Gemini and Voice Wake Mode"
             )
 
             .setView(container)
@@ -736,15 +799,37 @@ class MainActivity : ComponentActivity() {
                 "SAVE"
             ) { _, _ ->
 
+                // Save API key
                 prefs.saveApiKey(
-                    input.text
+                    apiInput.text
                         .toString()
                         .trim()
                 )
 
+                // Save Voice Wake Mode
+                val wakeEnabled =
+                    wakeSwitch.isChecked
+
+                prefs.setVoiceWakeEnabled(
+                    wakeEnabled
+                )
+
+                if (wakeEnabled) {
+
+                    startBackgroundVoiceService()
+
+                } else {
+
+                    stopBackgroundVoiceService()
+                }
+
                 Toast.makeText(
                     this,
-                    "API key saved securely",
+                    if (wakeEnabled) {
+                        "Settings saved • Voice Wake ON"
+                    } else {
+                        "Settings saved • Voice Wake OFF"
+                    },
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -755,6 +840,75 @@ class MainActivity : ComponentActivity() {
             )
 
             .show()
+    }
+
+    // =========================================================
+    // BACKGROUND VOICE SERVICE
+    // =========================================================
+
+    private fun startBackgroundVoiceService() {
+
+        if (!PermissionHelper.hasAudioPermission(this)) {
+
+            PermissionHelper.requestAudioPermission(
+                this
+            )
+
+            return
+        }
+
+        val intent =
+            Intent(
+                this,
+                VoiceService::class.java
+            ).apply {
+                action =
+                    VoiceService.ACTION_ENABLE_WAKE
+            }
+
+        try {
+
+            if (Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O
+            ) {
+
+                ContextCompat.startForegroundService(
+                    this,
+                    intent
+                )
+
+            } else {
+
+                startService(intent)
+            }
+
+        } catch (e: Exception) {
+
+            Toast.makeText(
+                this,
+                "Voice Wake service start nahi ho saka.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun stopBackgroundVoiceService() {
+
+        val intent =
+            Intent(
+                this,
+                VoiceService::class.java
+            ).apply {
+                action =
+                    VoiceService.ACTION_DISABLE_WAKE
+            }
+
+        try {
+
+            startService(intent)
+
+        } catch (_: Exception) {
+        }
     }
 
     // =========================================================
@@ -984,7 +1138,7 @@ class MainActivity : ComponentActivity() {
                 "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎\n\n" +
                     "Personal AI Assistant\n\n" +
                     "Voice • AI • Tools • Automation\n\n" +
-                    "Developed By 𝑵𝒂𝒆𝒆𝒎"
+                    "Developed By 𝑵𝒂𝒆𝒎"
             )
 
             .setPositiveButton(
@@ -1014,7 +1168,7 @@ class MainActivity : ComponentActivity() {
             )
 
             .setMessage(
-                "Developed By 𝑵𝒂𝒆𝒆𝒎\n\n" +
+                "Developed By 𝑵𝒂𝒆𝒎\n\n" +
                     "𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎"
             )
 
@@ -1151,6 +1305,28 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
+    // ACTIVITY RESUME
+    // =========================================================
+
+    override fun onResume() {
+        super.onResume()
+
+        /*
+         * If Voice Wake Mode was enabled earlier,
+         * keep the foreground service alive when the
+         * Activity comes back.
+         */
+        if (::prefs.isInitialized &&
+            prefs.isVoiceWakeEnabled()
+        ) {
+
+            if (PermissionHelper.hasAudioPermission(this)) {
+                startBackgroundVoiceService()
+            }
+        }
+    }
+
+    // =========================================================
     // DESTROY
     // =========================================================
 
@@ -1171,8 +1347,18 @@ class MainActivity : ComponentActivity() {
         } catch (_: Exception) {
         }
 
+        try {
+            voiceOverlay.destroy()
+        } catch (_: Exception) {
+        }
+
         vm.setResponseListener(null)
 
+        /*
+         * IMPORTANT:
+         * Voice Wake Mode ON hone par service ko
+         * Activity destroy hone ke time stop nahi karna hai.
+         */
         super.onDestroy()
     }
 }
