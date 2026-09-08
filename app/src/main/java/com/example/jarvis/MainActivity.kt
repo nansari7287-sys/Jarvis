@@ -37,11 +37,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var speech: SpeechRecognizerManager
     private lateinit var tts: TextToSpeechManager
     private lateinit var voiceSession: VoiceSessionManager
+    private lateinit var voiceOverlay: VoiceOverlayManager
 
     private lateinit var micButton: ImageButton
     private lateinit var messageInput: EditText
-
-    private lateinit var voiceOverlay: VoiceOverlayManager
 
     companion object {
 
@@ -60,6 +59,10 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.activity_main)
 
+        // =====================================================
+        // CORE
+        // =====================================================
+
         vm = ViewModelProvider(this)[MainViewModel::class.java]
 
         vm.initializeExecutor(this)
@@ -71,6 +74,10 @@ class MainActivity : ComponentActivity() {
         tts = TextToSpeechManager(this)
 
         voiceOverlay = VoiceOverlayManager(this)
+
+        // =====================================================
+        // VIEWS
+        // =====================================================
 
         messageInput = findViewById(
             R.id.messageInput
@@ -87,6 +94,10 @@ class MainActivity : ComponentActivity() {
         val recyclerView = findViewById<RecyclerView>(
             R.id.messageRecyclerView
         )
+
+        // =====================================================
+        // CHAT
+        // =====================================================
 
         adapter = ChatAdapter()
 
@@ -161,22 +172,22 @@ class MainActivity : ComponentActivity() {
 
                 runOnUiThread {
 
-                    if (voiceSession.isActive()) {
+                    if (
+                        error.contains(
+                            "permission",
+                            ignoreCase = true
+                        )
+                    ) {
 
-                        if (
-                            error.contains(
-                                "permission",
-                                ignoreCase = true
-                            )
-                        ) {
-                            Toast.makeText(
-                                this,
-                                error,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        Toast.makeText(
+                            this,
+                            error,
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                    } else {
+                    } else if (
+                        !voiceSession.isActive()
+                    ) {
 
                         Toast.makeText(
                             this,
@@ -212,7 +223,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // SEND
+        // SEND BUTTON
         // =====================================================
 
         sendButton.setOnClickListener {
@@ -224,7 +235,9 @@ class MainActivity : ComponentActivity() {
 
             if (text.isNotBlank()) {
 
-                processUserCommand(text)
+                processUserCommand(
+                    text
+                )
 
                 messageInput.text.clear()
             }
@@ -385,7 +398,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // UI STATE
+        // CHAT UI STATE
         // =====================================================
 
         lifecycleScope.launch {
@@ -404,6 +417,78 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // =====================================================
+        // VOICE COMMAND FROM VOICE SERVICE
+        // =====================================================
+
+        handleVoiceIntent(
+            intent
+        )
+    }
+
+    // =========================================================
+    // RECEIVE COMMAND FROM VOICE SERVICE
+    // =========================================================
+
+    override fun onNewIntent(
+        intent: Intent
+    ) {
+        super.onNewIntent(intent)
+
+        setIntent(intent)
+
+        handleVoiceIntent(
+            intent
+        )
+    }
+
+    private fun handleVoiceIntent(
+        intent: Intent?
+    ) {
+
+        if (
+            intent?.action !=
+            VoiceService.ACTION_VOICE_COMMAND
+        ) {
+            return
+        }
+
+        val command =
+            intent
+                .getStringExtra(
+                    VoiceService.EXTRA_COMMAND
+                )
+                ?.trim()
+                .orEmpty()
+
+        if (command.isBlank()) {
+            return
+        }
+
+        runOnUiThread {
+
+            messageInput.setText(
+                command
+            )
+
+            messageInput.setSelection(
+                messageInput.length()
+            )
+
+            processUserCommand(
+                command
+            )
+
+            messageInput.text.clear()
+        }
+
+        // Prevent processing the same command again
+        intent.action = null
+
+        intent.removeExtra(
+            VoiceService.EXTRA_COMMAND
+        )
     }
 
     // =========================================================
@@ -458,7 +543,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // SPEAK IN VOICE MODE
+    // VOICE RESPONSE
     // =========================================================
 
     private fun speakInVoiceMode(
@@ -545,9 +630,9 @@ class MainActivity : ComponentActivity() {
                 )
                 .trim()
 
-        // -----------------------------------------------------
+        // =====================================================
         // WAKE PHRASE ONLY
-        // -----------------------------------------------------
+        // =====================================================
 
         if (normalized.isBlank()) {
 
@@ -562,7 +647,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // FAST PATH
+        // FAST COMMANDS
         // =====================================================
 
         when {
@@ -648,7 +733,7 @@ class MainActivity : ComponentActivity() {
         }
 
         vm.send(
-            command,
+            normalized,
             prefs.getApiKey()
         )
     }
@@ -663,7 +748,9 @@ class MainActivity : ComponentActivity() {
 
         if (!voiceSession.isActive()) {
 
-            tts.speak(text)
+            tts.speak(
+                text
+            )
 
             return
         }
@@ -707,9 +794,9 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        // -----------------------------------------------------
+        // =====================================================
         // GEMINI API KEY
-        // -----------------------------------------------------
+        // =====================================================
 
         val apiInput =
             EditText(this).apply {
@@ -732,9 +819,9 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        // -----------------------------------------------------
+        // =====================================================
         // VOICE WAKE MODE
-        // -----------------------------------------------------
+        // =====================================================
 
         val wakeSwitch =
             Switch(this).apply {
@@ -763,12 +850,16 @@ class MainActivity : ComponentActivity() {
             )
         )
 
+        // =====================================================
+        // DESCRIPTION
+        // =====================================================
+
         val wakeDescription =
             android.widget.TextView(this).apply {
 
                 text =
-                    "ON karne par JARVIS background me " +
-                    "\"Hey Jarvis\" wake mode ke liye ready rahega."
+                    "ON karne par JARVIS background voice " +
+                    "wake mode ke liye ready rahega."
 
                 textSize = 12f
 
@@ -783,6 +874,10 @@ class MainActivity : ComponentActivity() {
             )
         )
 
+        // =====================================================
+        // DIALOG
+        // =====================================================
+
         AlertDialog.Builder(this)
 
             .setTitle(
@@ -793,7 +888,9 @@ class MainActivity : ComponentActivity() {
                 "Configure Gemini and Voice Wake Mode"
             )
 
-            .setView(container)
+            .setView(
+                container
+            )
 
             .setPositiveButton(
                 "SAVE"
@@ -806,7 +903,7 @@ class MainActivity : ComponentActivity() {
                         .trim()
                 )
 
-                // Save Voice Wake Mode
+                // Save wake mode
                 val wakeEnabled =
                     wakeSwitch.isChecked
 
@@ -843,7 +940,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // BACKGROUND VOICE SERVICE
+    // START BACKGROUND VOICE SERVICE
     // =========================================================
 
     private fun startBackgroundVoiceService() {
@@ -862,13 +959,15 @@ class MainActivity : ComponentActivity() {
                 this,
                 VoiceService::class.java
             ).apply {
+
                 action =
                     VoiceService.ACTION_ENABLE_WAKE
             }
 
         try {
 
-            if (Build.VERSION.SDK_INT >=
+            if (
+                Build.VERSION.SDK_INT >=
                 Build.VERSION_CODES.O
             ) {
 
@@ -879,7 +978,9 @@ class MainActivity : ComponentActivity() {
 
             } else {
 
-                startService(intent)
+                startService(
+                    intent
+                )
             }
 
         } catch (e: Exception) {
@@ -892,20 +993,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun stopBackgroundVoiceService() {
+    // =========================================================
+    // STOP BACKGROUND VOICE SERVICE
+    // =========================================================
 
-        val intent =
-            Intent(
-                this,
-                VoiceService::class.java
-            ).apply {
-                action =
-                    VoiceService.ACTION_DISABLE_WAKE
-            }
+    private fun stopBackgroundVoiceService() {
 
         try {
 
-            startService(intent)
+            stopService(
+                Intent(
+                    this,
+                    VoiceService::class.java
+                )
+            )
 
         } catch (_: Exception) {
         }
@@ -917,12 +1018,14 @@ class MainActivity : ComponentActivity() {
 
     private fun showSearch() {
 
-        val input = EditText(this)
+        val input =
+            EditText(this).apply {
 
-        input.hint =
-            "Search the web"
+                hint =
+                    "Search the web"
 
-        input.setSingleLine(true)
+                setSingleLine(true)
+            }
 
         AlertDialog.Builder(this)
 
@@ -930,7 +1033,9 @@ class MainActivity : ComponentActivity() {
                 "⌕ JARVIS SEARCH"
             )
 
-            .setView(input)
+            .setView(
+                input
+            )
 
             .setPositiveButton(
                 "SEARCH"
@@ -1206,14 +1311,17 @@ class MainActivity : ComponentActivity() {
 
         try {
 
-            val intent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse(
-                    "instagram://user?username=drakoxnaeem"
+            val intent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "instagram://user?username=drakoxnaeem"
+                    )
                 )
-            )
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
         } catch (_: Exception) {
 
@@ -1231,14 +1339,17 @@ class MainActivity : ComponentActivity() {
 
         try {
 
-            val intent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse(
-                    "vnd.youtube:"
+            val intent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "vnd.youtube:"
+                    )
                 )
-            )
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
         } catch (_: Exception) {
 
@@ -1256,14 +1367,17 @@ class MainActivity : ComponentActivity() {
 
         try {
 
-            val intent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse(
-                    "whatsapp://"
+            val intent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "whatsapp://"
+                    )
                 )
-            )
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
         } catch (_: Exception) {
 
@@ -1309,25 +1423,35 @@ class MainActivity : ComponentActivity() {
     // =========================================================
 
     override fun onResume() {
+
         super.onResume()
 
         /*
-         * If Voice Wake Mode was enabled earlier,
-         * keep the foreground service alive when the
-         * Activity comes back.
+         * If Voice Wake Mode is enabled,
+         * make sure the foreground service is running.
+         *
+         * Actual wake-word detection is handled by
+         * the voice-service layer.
          */
-        if (::prefs.isInitialized &&
+
+        if (
+            ::prefs.isInitialized &&
             prefs.isVoiceWakeEnabled()
         ) {
 
-            if (PermissionHelper.hasAudioPermission(this)) {
+            if (
+                PermissionHelper.hasAudioPermission(
+                    this
+                )
+            ) {
+
                 startBackgroundVoiceService()
             }
         }
     }
 
     // =========================================================
-    // DESTROY
+    // ACTIVITY DESTROY
     // =========================================================
 
     override fun onDestroy() {
@@ -1352,13 +1476,17 @@ class MainActivity : ComponentActivity() {
         } catch (_: Exception) {
         }
 
-        vm.setResponseListener(null)
+        vm.setResponseListener(
+            null
+        )
 
         /*
-         * IMPORTANT:
-         * Voice Wake Mode ON hone par service ko
-         * Activity destroy hone ke time stop nahi karna hai.
+         * DO NOT stop VoiceService here.
+         *
+         * When Voice Wake Mode is ON, the service is supposed
+         * to survive Activity destruction.
          */
+
         super.onDestroy()
     }
 }
