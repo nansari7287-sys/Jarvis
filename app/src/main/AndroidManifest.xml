@@ -2,8 +2,20 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Network -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Microphone -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Microphone foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- Android 13+ notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -20,25 +32,36 @@
             android:exported="true">
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
+
             </intent-filter>
 
         </activity>
 
-        <!-- Voice Service -->
+        <!-- JARVIS Voice Foreground Service -->
         <service
             android:name=".VoiceService"
-            android:exported="false" />
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- JARVIS Accessibility Service -->
         <service
             android:name=".accessibility.JarvisAccessibilityService"
+            android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
 
             <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
+
+                <action
+                    android:name="android.accessibilityservice.AccessibilityService" />
+
             </intent-filter>
 
             <meta-data
