@@ -1,0 +1,80 @@
+name: Inspect Wake Word Feature Models
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install TensorFlow
+        run: |
+          python -m pip install --upgrade pip
+          pip install tensorflow==2.19.0
+
+      - name: Inspect Feature Models
+        run: |
+          python - <<'PY'
+          import tensorflow as tf
+          import os
+
+          models = [
+              "app/src/main/assets/melspectrogram.tflite",
+              "app/src/main/assets/embedding_model.tflite",
+          ]
+
+          print("=" * 70)
+          print("JARVIS WAKE WORD FEATURE MODEL INSPECTION")
+          print("=" * 70)
+
+          for model_path in models:
+              print("\n" + "=" * 70)
+              print("MODEL:", model_path)
+              print("=" * 70)
+
+              if not os.path.exists(model_path):
+                  raise FileNotFoundError(
+                      f"Model not found: {model_path}"
+                  )
+
+              print("Exists: YES")
+              print("File size:", os.path.getsize(model_path), "bytes")
+
+              interpreter = tf.lite.Interpreter(
+                  model_path=model_path
+              )
+              interpreter.allocate_tensors()
+
+              print("\nINPUT TENSORS")
+              print("-" * 70)
+
+              for tensor in interpreter.get_input_details():
+                  print("Name:", tensor["name"])
+                  print("Shape:", tensor["shape"])
+                  print("Shape Signature:", tensor["shape_signature"])
+                  print("DType:", tensor["dtype"])
+                  print("Quantization:", tensor["quantization"])
+
+              print("\nOUTPUT TENSORS")
+              print("-" * 70)
+
+              for tensor in interpreter.get_output_details():
+                  print("Name:", tensor["name"])
+                  print("Shape:", tensor["shape"])
+                  print("Shape Signature:", tensor["shape_signature"])
+                  print("DType:", tensor["dtype"])
+                  print("Quantization:", tensor["quantization"])
+
+          print("\n" + "=" * 70)
+          print("FEATURE MODEL INSPECTION COMPLETE")
+          print("=" * 70)
+          PY
