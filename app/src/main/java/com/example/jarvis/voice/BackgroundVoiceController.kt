@@ -1,4 +1,3 @@
-
 package com.example.jarvis.voice
 
 import android.content.Context
@@ -7,14 +6,20 @@ import android.os.Looper
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Controls the background voice lifecycle used by VoiceService.
+ * Controls JARVIS background voice interaction.
  *
- * Important:
- * This controller manages the voice state and command-recognition
- * cycle. The Android foreground service owns its lifecycle.
+ * Flow:
+ * STANDBY
+ *   ↓ Hey Jarvis
+ * LISTENING
+ *   ↓ command
+ * THINKING
+ *   ↓
+ * EXECUTING / SPEAKING
+ *   ↓
+ * LISTENING again for continuous conversation
  *
- * Wake-word detection is intentionally kept separate from the
- * normal SpeechRecognizer command cycle.
+ * Wake-word detection itself is handled separately by VoiceService.
  */
 class BackgroundVoiceController(
     private val context: Context,
@@ -24,24 +29,19 @@ class BackgroundVoiceController(
     private val onError: (String) -> Unit
 ) {
 
-    private val handler =
-        Handler(Looper.getMainLooper())
+    private val handler = Handler(Looper.getMainLooper())
 
-    private val running =
-        AtomicBoolean(false)
-
-    private val wakeMode =
-        AtomicBoolean(false)
-
-    private val commandMode =
-        AtomicBoolean(false)
+    private val running = AtomicBoolean(false)
+    private val wakeMode = AtomicBoolean(false)
+    private val commandMode = AtomicBoolean(false)
 
     private var speechRecognizer: SpeechRecognizerManager? = null
 
     private var restartScheduled = false
+    private var waitingForResponse = false
 
     companion object {
-        private const val RESTART_DELAY = 500L
+        private const val RESTART_DELAY = 350L
     }
 
     // =========================================================
@@ -49,16 +49,12 @@ class BackgroundVoiceController(
     // =========================================================
 
     fun start() {
-
-        if (running.get()) {
-            return
-        }
+        if (running.get()) return
 
         running.set(true)
+        waitingForResponse = false
 
-        setState(
-            VoiceState.STANDBY
-        )
+        setState(VoiceState.STANDBY)
     }
 
     // =========================================================
@@ -72,22 +68,13 @@ class BackgroundVoiceController(
         }
 
         wakeMode.set(true)
-
         commandMode.set(false)
+        waitingForResponse = false
 
+        cancelRestart()
         stopRecognition()
 
-        setState(
-            VoiceState.STANDBY
-        )
-
-        /*
-         * The actual always-on wake-word engine will be attached
-         * to this controller separately.
-         *
-         * We deliberately do not start Android SpeechRecognizer
-         * here as an always-on wake-word detector.
-         */
+        setState(VoiceState.STANDBY)
     }
 
     // =========================================================
@@ -97,16 +84,13 @@ class BackgroundVoiceController(
     fun disableWakeMode() {
 
         wakeMode.set(false)
-
         commandMode.set(false)
+        waitingForResponse = false
 
         cancelRestart()
-
         stopRecognition()
 
-        setState(
-            VoiceState.IDLE
-        )
+        setState(VoiceState.IDLE)
     }
 
     // =========================================================
@@ -115,15 +99,14 @@ class BackgroundVoiceController(
 
     fun wakeDetected() {
 
-        if (!running.get()) {
-            return
-        }
-
-        if (!wakeMode.get()) {
-            return
-        }
+        if (!running.get()) return
+        if (!wakeMode.get()) return
 
         commandMode.set(true)
+        waitingForResponse = false
+
+        cancelRestart()
+        stopRecognition()
 
         onWakeDetected.invoke()
 
@@ -136,78 +119,59 @@ class BackgroundVoiceController(
 
     private fun startCommandListening() {
 
-        if (!running.get()) {
-            return
-        }
-
-        if (!wakeMode.get()) {
-            return
-        }
-
-        if (!commandMode.get()) {
-            return
-        }
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+        if (!commandMode.get()) return
+        if (waitingForResponse) return
 
         cancelRestart()
 
-        setState(
-            VoiceState.LISTENING
-        )
+        setState(VoiceState.LISTENING)
 
-        val recognizer =
-            getRecognizer()
+        val recognizer = getRecognizer()
 
         recognizer.start(
 
             { text ->
 
-                if (!running.get()) {
-                    return@start
-                }
+                if (!running.get()) return@start
+                if (!wakeMode.get()) return@start
+                if (!commandMode.get()) return@start
+                if (waitingForResponse) return@start
 
-                if (!wakeMode.get()) {
-                    return@start
-                }
-
-                if (!commandMode.get()) {
-                    return@start
-                }
-
-                val cleanText =
-                    text
-                        .trim()
+                val cleanText = text.trim()
 
                 if (cleanText.isBlank()) {
-
                     restartCommandListening()
-
                     return@start
                 }
+
+                /*
+                 * Prevent duplicate callbacks while the current
+                 * command is being processed.
+                 */
+                waitingForResponse = true
 
                 stopRecognition()
 
-                setState(
-                    VoiceState.THINKING
-                )
+                setState(VoiceState.THINKING)
 
-                onCommand.invoke(
-                    cleanText
-                )
+                onCommand.invoke(cleanText)
             },
 
             { error ->
 
-                if (!running.get()) {
-                    return@start
-                }
+                if (!running.get()) return@start
+                if (!wakeMode.get()) return@start
+                if (!commandMode.get()) return@start
+                if (waitingForResponse) return@start
 
-                if (!wakeMode.get()) {
-                    return@start
-                }
-
-                onError.invoke(
-                    error
-                )
+                /*
+                 * Don't permanently kill the voice session because
+                 * SpeechRecognizer occasionally reports transient
+                 * errors such as timeout/no-match.
+                 */
+                onError.invoke(error)
 
                 restartCommandListening()
             }
@@ -220,15 +184,13 @@ class BackgroundVoiceController(
 
     fun setProcessing() {
 
-        if (!running.get()) {
-            return
-        }
+        if (!running.get()) return
 
-        setState(
-            VoiceState.THINKING
-        )
+        waitingForResponse = true
 
         stopRecognition()
+
+        setState(VoiceState.THINKING)
     }
 
     // =========================================================
@@ -237,13 +199,11 @@ class BackgroundVoiceController(
 
     fun setExecuting() {
 
-        if (!running.get()) {
-            return
-        }
+        if (!running.get()) return
 
-        setState(
-            VoiceState.EXECUTING
-        )
+        waitingForResponse = true
+
+        setState(VoiceState.EXECUTING)
     }
 
     // =========================================================
@@ -252,15 +212,13 @@ class BackgroundVoiceController(
 
     fun setSpeaking() {
 
-        if (!running.get()) {
-            return
-        }
+        if (!running.get()) return
+
+        waitingForResponse = true
 
         stopRecognition()
 
-        setState(
-            VoiceState.SPEAKING
-        )
+        setState(VoiceState.SPEAKING)
     }
 
     // =========================================================
@@ -269,25 +227,61 @@ class BackgroundVoiceController(
 
     fun speechFinished() {
 
-        if (!running.get()) {
-            return
-        }
-
-        if (!wakeMode.get()) {
-            return
-        }
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+        if (!commandMode.get()) return
 
         /*
-         * After JARVIS finishes speaking, return to standby.
+         * IMPORTANT:
          *
-         * We don't immediately start command recognition here.
-         * The wake-word engine should hear "Hey Jarvis" again.
+         * Do NOT return to permanent STANDBY here.
+         *
+         * After JARVIS speaks, continue listening so the user
+         * can naturally say:
+         *
+         * "haan"
+         * "accha Instagram kholo"
+         * "volume badhao"
+         * "nahi, doosra wala"
+         *
+         * without pressing the microphone again.
          */
-        commandMode.set(false)
+        waitingForResponse = false
 
-        setState(
-            VoiceState.STANDBY
-        )
+        startCommandListening()
+    }
+
+    // =========================================================
+    // RESUME LISTENING
+    // =========================================================
+
+    fun resumeListening() {
+
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+        if (!commandMode.get()) return
+
+        waitingForResponse = false
+
+        startCommandListening()
+    }
+
+    // =========================================================
+    // FORCE LISTENING
+    // =========================================================
+
+    fun forceListening() {
+
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+
+        commandMode.set(true)
+        waitingForResponse = false
+
+        cancelRestart()
+        stopRecognition()
+
+        startCommandListening()
     }
 
     // =========================================================
@@ -301,8 +295,42 @@ class BackgroundVoiceController(
         }
 
         commandMode.set(true)
+        waitingForResponse = false
 
         startCommandListening()
+    }
+
+    // =========================================================
+    // COMMAND FINISHED WITHOUT SPEECH
+    // =========================================================
+
+    fun commandFinished() {
+
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+        if (!commandMode.get()) return
+
+        waitingForResponse = false
+
+        startCommandListening()
+    }
+
+    // =========================================================
+    // RETURN TO STANDBY
+    // =========================================================
+
+    fun returnToStandby() {
+
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+
+        commandMode.set(false)
+        waitingForResponse = false
+
+        cancelRestart()
+        stopRecognition()
+
+        setState(VoiceState.STANDBY)
     }
 
     // =========================================================
@@ -312,18 +340,15 @@ class BackgroundVoiceController(
     fun stop() {
 
         running.set(false)
-
         wakeMode.set(false)
-
         commandMode.set(false)
 
-        cancelRestart()
+        waitingForResponse = false
 
+        cancelRestart()
         stopRecognition()
 
-        setState(
-            VoiceState.IDLE
-        )
+        setState(VoiceState.IDLE)
     }
 
     // =========================================================
@@ -332,21 +357,11 @@ class BackgroundVoiceController(
 
     private fun restartCommandListening() {
 
-        if (!running.get()) {
-            return
-        }
-
-        if (!wakeMode.get()) {
-            return
-        }
-
-        if (!commandMode.get()) {
-            return
-        }
-
-        if (restartScheduled) {
-            return
-        }
+        if (!running.get()) return
+        if (!wakeMode.get()) return
+        if (!commandMode.get()) return
+        if (waitingForResponse) return
+        if (restartScheduled) return
 
         restartScheduled = true
 
@@ -354,17 +369,10 @@ class BackgroundVoiceController(
 
             restartScheduled = false
 
-            if (!running.get()) {
-                return@postDelayed
-            }
-
-            if (!wakeMode.get()) {
-                return@postDelayed
-            }
-
-            if (!commandMode.get()) {
-                return@postDelayed
-            }
+            if (!running.get()) return@postDelayed
+            if (!wakeMode.get()) return@postDelayed
+            if (!commandMode.get()) return@postDelayed
+            if (waitingForResponse) return@postDelayed
 
             startCommandListening()
 
@@ -375,23 +383,15 @@ class BackgroundVoiceController(
     // RECOGNIZER
     // =========================================================
 
-    private fun getRecognizer():
-        SpeechRecognizerManager {
+    private fun getRecognizer(): SpeechRecognizerManager {
 
-        val existing =
-            speechRecognizer
-
-        if (existing != null) {
-            return existing
+        speechRecognizer?.let {
+            return it
         }
 
-        val created =
-            SpeechRecognizerManager(
-                context
-            )
+        val created = SpeechRecognizerManager(context)
 
-        speechRecognizer =
-            created
+        speechRecognizer = created
 
         return created
     }
@@ -416,24 +416,17 @@ class BackgroundVoiceController(
 
         restartScheduled = false
 
-        handler.removeCallbacksAndMessages(
-            null
-        )
+        handler.removeCallbacksAndMessages(null)
     }
 
     // =========================================================
     // STATE
     // =========================================================
 
-    private fun setState(
-        state: VoiceState
-    ) {
+    private fun setState(state: VoiceState) {
 
         handler.post {
-
-            onStateChanged.invoke(
-                state
-            )
+            onStateChanged.invoke(state)
         }
     }
 
@@ -453,16 +446,23 @@ class BackgroundVoiceController(
         return commandMode.get()
     }
 
+    fun isWaitingForResponse(): Boolean {
+        return waitingForResponse
+    }
+
+    // =========================================================
+    // DESTROY
+    // =========================================================
+
     fun destroy() {
 
         running.set(false)
-
         wakeMode.set(false)
-
         commandMode.set(false)
 
-        cancelRestart()
+        waitingForResponse = false
 
+        cancelRestart()
         stopRecognition()
 
         try {
@@ -472,8 +472,6 @@ class BackgroundVoiceController(
 
         speechRecognizer = null
 
-        setState(
-            VoiceState.IDLE
-        )
+        setState(VoiceState.IDLE)
     }
 }
