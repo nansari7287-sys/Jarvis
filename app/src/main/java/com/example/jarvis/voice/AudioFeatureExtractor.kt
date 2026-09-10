@@ -6,24 +6,23 @@ import java.io.FileInputStream
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.util.ArrayDeque
-import kotlin.math.ceil
 
 /**
- * openWakeWord audio feature pipeline.
+ * openWakeWord feature extraction pipeline.
  *
- * 16 kHz / 16-bit PCM
- *        ↓
+ * 16 kHz PCM
+ *      ↓
  * melspectrogram.tflite
- *        ↓
+ *      ↓
  * 32-bin mel features
- *        ↓
+ *      ↓
  * 76 x 32 windows
- *        ↓
+ *      ↓
  * embedding_model.tflite
- *        ↓
+ *      ↓
  * 96-D embeddings
- *        ↓
- * 16 x 96 wake-word feature window
+ *      ↓
+ * 16 x 96 feature window
  */
 class AudioFeatureExtractor(
     context: Context
@@ -32,14 +31,14 @@ class AudioFeatureExtractor(
     companion object {
         private const val SAMPLE_RATE = 16_000
 
-        // openWakeWord streaming step.
+        // 80 ms at 16 kHz.
         private const val STEP_SAMPLES = 1_280
 
-        // Embedding model input.
+        // embedding_model.tflite
         private const val MEL_WINDOW_SIZE = 76
         private const val MEL_FEATURES = 32
 
-        // Wake-word classifier input.
+        // hey_jarvis_v0.1.tflite
         private const val FEATURE_WINDOW_SIZE = 16
         private const val EMBEDDING_SIZE = 96
 
@@ -53,31 +52,15 @@ class AudioFeatureExtractor(
     private val melInterpreter: Interpreter
     private val embeddingInterpreter: Interpreter
 
-    /**
-     * Maximum 10 seconds of raw audio history.
-     */
     private val rawDataBuffer =
-        ArrayDeque<Short>(SAMPLE_RATE * 10)
+        ArrayDeque<Short>()
 
-    /**
-     * Streaming mel-spectrogram history.
-     *
-     * Official openWakeWord initializes this with
-     * 76 x 32 values before real audio arrives.
-     */
-    private var melSpectrogramBuffer =
-        createInitialMelBuffer()
+    private val melSpectrogramBuffer =
+        ArrayDeque<FloatArray>()
 
-    /**
-     * Recent 96-D embeddings.
-     */
     private val featureBuffer =
         ArrayDeque<FloatArray>()
 
-    /**
-     * Number of samples received since the last
-     * feature extraction step.
-     */
     private var accumulatedSamples = 0
 
     init {
@@ -91,13 +74,9 @@ class AudioFeatureExtractor(
             }
         )
 
-        // The official TFLite pipeline starts the mel model
-        // with a 1280-sample input.
-        melInterpreter.resizeInput(
-            0,
-            intArrayOf(1, STEP_SAMPLES)
+        resizeMelModelIfNecessary(
+            STEP_SAMPLES
         )
-        melInterpreter.allocateTensors()
 
         embeddingInterpreter = Interpreter(
             loadModel(
@@ -110,12 +89,12 @@ class AudioFeatureExtractor(
         )
 
         embeddingInterpreter.allocateTensors()
+
+        reset()
     }
 
     /**
-     * Feed normalized Float audio [-1, +1].
-     *
-     * This method is useful with AudioCaptureManager.
+     * Accept normalized Float audio [-1, +1].
      */
     @Synchronized
     fun processAudio(
@@ -126,29 +105,36 @@ class AudioFeatureExtractor(
             return emptyList()
         }
 
-        val pcm = ShortArray(audio.size)
+        val pcm =
+            ShortArray(audio.size)
 
         for (i in audio.indices) {
-            val sample = audio[i]
-                .coerceIn(-1.0f, 1.0f)
 
-            pcm[i] = (
-                sample * 32767.0f
-            ).toInt()
-                .coerceIn(
-                    Short.MIN_VALUE.toInt(),
-                    Short.MAX_VALUE.toInt()
+            val sample =
+                audio[i].coerceIn(
+                    -1.0f,
+                    1.0f
                 )
-                .toShort()
+
+            pcm[i] =
+                (
+                    sample * 32767.0f
+                )
+                    .toInt()
+                    .coerceIn(
+                        Short.MIN_VALUE.toInt(),
+                        Short.MAX_VALUE.toInt()
+                    )
+                    .toShort()
         }
 
         return processPcm(pcm)
     }
 
     /**
-     * Feed native 16-bit PCM audio.
+     * Accept native 16-bit PCM audio.
      *
-     * Returns zero or more [16 x 96] feature windows.
+     * Returns [16 x 96] windows.
      */
     @Synchronized
     fun processPcm(
@@ -159,17 +145,12 @@ class AudioFeatureExtractor(
             return emptyList()
         }
 
-        /*
-         * Add incoming audio to the streaming buffer.
-         */
         for (sample in pcm) {
             rawDataBuffer.addLast(sample)
             accumulatedSamples++
         }
 
-        /*
-         * Keep at most 10 seconds of raw audio.
-         */
+        // Keep maximum 10 seconds of audio history.
         while (
             rawDataBuffer.size >
             SAMPLE_RATE * 10
@@ -180,11 +161,9 @@ class AudioFeatureExtractor(
         val results =
             mutableListOf<Array<FloatArray>>()
 
-        /*
-         * Only process when at least one complete
-         * 80 ms / 1280-sample block is available.
-         */
-        while (accumulatedSamples >= STEP_SAMPLES) {
+        while (
+            accumulatedSamples >= STEP_SAMPLES
+        ) {
 
             updateStreamingMelSpectrogram()
 
@@ -197,9 +176,6 @@ class AudioFeatureExtractor(
                     embedding
                 )
 
-                /*
-                 * Keep roughly 10 seconds of feature history.
-                 */
                 while (
                     featureBuffer.size >
                     120
@@ -207,13 +183,6 @@ class AudioFeatureExtractor(
                     featureBuffer.removeFirst()
                 }
 
-                /*
-                 * The Jarvis wake-word model expects:
-                 *
-                 * [1, 16, 96]
-                 *
-                 * We return the inner [16, 96] array.
-                 */
                 if (
                     featureBuffer.size >=
                     FEATURE_WINDOW_SIZE
@@ -224,15 +193,15 @@ class AudioFeatureExtractor(
                 }
             }
 
-            accumulatedSamples -= STEP_SAMPLES
+            accumulatedSamples -=
+                STEP_SAMPLES
         }
 
         return results
     }
 
     /**
-     * Computes new mel-spectrogram frames using the
-     * same streaming strategy as openWakeWord.
+     * Run the mel-spectrogram model.
      */
     private fun updateStreamingMelSpectrogram() {
 
@@ -240,10 +209,6 @@ class AudioFeatureExtractor(
             return
         }
 
-        /*
-         * openWakeWord includes 3 x 160 samples of
-         * additional context around the current chunk.
-         */
         val contextSamples =
             STEP_SAMPLES + (160 * 3)
 
@@ -261,13 +226,16 @@ class AudioFeatureExtractor(
 
         var outputIndex = 0
 
-        for ((index, sample) in
-            rawDataBuffer.withIndex()
+        for (
+            index in 0 until rawDataBuffer.size
         ) {
 
             if (index >= skip) {
-                samples[outputIndex++] =
-                    sample
+
+                samples[outputIndex] =
+                    rawDataBuffer.elementAt(index)
+
+                outputIndex++
             }
         }
 
@@ -275,37 +243,33 @@ class AudioFeatureExtractor(
             runMelModel(samples)
 
         /*
-         * openWakeWord uses:
+         * openWakeWord normalization:
          *
-         * spec = spec / 10 + 2
+         * spectrogram / 10 + 2
          */
         for (frame in melOutput) {
 
             val transformed =
-                FloatArray(MEL_FEATURES)
+                FloatArray(
+                    MEL_FEATURES
+                )
 
-            for (i in 0 until MEL_FEATURES) {
+            for (
+                i in 0 until MEL_FEATURES
+            ) {
+
                 transformed[i] =
                     frame[i] / 10.0f + 2.0f
             }
 
-            melSpectrogramBuffer.add(
+            melSpectrogramBuffer.addLast(
                 transformed
             )
         }
 
-        /*
-         * Keep the same general history size used
-         * by openWakeWord.
-         *
-         * 97 frames ~= 1 second at 16 kHz.
-         */
-        val maximumFrames =
-            97 * 10
-
         while (
             melSpectrogramBuffer.size >
-            maximumFrames
+            97 * 10
         ) {
             melSpectrogramBuffer.removeFirst()
         }
@@ -314,13 +278,15 @@ class AudioFeatureExtractor(
     /**
      * Run melspectrogram.tflite.
      *
-     * IMPORTANT:
-     * The model receives 16-bit PCM values converted
-     * to Float32. Do NOT normalize them to [-1,1].
+     * The model expects Float32 PCM values.
      */
     private fun runMelModel(
         pcm: ShortArray
     ): List<FloatArray> {
+
+        if (pcm.isEmpty()) {
+            return emptyList()
+        }
 
         val sampleCount =
             pcm.size
@@ -331,6 +297,7 @@ class AudioFeatureExtractor(
             }
 
         for (i in pcm.indices) {
+
             input[0][i] =
                 pcm[i].toFloat()
         }
@@ -344,13 +311,10 @@ class AudioFeatureExtractor(
                 .getOutputTensor(0)
                 .shape()
 
-        /*
-         * Expected:
-         *
-         * [1, frames, 32]
-         */
         val frames =
-            if (outputShape.size >= 3) {
+            if (
+                outputShape.size >= 3
+            ) {
                 outputShape[1]
             } else {
                 1
@@ -359,7 +323,9 @@ class AudioFeatureExtractor(
         val output =
             Array(1) {
                 Array(frames) {
-                    FloatArray(MEL_FEATURES)
+                    FloatArray(
+                        MEL_FEATURES
+                    )
                 }
             }
 
@@ -369,9 +335,10 @@ class AudioFeatureExtractor(
         )
 
         val result =
-            ArrayList<FloatArray>()
+            mutableListOf<FloatArray>()
 
         for (frame in output[0]) {
+
             result.add(
                 frame.copyOf()
             )
@@ -381,7 +348,7 @@ class AudioFeatureExtractor(
     }
 
     /**
-     * Resize the dynamic mel model input when needed.
+     * Resize dynamic mel input.
      */
     private fun resizeMelModelIfNecessary(
         sampleCount: Int
@@ -410,11 +377,8 @@ class AudioFeatureExtractor(
     }
 
     /**
-     * Convert the newest mel frames into 96-D
-     * speech embeddings.
-     *
-     * Windows are 76 frames long and move by
-     * 8 frames, matching openWakeWord.
+     * Convert 76 x 32 mel windows into 96-D
+     * embeddings.
      */
     private fun createEmbeddingsFromLatestMelData():
         List<FloatArray> {
@@ -429,14 +393,6 @@ class AudioFeatureExtractor(
         val results =
             mutableListOf<FloatArray>()
 
-        /*
-         * Only the newly available region needs to
-         * generate embeddings.
-         *
-         * For each 1280-sample audio step,
-         * openWakeWord advances approximately
-         * 8 mel frames.
-         */
         val start =
             maxOf(
                 0,
@@ -453,13 +409,6 @@ class AudioFeatureExtractor(
             return emptyList()
         }
 
-        /*
-         * Usually this produces one embedding per
-         * streaming audio step.
-         */
-        val windows =
-            mutableListOf<Array<Array<FloatArray>>>()
-
         var frameStart = start
 
         while (
@@ -467,25 +416,30 @@ class AudioFeatureExtractor(
         ) {
 
             val window =
-                Array(MEL_WINDOW_SIZE) {
-                    Array(MEL_FEATURES) {
+                Array(
+                    MEL_WINDOW_SIZE
+                ) {
+                    Array(
+                        MEL_FEATURES
+                    ) {
                         FloatArray(1)
                     }
                 }
 
             for (
-                frameIndex
-                in 0 until MEL_WINDOW_SIZE
+                frameIndex in
+                0 until MEL_WINDOW_SIZE
             ) {
 
                 val source =
-                    melSpectrogramBuffer[
-                        frameStart + frameIndex
-                    ]
+                    melSpectrogramBuffer.elementAt(
+                        frameStart +
+                            frameIndex
+                    )
 
                 for (
-                    featureIndex
-                    in 0 until MEL_FEATURES
+                    featureIndex in
+                    0 until MEL_FEATURES
                 ) {
 
                     window[
@@ -495,55 +449,40 @@ class AudioFeatureExtractor(
                 }
             }
 
-            windows.add(window)
+            val embedding =
+                runEmbeddingModel(
+                    window
+                )
+
+            if (embedding != null) {
+                results.add(
+                    embedding
+                )
+            }
 
             frameStart += 8
         }
 
-        if (windows.isEmpty()) {
-            return emptyList()
-        }
-
-        /*
-         * The embedding model accepts:
-         *
-         * [batch, 76, 32, 1]
-         */
-        val batch =
-            Array(windows.size) {
-                windows[it]
-            }
-
-        return runEmbeddingModel(batch)
+        return results
     }
 
     /**
      * Run embedding_model.tflite.
+     *
+     * Input:
+     * [1, 76, 32, 1]
+     *
+     * Output:
+     * [1, 1, 96]
      */
     private fun runEmbeddingModel(
-        input: Array<Array<Array<FloatArray>>>
-    ): List<FloatArray> {
+        input: Array<Array<FloatArray>>
+    ): FloatArray? {
 
-        val batchSize =
-            input.size
+        resizeEmbeddingModelIfNecessary()
 
-        if (batchSize == 0) {
-            return emptyList()
-        }
-
-        resizeEmbeddingModelIfNecessary(
-            batchSize
-        )
-
-        /*
-         * Output for batch N is effectively:
-         *
-         * [N, 1, 96]
-         *
-         * We flatten each item to 96 values.
-         */
         val output =
-            Array(batchSize) {
+            Array(1) {
                 Array(1) {
                     FloatArray(
                         EMBEDDING_SIZE
@@ -551,31 +490,31 @@ class AudioFeatureExtractor(
                 }
             }
 
-        embeddingInterpreter.run(
-            input,
-            output
-        )
+        try {
 
-        val results =
-            mutableListOf<FloatArray>()
+            embeddingInterpreter.run(
+                arrayOf(input),
+                output
+            )
 
-        for (i in 0 until batchSize) {
+            return output[0][0].copyOf()
 
-            results.add(
-                output[i][0].copyOf()
+        } catch (e: Exception) {
+
+            throw IllegalStateException(
+                "Embedding inference failed: " +
+                    e.message,
+                e
             )
         }
-
-        return results
     }
 
     /**
-     * The embedding model was exported with a
-     * dynamic batch dimension.
+     * Ensure embedding model has:
+     *
+     * [1, 76, 32, 1]
      */
-    private fun resizeEmbeddingModelIfNecessary(
-        batchSize: Int
-    ) {
+    private fun resizeEmbeddingModelIfNecessary() {
 
         val shape =
             embeddingInterpreter
@@ -584,13 +523,16 @@ class AudioFeatureExtractor(
 
         if (
             shape.size != 4 ||
-            shape[0] != batchSize
+            shape[0] != 1 ||
+            shape[1] != MEL_WINDOW_SIZE ||
+            shape[2] != MEL_FEATURES ||
+            shape[3] != 1
         ) {
 
             embeddingInterpreter.resizeInput(
                 0,
                 intArrayOf(
-                    batchSize,
+                    1,
                     MEL_WINDOW_SIZE,
                     MEL_FEATURES,
                     1
@@ -602,13 +544,15 @@ class AudioFeatureExtractor(
     }
 
     /**
-     * Return the newest 16 x 96 feature window.
+     * Get latest [16 x 96] feature window.
      */
     private fun getLatestFeatureWindow():
         Array<FloatArray> {
 
         val result =
-            Array(FEATURE_WINDOW_SIZE) {
+            Array(
+                FEATURE_WINDOW_SIZE
+            ) {
                 FloatArray(
                     EMBEDDING_SIZE
                 )
@@ -621,10 +565,16 @@ class AudioFeatureExtractor(
         var outputIndex = 0
 
         for (
-            index in start until featureBuffer.size
+            index in
+            start until featureBuffer.size
         ) {
 
-            featureBuffer[index].copyInto(
+            val embedding =
+                featureBuffer.elementAt(
+                    index
+                )
+
+            embedding.copyInto(
                 result[outputIndex]
             )
 
@@ -635,19 +585,34 @@ class AudioFeatureExtractor(
     }
 
     /**
-     * Reset streaming state.
+     * Reset all streaming state.
      */
     @Synchronized
     fun reset() {
 
         rawDataBuffer.clear()
 
+        melSpectrogramBuffer.clear()
+
         featureBuffer.clear()
 
         accumulatedSamples = 0
 
-        melSpectrogramBuffer =
-            createInitialMelBuffer()
+        /*
+         * Initial mel history.
+         */
+        repeat(
+            MEL_WINDOW_SIZE
+        ) {
+
+            melSpectrogramBuffer.addLast(
+                FloatArray(
+                    MEL_FEATURES
+                ) {
+                    1.0f
+                }
+            )
+        }
     }
 
     /**
@@ -663,31 +628,8 @@ class AudioFeatureExtractor(
         embeddingInterpreter.close()
     }
 
-    private fun createInitialMelBuffer():
-        ArrayDeque<FloatArray> {
-
-        val buffer =
-            ArrayDeque<FloatArray>(
-                MEL_WINDOW_SIZE
-            )
-
-        repeat(MEL_WINDOW_SIZE) {
-
-            val frame =
-                FloatArray(
-                    MEL_FEATURES
-                ) {
-                    1.0f
-                }
-
-            buffer.addLast(frame)
-        }
-
-        return buffer
-    }
-
     /**
-     * Load a .tflite file directly from assets.
+     * Load TFLite model from assets.
      */
     private fun loadModel(
         context: Context,
@@ -695,7 +637,9 @@ class AudioFeatureExtractor(
     ): MappedByteBuffer {
 
         val descriptor =
-            context.assets.openFd(fileName)
+            context.assets.openFd(
+                fileName
+            )
 
         FileInputStream(
             descriptor.fileDescriptor
