@@ -8,8 +8,10 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.example.jarvis.voice.AudioCaptureManager
 import com.example.jarvis.voice.BackgroundVoiceController
 import com.example.jarvis.voice.VoiceState
+import com.example.jarvis.voice.WakeWordEngine
 
 class VoiceService : Service() {
 
@@ -36,7 +38,8 @@ class VoiceService : Service() {
         private const val CHANNEL_ID =
             "jarvis_voice_channel"
 
-        private const val NOTIFICATION_ID = 1001
+        private const val NOTIFICATION_ID =
+            1001
     }
 
     private var serviceActive = false
@@ -45,11 +48,20 @@ class VoiceService : Service() {
     private lateinit var voiceController:
             BackgroundVoiceController
 
+    private lateinit var audioCapture:
+            AudioCaptureManager
+
+    private lateinit var wakeWordEngine:
+            WakeWordEngine
+
     override fun onCreate() {
         super.onCreate()
 
         createNotificationChannel()
 
+        /*
+         * Background voice controller.
+         */
         voiceController =
             BackgroundVoiceController(
 
@@ -69,6 +81,60 @@ class VoiceService : Service() {
 
                 onError = { error ->
                     handleVoiceError(error)
+                }
+            )
+
+        /*
+         * Real microphone capture.
+         *
+         * IMPORTANT:
+         * This does NOT start automatically.
+         * It starts only when Wake Mode is enabled.
+         */
+        audioCapture =
+            AudioCaptureManager(
+
+                context = applicationContext,
+
+                onAudioFrame = { audioFrame ->
+
+                    if (
+                        serviceActive &&
+                        wakeModeEnabled
+                    ) {
+
+                        wakeWordEngine.processAudio(
+                            audioFrame
+                        )
+                    }
+                },
+
+                onError = { error ->
+
+                    handleVoiceError(
+                        error
+                    )
+                }
+            )
+
+        /*
+         * Real Hey Jarvis classifier.
+         */
+        wakeWordEngine =
+            WakeWordEngine(
+
+                context = applicationContext,
+
+                onWakeWordDetected = {
+
+                    handleWakeWordDetected()
+                },
+
+                onError = { error ->
+
+                    handleVoiceError(
+                        error
+                    )
                 }
             )
     }
@@ -111,7 +177,10 @@ class VoiceService : Service() {
                         ?.trim()
                         .orEmpty()
 
-                if (command.isNotBlank()) {
+                if (
+                    command.isNotBlank()
+                ) {
+
                     handleRecognizedCommand(
                         command
                     )
@@ -131,7 +200,7 @@ class VoiceService : Service() {
     }
 
     // =========================================================
-    // START SERVICE
+    // START
     // =========================================================
 
     private fun startVoiceService() {
@@ -142,9 +211,13 @@ class VoiceService : Service() {
 
         voiceController.start()
 
+        if (wakeModeEnabled) {
+            startWakeWordListening()
+        }
+
         updateNotification(
             if (wakeModeEnabled) {
-                "Hey Jarvis wake mode is active"
+                "Say Hey Jarvis"
             } else {
                 "JARVIS voice service is active"
             }
@@ -157,6 +230,10 @@ class VoiceService : Service() {
 
     private fun enableWakeMode() {
 
+        /*
+         * Android requires microphone foreground
+         * service handling for background microphone use.
+         */
         startVoiceForeground()
 
         serviceActive = true
@@ -164,48 +241,130 @@ class VoiceService : Service() {
 
         voiceController.start()
 
-        voiceController.enableWakeMode()
+        /*
+         * IMPORTANT:
+         *
+         * No Android SpeechRecognizer is started here.
+         *
+         * Only our on-device wake-word pipeline listens.
+         */
+        startWakeWordListening()
 
         updateNotification(
-            "Hey Jarvis wake mode is active"
+            "Say Hey Jarvis"
         )
     }
 
     // =========================================================
-    // DISABLE WAKE MODE
+    // REAL WAKE LISTENER
     // =========================================================
 
-    private fun disableWakeMode() {
+    private fun startWakeWordListening() {
 
-        wakeModeEnabled = false
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
+            return
+        }
 
-        voiceController.disableWakeMode()
+        try {
 
-        stopVoiceService()
+            voiceController.enableWakeMode()
+
+            wakeWordEngine.start()
+
+            audioCapture.start()
+
+            updateNotification(
+                "Say Hey Jarvis"
+            )
+
+        } catch (e: Exception) {
+
+            handleVoiceError(
+                "Wake listener failed"
+            )
+        }
     }
 
     // =========================================================
-    // WAKE DETECTED
+    // STOP WAKE LISTENER
+    // =========================================================
+
+    private fun stopWakeWordListening() {
+
+        try {
+            wakeWordEngine.stop()
+        } catch (_: Exception) {
+        }
+
+        try {
+            audioCapture.stop()
+        } catch (_: Exception) {
+        }
+    }
+
+    // =========================================================
+    // WAKE WORD DETECTED
+    // =========================================================
+
+    private fun handleWakeWordDetected() {
+
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
+            return
+        }
+
+        /*
+         * STOP the wake-word microphone pipeline first.
+         *
+         * This prevents wake-word detection from
+         * repeatedly triggering while the user gives
+         * the actual command.
+         */
+        stopWakeWordListening()
+
+        /*
+         * Tell BackgroundVoiceController that
+         * "Hey Jarvis" was detected.
+         *
+         * It then enters command-listening mode.
+         */
+        try {
+
+            voiceController.wakeDetected()
+
+        } catch (_: Exception) {
+
+            updateNotification(
+                "JARVIS voice standby"
+            )
+        }
+
+        updateNotification(
+            "JARVIS is listening..."
+        )
+    }
+
+    // =========================================================
+    // CONTROLLER WAKE CALLBACK
     // =========================================================
 
     private fun handleWakeDetected() {
 
-        if (!serviceActive) {
-            return
-        }
-
-        if (!wakeModeEnabled) {
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
             return
         }
 
         updateNotification(
             "JARVIS is listening..."
         )
-
-        /*
-         * The controller now changes to LISTENING
-         * and waits for the user's command.
-         */
     }
 
     // =========================================================
@@ -216,19 +375,19 @@ class VoiceService : Service() {
         command: String
     ) {
 
-        if (!serviceActive) {
-            return
-        }
-
-        if (!wakeModeEnabled) {
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
             return
         }
 
         val cleanCommand =
-            command
-                .trim()
+            command.trim()
 
-        if (cleanCommand.isBlank()) {
+        if (
+            cleanCommand.isBlank()
+        ) {
             return
         }
 
@@ -267,12 +426,50 @@ class VoiceService : Service() {
         } catch (_: Exception) {
 
             /*
-             * Keep the foreground service alive
-             * even if Android does not allow the
-             * Activity launch at that moment.
+             * Keep service alive.
              */
+            try {
+                voiceController.speechFinished()
+            } catch (_: Exception) {
+            }
 
-            voiceController.speechFinished()
+            /*
+             * Return to wake standby.
+             */
+            restartWakeWordListening()
+        }
+    }
+
+    // =========================================================
+    // RESTART WAKE LISTENER
+    // =========================================================
+
+    private fun restartWakeWordListening() {
+
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
+            return
+        }
+
+        try {
+
+            voiceController.start()
+
+            wakeWordEngine.start()
+
+            audioCapture.start()
+
+            updateNotification(
+                "Say Hey Jarvis"
+            )
+
+        } catch (_: Exception) {
+
+            updateNotification(
+                "JARVIS voice standby"
+            )
         }
     }
 
@@ -288,7 +485,7 @@ class VoiceService : Service() {
             return
         }
 
-        val notificationText =
+        val text =
             when (state) {
 
                 VoiceState.IDLE ->
@@ -310,27 +507,28 @@ class VoiceService : Service() {
                     "JARVIS is speaking..."
             }
 
-        updateNotification(
-            notificationText
-        )
+        updateNotification(text)
     }
 
     // =========================================================
-    // VOICE ERROR
+    // ERROR
     // =========================================================
 
     private fun handleVoiceError(
         error: String
     ) {
 
-        if (!serviceActive) {
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
             return
         }
 
-        if (!wakeModeEnabled) {
-            return
-        }
-
+        /*
+         * Do not expose raw technical errors
+         * in the permanent notification.
+         */
         updateNotification(
             "JARVIS voice standby"
         )
@@ -372,7 +570,7 @@ class VoiceService : Service() {
     // =========================================================
 
     private fun createNotification():
-            Notification {
+        Notification {
 
         val openIntent =
             Intent(
@@ -408,9 +606,7 @@ class VoiceService : Service() {
             .setContentTitle(
                 "JARVIS Voice Wake"
             )
-            .setContentText(
-                text
-            )
+            .setContentText(text)
             .setSmallIcon(
                 android.R.drawable.ic_btn_speak_now
             )
@@ -464,9 +660,7 @@ class VoiceService : Service() {
                 .setContentTitle(
                     "JARVIS Voice Wake"
                 )
-                .setContentText(
-                    text
-                )
+                .setContentText(text)
                 .setSmallIcon(
                     android.R.drawable.ic_btn_speak_now
                 )
@@ -501,13 +695,33 @@ class VoiceService : Service() {
     }
 
     // =========================================================
-    // STOP SERVICE
+    // DISABLE
+    // =========================================================
+
+    private fun disableWakeMode() {
+
+        wakeModeEnabled = false
+
+        stopWakeWordListening()
+
+        try {
+            voiceController.disableWakeMode()
+        } catch (_: Exception) {
+        }
+
+        stopVoiceService()
+    }
+
+    // =========================================================
+    // STOP
     // =========================================================
 
     private fun stopVoiceService() {
 
         serviceActive = false
         wakeModeEnabled = false
+
+        stopWakeWordListening()
 
         try {
             voiceController.stop()
@@ -586,6 +800,16 @@ class VoiceService : Service() {
 
         serviceActive = false
         wakeModeEnabled = false
+
+        try {
+            audioCapture.stop()
+        } catch (_: Exception) {
+        }
+
+        try {
+            wakeWordEngine.release()
+        } catch (_: Exception) {
+        }
 
         try {
             voiceController.destroy()
