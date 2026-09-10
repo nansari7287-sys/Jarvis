@@ -32,6 +32,15 @@ class VoiceService : Service() {
         const val ACTION_VOICE_COMMAND =
             "com.example.jarvis.action.VOICE_COMMAND"
 
+        const val ACTION_VOICE_RESPONSE_FINISHED =
+            "com.example.jarvis.action.VOICE_RESPONSE_FINISHED"
+
+        const val ACTION_VOICE_RESUME_LISTENING =
+            "com.example.jarvis.action.VOICE_RESUME_LISTENING"
+
+        const val ACTION_VOICE_RETURN_STANDBY =
+            "com.example.jarvis.action.VOICE_RETURN_STANDBY"
+
         const val EXTRA_COMMAND =
             "com.example.jarvis.extra.COMMAND"
 
@@ -45,98 +54,67 @@ class VoiceService : Service() {
     private var serviceActive = false
     private var wakeModeEnabled = false
 
-    private lateinit var voiceController:
-            BackgroundVoiceController
-
-    private lateinit var audioCapture:
-            AudioCaptureManager
-
-    private lateinit var wakeWordEngine:
-            WakeWordEngine
+    private lateinit var voiceController: BackgroundVoiceController
+    private lateinit var audioCapture: AudioCaptureManager
+    private lateinit var wakeWordEngine: WakeWordEngine
 
     override fun onCreate() {
         super.onCreate()
 
         createNotificationChannel()
 
-        /*
-         * Background voice controller.
-         */
-        voiceController =
-            BackgroundVoiceController(
+        voiceController = BackgroundVoiceController(
 
-                context = applicationContext,
+            context = applicationContext,
 
-                onStateChanged = { state ->
-                    handleVoiceState(state)
-                },
+            onStateChanged = { state ->
+                handleVoiceState(state)
+            },
 
-                onWakeDetected = {
-                    handleWakeDetected()
-                },
+            onWakeDetected = {
+                handleWakeDetected()
+            },
 
-                onCommand = { command ->
-                    handleRecognizedCommand(command)
-                },
+            onCommand = { command ->
+                handleRecognizedCommand(command)
+            },
 
-                onError = { error ->
-                    handleVoiceError(error)
+            onError = { error ->
+                handleVoiceError(error)
+            }
+        )
+
+        audioCapture = AudioCaptureManager(
+
+            context = applicationContext,
+
+            onAudioFrame = { audioFrame ->
+
+                if (
+                    serviceActive &&
+                    wakeModeEnabled
+                ) {
+                    wakeWordEngine.processAudio(audioFrame)
                 }
-            )
+            },
 
-        /*
-         * Real microphone capture.
-         *
-         * IMPORTANT:
-         * This does NOT start automatically.
-         * It starts only when Wake Mode is enabled.
-         */
-        audioCapture =
-            AudioCaptureManager(
+            onError = { error ->
+                handleVoiceError(error)
+            }
+        )
 
-                context = applicationContext,
+        wakeWordEngine = WakeWordEngine(
 
-                onAudioFrame = { audioFrame ->
+            context = applicationContext,
 
-                    if (
-                        serviceActive &&
-                        wakeModeEnabled
-                    ) {
+            onWakeWordDetected = {
+                handleWakeWordDetected()
+            },
 
-                        wakeWordEngine.processAudio(
-                            audioFrame
-                        )
-                    }
-                },
-
-                onError = { error ->
-
-                    handleVoiceError(
-                        error
-                    )
-                }
-            )
-
-        /*
-         * Real Hey Jarvis classifier.
-         */
-        wakeWordEngine =
-            WakeWordEngine(
-
-                context = applicationContext,
-
-                onWakeWordDetected = {
-
-                    handleWakeWordDetected()
-                },
-
-                onError = { error ->
-
-                    handleVoiceError(
-                        error
-                    )
-                }
-            )
+            onError = { error ->
+                handleVoiceError(error)
+            }
+        )
     }
 
     // =========================================================
@@ -171,20 +149,25 @@ class VoiceService : Service() {
 
                 val command =
                     intent
-                        .getStringExtra(
-                            EXTRA_COMMAND
-                        )
+                        .getStringExtra(EXTRA_COMMAND)
                         ?.trim()
                         .orEmpty()
 
-                if (
-                    command.isNotBlank()
-                ) {
-
-                    handleRecognizedCommand(
-                        command
-                    )
+                if (command.isNotBlank()) {
+                    handleRecognizedCommand(command)
                 }
+            }
+
+            ACTION_VOICE_RESPONSE_FINISHED -> {
+                handleResponseFinished()
+            }
+
+            ACTION_VOICE_RESUME_LISTENING -> {
+                handleResumeListening()
+            }
+
+            ACTION_VOICE_RETURN_STANDBY -> {
+                handleReturnToStandby()
             }
 
             null -> {
@@ -230,10 +213,6 @@ class VoiceService : Service() {
 
     private fun enableWakeMode() {
 
-        /*
-         * Android requires microphone foreground
-         * service handling for background microphone use.
-         */
         startVoiceForeground()
 
         serviceActive = true
@@ -241,13 +220,6 @@ class VoiceService : Service() {
 
         voiceController.start()
 
-        /*
-         * IMPORTANT:
-         *
-         * No Android SpeechRecognizer is started here.
-         *
-         * Only our on-device wake-word pipeline listens.
-         */
         startWakeWordListening()
 
         updateNotification(
@@ -256,7 +228,7 @@ class VoiceService : Service() {
     }
 
     // =========================================================
-    // REAL WAKE LISTENER
+    // WAKE LISTENER
     // =========================================================
 
     private fun startWakeWordListening() {
@@ -270,17 +242,20 @@ class VoiceService : Service() {
 
         try {
 
+            /*
+             * Make sure command recognition is not
+             * using the microphone at the same time.
+             */
             voiceController.enableWakeMode()
 
             wakeWordEngine.start()
-
             audioCapture.start()
 
             updateNotification(
                 "Say Hey Jarvis"
             )
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
 
             handleVoiceError(
                 "Wake listener failed"
@@ -319,20 +294,13 @@ class VoiceService : Service() {
         }
 
         /*
-         * STOP the wake-word microphone pipeline first.
+         * IMPORTANT:
          *
-         * This prevents wake-word detection from
-         * repeatedly triggering while the user gives
-         * the actual command.
+         * Wake-word microphone is completely stopped
+         * before SpeechRecognizer starts.
          */
         stopWakeWordListening()
 
-        /*
-         * Tell BackgroundVoiceController that
-         * "Hey Jarvis" was detected.
-         *
-         * It then enters command-listening mode.
-         */
         try {
 
             voiceController.wakeDetected()
@@ -368,7 +336,7 @@ class VoiceService : Service() {
     }
 
     // =========================================================
-    // VOICE COMMAND
+    // RECOGNIZED COMMAND
     // =========================================================
 
     private fun handleRecognizedCommand(
@@ -385,9 +353,7 @@ class VoiceService : Service() {
         val cleanCommand =
             command.trim()
 
-        if (
-            cleanCommand.isBlank()
-        ) {
+        if (cleanCommand.isBlank()) {
             return
         }
 
@@ -419,32 +385,56 @@ class VoiceService : Service() {
 
         try {
 
-            startActivity(
-                commandIntent
-            )
+            startActivity(commandIntent)
 
         } catch (_: Exception) {
 
             /*
-             * Keep service alive.
+             * If MainActivity cannot be opened,
+             * return to wake listening.
              */
-            try {
-                voiceController.speechFinished()
-            } catch (_: Exception) {
-            }
+            voiceController.returnToStandby()
 
-            /*
-             * Return to wake standby.
-             */
             restartWakeWordListening()
         }
     }
 
     // =========================================================
-    // RESTART WAKE LISTENER
+    // RESPONSE FINISHED
     // =========================================================
 
-    private fun restartWakeWordListening() {
+    private fun handleResponseFinished() {
+
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
+            return
+        }
+
+        /*
+         * Gemini response + TTS has finished.
+         *
+         * Continue the same conversation instead
+         * of returning to the wake-word-only state.
+         */
+        try {
+
+            voiceController.speechFinished()
+
+        } catch (_: Exception) {
+        }
+
+        updateNotification(
+            "JARVIS is listening..."
+        )
+    }
+
+    // =========================================================
+    // RESUME LISTENING
+    // =========================================================
+
+    private fun handleResumeListening() {
 
         if (
             !serviceActive ||
@@ -455,22 +445,37 @@ class VoiceService : Service() {
 
         try {
 
-            voiceController.start()
-
-            wakeWordEngine.start()
-
-            audioCapture.start()
-
-            updateNotification(
-                "Say Hey Jarvis"
-            )
+            voiceController.resumeListening()
 
         } catch (_: Exception) {
-
-            updateNotification(
-                "JARVIS voice standby"
-            )
         }
+
+        updateNotification(
+            "JARVIS is listening..."
+        )
+    }
+
+    // =========================================================
+    // RETURN TO STANDBY
+    // =========================================================
+
+    private fun handleReturnToStandby() {
+
+        if (
+            !serviceActive ||
+            !wakeModeEnabled
+        ) {
+            return
+        }
+
+        try {
+
+            voiceController.returnToStandby()
+
+        } catch (_: Exception) {
+        }
+
+        startWakeWordListening()
     }
 
     // =========================================================
@@ -525,10 +530,6 @@ class VoiceService : Service() {
             return
         }
 
-        /*
-         * Do not expose raw technical errors
-         * in the permanent notification.
-         */
         updateNotification(
             "JARVIS voice standby"
         )
@@ -566,11 +567,10 @@ class VoiceService : Service() {
     }
 
     // =========================================================
-    // NOTIFICATION
+    // CREATE NOTIFICATION
     // =========================================================
 
-    private fun createNotification():
-        Notification {
+    private fun createNotification(): Notification {
 
         val openIntent =
             Intent(
@@ -622,6 +622,10 @@ class VoiceService : Service() {
             )
             .build()
     }
+
+    // =========================================================
+    // UPDATE NOTIFICATION
+    // =========================================================
 
     private fun updateNotification(
         text: String
@@ -695,7 +699,7 @@ class VoiceService : Service() {
     }
 
     // =========================================================
-    // DISABLE
+    // DISABLE WAKE MODE
     // =========================================================
 
     private fun disableWakeMode() {
