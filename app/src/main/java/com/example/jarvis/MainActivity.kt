@@ -42,6 +42,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var micButton: ImageButton
     private lateinit var messageInput: EditText
 
+    /*
+     * True when a command came from the background
+     * VoiceService.
+     *
+     * This is separate from manual voice mode.
+     */
+    private var backgroundVoiceCommandActive = false
+
     companion object {
 
         private const val INSTAGRAM_URL =
@@ -54,6 +62,10 @@ class MainActivity : ComponentActivity() {
             "https://frexxy-portfolio-3dri.vercel.app/#projects"
     }
 
+    // =========================================================
+    // CREATE
+    // =========================================================
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -63,167 +75,205 @@ class MainActivity : ComponentActivity() {
         // CORE
         // =====================================================
 
-        vm = ViewModelProvider(this)[MainViewModel::class.java]
+        vm =
+            ViewModelProvider(this)[MainViewModel::class.java]
 
         vm.initializeExecutor(this)
 
-        prefs = PreferencesManager(this)
+        prefs =
+            PreferencesManager(this)
 
-        speech = SpeechRecognizerManager(this)
+        speech =
+            SpeechRecognizerManager(this)
 
-        tts = TextToSpeechManager(this)
+        tts =
+            TextToSpeechManager(this)
 
-        voiceOverlay = VoiceOverlayManager(this)
+        voiceOverlay =
+            VoiceOverlayManager(this)
 
         // =====================================================
         // VIEWS
         // =====================================================
 
-        messageInput = findViewById(
-            R.id.messageInput
-        )
+        messageInput =
+            findViewById(R.id.messageInput)
 
-        val sendButton = findViewById<ImageButton>(
-            R.id.sendButton
-        )
+        val sendButton =
+            findViewById<ImageButton>(
+                R.id.sendButton
+            )
 
-        micButton = findViewById(
-            R.id.micButton
-        )
+        micButton =
+            findViewById(R.id.micButton)
 
-        val recyclerView = findViewById<RecyclerView>(
-            R.id.messageRecyclerView
-        )
+        val recyclerView =
+            findViewById<RecyclerView>(
+                R.id.messageRecyclerView
+            )
 
         // =====================================================
         // CHAT
         // =====================================================
 
-        adapter = ChatAdapter()
+        adapter =
+            ChatAdapter()
 
         recyclerView.layoutManager =
             LinearLayoutManager(this)
 
-        recyclerView.adapter = adapter
+        recyclerView.adapter =
+            adapter
 
         // =====================================================
-        // VOICE SESSION
+        // MANUAL VOICE SESSION
         // =====================================================
 
-        voiceSession = VoiceSessionManager(
-            context = this,
-            speechRecognizer = speech,
+        voiceSession =
+            VoiceSessionManager(
+                context = this,
+                speechRecognizer = speech,
 
-            onText = { text ->
+                onText = { text ->
 
-                runOnUiThread {
+                    runOnUiThread {
 
-                    val cleanText =
-                        text.trim()
+                        val cleanText =
+                            text.trim()
 
-                    if (cleanText.isBlank()) {
-                        return@runOnUiThread
-                    }
-
-                    messageInput.setText(
-                        cleanText
-                    )
-
-                    messageInput.setSelection(
-                        messageInput.length()
-                    )
-
-                    processUserCommand(
-                        cleanText
-                    )
-                }
-            },
-
-            onStateChanged = { state ->
-
-                runOnUiThread {
-
-                    when (state) {
-
-                        VoiceSessionManager.State.IDLE -> {
-                            updateMicState(false)
-                            voiceOverlay.hide()
+                        if (cleanText.isBlank()) {
+                            return@runOnUiThread
                         }
 
-                        VoiceSessionManager.State.LISTENING -> {
-                            updateMicState(true)
-                            voiceOverlay.show()
-                        }
-
-                        VoiceSessionManager.State.PROCESSING -> {
-                            updateMicState(true)
-                            voiceOverlay.show()
-                        }
-
-                        VoiceSessionManager.State.SPEAKING -> {
-                            updateMicState(true)
-                            voiceOverlay.show()
-                        }
-                    }
-                }
-            },
-
-            onError = { error ->
-
-                runOnUiThread {
-
-                    if (
-                        error.contains(
-                            "permission",
-                            ignoreCase = true
+                        messageInput.setText(
+                            cleanText
                         )
-                    ) {
 
-                        Toast.makeText(
-                            this,
-                            error,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        messageInput.setSelection(
+                            messageInput.length()
+                        )
 
-                    } else if (
-                        !voiceSession.isActive()
-                    ) {
+                        processUserCommand(
+                            cleanText
+                        )
+                    }
+                },
 
-                        Toast.makeText(
-                            this,
-                            error,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                onStateChanged = { state ->
+
+                    runOnUiThread {
+
+                        when (state) {
+
+                            VoiceSessionManager.State.IDLE -> {
+
+                                updateMicState(false)
+
+                                voiceOverlay.hide()
+                            }
+
+                            VoiceSessionManager.State.LISTENING -> {
+
+                                updateMicState(true)
+
+                                voiceOverlay.show()
+                            }
+
+                            VoiceSessionManager.State.PROCESSING -> {
+
+                                updateMicState(true)
+
+                                voiceOverlay.show()
+                            }
+
+                            VoiceSessionManager.State.SPEAKING -> {
+
+                                updateMicState(true)
+
+                                voiceOverlay.show()
+                            }
+                        }
+                    }
+                },
+
+                onError = { error ->
+
+                    runOnUiThread {
+
+                        if (
+                            error.contains(
+                                "permission",
+                                ignoreCase = true
+                            )
+                        ) {
+
+                            Toast.makeText(
+                                this,
+                                error,
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                        } else if (
+                            !voiceSession.isActive()
+                        ) {
+
+                            Toast.makeText(
+                                this,
+                                error,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
-            }
-        )
+            )
 
         // =====================================================
-        // GEMINI RESPONSE → TTS
+        // GEMINI RESPONSE
         // =====================================================
 
         vm.setResponseListener { response ->
 
             runOnUiThread {
 
-                if (voiceSession.isActive()) {
+                /*
+                 * Manual voice mode.
+                 */
+                if (
+                    voiceSession.isActive()
+                ) {
 
                     speakInVoiceMode(
                         response
                     )
 
-                } else {
+                    return@runOnUiThread
+                }
 
-                    tts.speak(
+                /*
+                 * Background VoiceService command.
+                 */
+                if (
+                    backgroundVoiceCommandActive
+                ) {
+
+                    speakBackgroundResponse(
                         response
                     )
+
+                    return@runOnUiThread
                 }
+
+                /*
+                 * Normal text-chat mode.
+                 */
+                tts.speak(
+                    response
+                )
             }
         }
 
         // =====================================================
-        // SEND BUTTON
+        // SEND
         // =====================================================
 
         sendButton.setOnClickListener {
@@ -249,7 +299,11 @@ class MainActivity : ComponentActivity() {
 
         micButton.setOnClickListener {
 
-            if (!PermissionHelper.hasAudioPermission(this)) {
+            if (
+                !PermissionHelper.hasAudioPermission(
+                    this
+                )
+            ) {
 
                 PermissionHelper.requestAudioPermission(
                     this
@@ -258,7 +312,9 @@ class MainActivity : ComponentActivity() {
                 return@setOnClickListener
             }
 
-            if (voiceSession.isActive()) {
+            if (
+                voiceSession.isActive()
+            ) {
 
                 stopVoiceMode()
 
@@ -398,7 +454,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // CHAT UI STATE
+        // CHAT STATE
         // =====================================================
 
         lifecycleScope.launch {
@@ -409,7 +465,9 @@ class MainActivity : ComponentActivity() {
                     state.messages
                 )
 
-                if (state.messages.isNotEmpty()) {
+                if (
+                    state.messages.isNotEmpty()
+                ) {
 
                     recyclerView.scrollToPosition(
                         state.messages.lastIndex
@@ -419,7 +477,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // VOICE COMMAND FROM VOICE SERVICE
+        // BACKGROUND VOICE COMMAND
         // =====================================================
 
         handleVoiceIntent(
@@ -428,12 +486,13 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // RECEIVE COMMAND FROM VOICE SERVICE
+    // RECEIVE VOICE COMMAND
     // =========================================================
 
     override fun onNewIntent(
         intent: Intent
     ) {
+
         super.onNewIntent(intent)
 
         setIntent(intent)
@@ -462,11 +521,21 @@ class MainActivity : ComponentActivity() {
                 ?.trim()
                 .orEmpty()
 
-        if (command.isBlank()) {
+        if (
+            command.isBlank()
+        ) {
             return
         }
 
         runOnUiThread {
+
+            /*
+             * Mark this as a background voice request.
+             *
+             * Gemini response will therefore be spoken
+             * and VoiceService will be resumed afterwards.
+             */
+            backgroundVoiceCommandActive = true
 
             messageInput.setText(
                 command
@@ -483,7 +552,9 @@ class MainActivity : ComponentActivity() {
             messageInput.text.clear()
         }
 
-        // Prevent processing the same command again
+        /*
+         * Prevent duplicate processing.
+         */
         intent.action = null
 
         intent.removeExtra(
@@ -492,12 +563,16 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // START MANUAL VOICE MODE
+    // START MANUAL VOICE
     // =========================================================
 
     private fun startVoiceMode() {
 
-        if (!PermissionHelper.hasAudioPermission(this)) {
+        if (
+            !PermissionHelper.hasAudioPermission(
+                this
+            )
+        ) {
 
             PermissionHelper.requestAudioPermission(
                 this
@@ -507,6 +582,9 @@ class MainActivity : ComponentActivity() {
         }
 
         tts.stop()
+
+        backgroundVoiceCommandActive =
+            false
 
         voiceSession.start()
 
@@ -520,7 +598,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // STOP MANUAL VOICE MODE
+    // STOP MANUAL VOICE
     // =========================================================
 
     private fun stopVoiceMode() {
@@ -543,14 +621,16 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // VOICE RESPONSE
+    // MANUAL VOICE RESPONSE
     // =========================================================
 
     private fun speakInVoiceMode(
         text: String
     ) {
 
-        if (!voiceSession.isActive()) {
+        if (
+            !voiceSession.isActive()
+        ) {
             return
         }
 
@@ -568,6 +648,7 @@ class MainActivity : ComponentActivity() {
                     if (
                         voiceSession.isActive()
                     ) {
+
                         voiceSession.setSpeaking()
                     }
                 }
@@ -580,7 +661,85 @@ class MainActivity : ComponentActivity() {
                     if (
                         voiceSession.isActive()
                     ) {
+
                         voiceSession.resumeListening()
+                    }
+                }
+            }
+        )
+    }
+
+    // =========================================================
+    // BACKGROUND VOICE RESPONSE
+    // =========================================================
+
+    private fun speakBackgroundResponse(
+        text: String
+    ) {
+
+        /*
+         * Tell VoiceService that JARVIS is speaking.
+         */
+        try {
+
+            startService(
+                Intent(
+                    this,
+                    VoiceService::class.java
+                ).apply {
+
+                    action =
+                        VoiceService.ACTION_VOICE_RESUME_LISTENING
+                }
+            )
+
+        } catch (_: Exception) {
+        }
+
+        tts.speak(
+
+            text,
+
+            onStarted = {
+
+                runOnUiThread {
+
+                    /*
+                     * TTS has started.
+                     *
+                     * VoiceService will remain alive.
+                     */
+                }
+            },
+
+            onFinished = {
+
+                runOnUiThread {
+
+                    backgroundVoiceCommandActive =
+                        false
+
+                    /*
+                     * Tell VoiceService that the response
+                     * is completely finished.
+                     *
+                     * It will start the next listening cycle.
+                     */
+                    try {
+
+                        startService(
+                            Intent(
+                                this,
+                                VoiceService::class.java
+                            ).apply {
+
+                                action =
+                                    VoiceService
+                                        .ACTION_VOICE_RESPONSE_FINISHED
+                            }
+                        )
+
+                    } catch (_: Exception) {
                     }
                 }
             }
@@ -631,12 +790,16 @@ class MainActivity : ComponentActivity() {
                 .trim()
 
         // =====================================================
-        // WAKE PHRASE ONLY
+        // WAKE ONLY
         // =====================================================
 
-        if (normalized.isBlank()) {
+        if (
+            normalized.isBlank()
+        ) {
 
-            if (voiceSession.isActive()) {
+            if (
+                voiceSession.isActive()
+            ) {
 
                 speakInVoiceMode(
                     "Yes, boss. Aaj kya karna hai?"
@@ -647,87 +810,106 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // FAST COMMANDS
+        // INSTAGRAM
         // =====================================================
 
-        when {
-
+        if (
             containsAny(
                 normalized,
                 "instagram open",
                 "instagram kholo",
                 "instagram khol",
                 "open instagram"
-            ) -> {
+            )
+        ) {
 
-                openInstagram()
+            openInstagram()
 
-                speakCommandResult(
-                    "Instagram open kar diya."
-                )
+            speakCommandResult(
+                "Instagram open kar diya."
+            )
 
-                return
-            }
+            return
+        }
 
+        // =====================================================
+        // YOUTUBE
+        // =====================================================
+
+        if (
             containsAny(
                 normalized,
                 "youtube open",
                 "youtube kholo",
                 "youtube khol",
                 "open youtube"
-            ) -> {
+            )
+        ) {
 
-                openYouTube()
+            openYouTube()
 
-                speakCommandResult(
-                    "YouTube open kar diya."
-                )
+            speakCommandResult(
+                "YouTube open kar diya."
+            )
 
-                return
-            }
+            return
+        }
 
+        // =====================================================
+        // WHATSAPP
+        // =====================================================
+
+        if (
             containsAny(
                 normalized,
                 "whatsapp open",
                 "whatsapp kholo",
                 "whatsapp khol",
                 "open whatsapp"
-            ) -> {
+            )
+        ) {
 
-                openWhatsApp()
+            openWhatsApp()
 
-                speakCommandResult(
-                    "WhatsApp open kar diya."
-                )
+            speakCommandResult(
+                "WhatsApp open kar diya."
+            )
 
-                return
-            }
+            return
+        }
 
+        // =====================================================
+        // GOOGLE
+        // =====================================================
+
+        if (
             containsAny(
                 normalized,
                 "google open",
                 "google kholo",
                 "google khol",
                 "open google"
-            ) -> {
+            )
+        ) {
 
-                openUrl(
-                    "https://www.google.com"
-                )
+            openUrl(
+                "https://www.google.com"
+            )
 
-                speakCommandResult(
-                    "Google open kar diya."
-                )
+            speakCommandResult(
+                "Google open kar diya."
+            )
 
-                return
-            }
+            return
         }
 
         // =====================================================
         // GEMINI
         // =====================================================
 
-        if (voiceSession.isActive()) {
+        if (
+            voiceSession.isActive()
+        ) {
 
             voiceSession.setProcessing()
         }
@@ -746,16 +928,29 @@ class MainActivity : ComponentActivity() {
         text: String
     ) {
 
-        if (!voiceSession.isActive()) {
+        if (
+            voiceSession.isActive()
+        ) {
 
-            tts.speak(
+            speakInVoiceMode(
                 text
             )
 
             return
         }
 
-        speakInVoiceMode(
+        if (
+            backgroundVoiceCommandActive
+        ) {
+
+            speakBackgroundResponse(
+                text
+            )
+
+            return
+        }
+
+        tts.speak(
             text
         )
     }
@@ -820,7 +1015,7 @@ class MainActivity : ComponentActivity() {
         )
 
         // =====================================================
-        // VOICE WAKE MODE
+        // VOICE WAKE
         // =====================================================
 
         val wakeSwitch =
@@ -829,7 +1024,8 @@ class MainActivity : ComponentActivity() {
                 text =
                     "Voice Wake Mode"
 
-                textSize = 15f
+                textSize =
+                    15f
 
                 isChecked =
                     prefs.isVoiceWakeEnabled()
@@ -850,10 +1046,6 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        // =====================================================
-        // DESCRIPTION
-        // =====================================================
-
         val wakeDescription =
             android.widget.TextView(this).apply {
 
@@ -861,9 +1053,11 @@ class MainActivity : ComponentActivity() {
                     "ON karne par JARVIS background voice " +
                     "wake mode ke liye ready rahega."
 
-                textSize = 12f
+                textSize =
+                    12f
 
-                alpha = 0.7f
+                alpha =
+                    0.7f
             }
 
         container.addView(
@@ -896,14 +1090,12 @@ class MainActivity : ComponentActivity() {
                 "SAVE"
             ) { _, _ ->
 
-                // Save API key
                 prefs.saveApiKey(
                     apiInput.text
                         .toString()
                         .trim()
                 )
 
-                // Save wake mode
                 val wakeEnabled =
                     wakeSwitch.isChecked
 
@@ -911,7 +1103,9 @@ class MainActivity : ComponentActivity() {
                     wakeEnabled
                 )
 
-                if (wakeEnabled) {
+                if (
+                    wakeEnabled
+                ) {
 
                     startBackgroundVoiceService()
 
@@ -940,12 +1134,16 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // START BACKGROUND VOICE SERVICE
+    // START BACKGROUND SERVICE
     // =========================================================
 
     private fun startBackgroundVoiceService() {
 
-        if (!PermissionHelper.hasAudioPermission(this)) {
+        if (
+            !PermissionHelper.hasAudioPermission(
+                this
+            )
+        ) {
 
             PermissionHelper.requestAudioPermission(
                 this
@@ -983,7 +1181,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
 
             Toast.makeText(
                 this,
@@ -994,7 +1192,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // STOP BACKGROUND VOICE SERVICE
+    // STOP BACKGROUND SERVICE
     // =========================================================
 
     private fun stopBackgroundVoiceService() {
@@ -1010,6 +1208,9 @@ class MainActivity : ComponentActivity() {
 
         } catch (_: Exception) {
         }
+
+        backgroundVoiceCommandActive =
+            false
     }
 
     // =========================================================
@@ -1046,7 +1247,9 @@ class MainActivity : ComponentActivity() {
                         .toString()
                         .trim()
 
-                if (query.isNotBlank()) {
+                if (
+                    query.isNotBlank()
+                ) {
 
                     openUrl(
                         "https://www.google.com/search?q=" +
@@ -1069,14 +1272,15 @@ class MainActivity : ComponentActivity() {
 
     private fun showMenu() {
 
-        val items = arrayOf(
-            "⚙ Settings",
-            "🛠 Tools",
-            "◉ Assist",
-            "▣ Apps",
-            "◆ About JARVIS",
-            "✦ Developer"
-        )
+        val items =
+            arrayOf(
+                "⚙ Settings",
+                "🛠 Tools",
+                "◉ Assist",
+                "▣ Apps",
+                "◆ About JARVIS",
+                "✦ Developer"
+            )
 
         AlertDialog.Builder(this)
 
@@ -1090,21 +1294,27 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> showSettings()
+                    0 ->
+                        showSettings()
 
-                    1 -> showTools()
+                    1 ->
+                        showTools()
 
-                    2 -> Toast.makeText(
-                        this,
-                        "Assist mode activated",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    2 ->
+                        Toast.makeText(
+                            this,
+                            "Assist mode activated",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                    3 -> showApps()
+                    3 ->
+                        showApps()
 
-                    4 -> showAbout()
+                    4 ->
+                        showAbout()
 
-                    5 -> showDeveloper()
+                    5 ->
+                        showDeveloper()
                 }
             }
 
@@ -1134,15 +1344,19 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> openUrl(
-                        "https://www.google.com"
-                    )
+                    0 ->
+                        openUrl(
+                            "https://www.google.com"
+                        )
 
-                    1 -> openYouTube()
+                    1 ->
+                        openYouTube()
 
-                    2 -> openInstagram()
+                    2 ->
+                        openInstagram()
 
-                    3 -> openWhatsApp()
+                    3 ->
+                        openWhatsApp()
                 }
             }
 
@@ -1172,15 +1386,19 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> openInstagram()
+                    0 ->
+                        openInstagram()
 
-                    1 -> openYouTube()
+                    1 ->
+                        openYouTube()
 
-                    2 -> openWhatsApp()
+                    2 ->
+                        openWhatsApp()
 
-                    3 -> openUrl(
-                        "https://www.google.com"
-                    )
+                    3 ->
+                        openUrl(
+                            "https://www.google.com"
+                        )
                 }
             }
 
@@ -1210,17 +1428,21 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> showSettings()
+                    0 ->
+                        showSettings()
 
-                    1 -> Toast.makeText(
-                        this,
-                        "Conversation History",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    1 ->
+                        Toast.makeText(
+                            this,
+                            "Conversation History",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                    2 -> showAbout()
+                    2 ->
+                        showAbout()
 
-                    3 -> showDeveloper()
+                    3 ->
+                        showDeveloper()
                 }
             }
 
@@ -1260,11 +1482,12 @@ class MainActivity : ComponentActivity() {
 
     private fun showDeveloper() {
 
-        val items = arrayOf(
-            "◎ Instagram",
-            "f Facebook",
-            "⌂ Website"
-        )
+        val items =
+            arrayOf(
+                "◎ Instagram",
+                "f Facebook",
+                "⌂ Website"
+            )
 
         AlertDialog.Builder(this)
 
@@ -1283,15 +1506,18 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> openInstagram()
+                    0 ->
+                        openInstagram()
 
-                    1 -> openUrl(
-                        FACEBOOK_URL
-                    )
+                    1 ->
+                        openUrl(
+                            FACEBOOK_URL
+                        )
 
-                    2 -> openUrl(
-                        WEBSITE_URL
-                    )
+                    2 ->
+                        openUrl(
+                            WEBSITE_URL
+                        )
                 }
             }
 
@@ -1388,14 +1614,16 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // OPEN URL
+    // URL
     // =========================================================
 
     private fun openUrl(
         url: String
     ) {
 
-        if (url.isBlank()) {
+        if (
+            url.isBlank()
+        ) {
             return
         }
 
@@ -1419,20 +1647,12 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // ACTIVITY RESUME
+    // RESUME
     // =========================================================
 
     override fun onResume() {
 
         super.onResume()
-
-        /*
-         * If Voice Wake Mode is enabled,
-         * make sure the foreground service is running.
-         *
-         * Actual wake-word detection is handled by
-         * the voice-service layer.
-         */
 
         if (
             ::prefs.isInitialized &&
@@ -1451,7 +1671,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // ACTIVITY DESTROY
+    // DESTROY
     // =========================================================
 
     override fun onDestroy() {
@@ -1481,10 +1701,8 @@ class MainActivity : ComponentActivity() {
         )
 
         /*
-         * DO NOT stop VoiceService here.
-         *
-         * When Voice Wake Mode is ON, the service is supposed
-         * to survive Activity destruction.
+         * VoiceService intentionally remains alive
+         * when Voice Wake Mode is enabled.
          */
 
         super.onDestroy()
