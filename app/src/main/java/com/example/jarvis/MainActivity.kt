@@ -42,12 +42,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var micButton: ImageButton
     private lateinit var messageInput: EditText
 
-    /*
-     * True when a command came from the background
-     * VoiceService.
-     *
-     * This is separate from manual voice mode.
-     */
     private var backgroundVoiceCommandActive = false
 
     companion object {
@@ -70,10 +64,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
-
-        // =====================================================
-        // CORE
-        // =====================================================
 
         vm =
             ViewModelProvider(this)[MainViewModel::class.java]
@@ -235,9 +225,6 @@ class MainActivity : ComponentActivity() {
 
             runOnUiThread {
 
-                /*
-                 * Manual voice mode.
-                 */
                 if (
                     voiceSession.isActive()
                 ) {
@@ -249,9 +236,6 @@ class MainActivity : ComponentActivity() {
                     return@runOnUiThread
                 }
 
-                /*
-                 * Background VoiceService command.
-                 */
                 if (
                     backgroundVoiceCommandActive
                 ) {
@@ -263,9 +247,6 @@ class MainActivity : ComponentActivity() {
                     return@runOnUiThread
                 }
 
-                /*
-                 * Normal text-chat mode.
-                 */
                 tts.speak(
                     response
                 )
@@ -529,13 +510,8 @@ class MainActivity : ComponentActivity() {
 
         runOnUiThread {
 
-            /*
-             * Mark this as a background voice request.
-             *
-             * Gemini response will therefore be spoken
-             * and VoiceService will be resumed afterwards.
-             */
-            backgroundVoiceCommandActive = true
+            backgroundVoiceCommandActive =
+                true
 
             messageInput.setText(
                 command
@@ -552,9 +528,6 @@ class MainActivity : ComponentActivity() {
             messageInput.text.clear()
         }
 
-        /*
-         * Prevent duplicate processing.
-         */
         intent.action = null
 
         intent.removeExtra(
@@ -678,23 +651,13 @@ class MainActivity : ComponentActivity() {
     ) {
 
         /*
-         * Tell VoiceService that JARVIS is speaking.
+         * IMPORTANT:
+         *
+         * Do NOT tell VoiceService to resume listening
+         * when TTS starts.
+         *
+         * Otherwise JARVIS could listen to its own speech.
          */
-        try {
-
-            startService(
-                Intent(
-                    this,
-                    VoiceService::class.java
-                ).apply {
-
-                    action =
-                        VoiceService.ACTION_VOICE_RESUME_LISTENING
-                }
-            )
-
-        } catch (_: Exception) {
-        }
 
         tts.speak(
 
@@ -705,9 +668,10 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
 
                     /*
-                     * TTS has started.
+                     * JARVIS is speaking.
                      *
-                     * VoiceService will remain alive.
+                     * VoiceService remains alive,
+                     * but command listening stays stopped.
                      */
                 }
             },
@@ -716,15 +680,15 @@ class MainActivity : ComponentActivity() {
 
                 runOnUiThread {
 
+                    /*
+                     * TTS is completely finished.
+                     *
+                     * Only now can VoiceService start
+                     * the next listening cycle.
+                     */
                     backgroundVoiceCommandActive =
                         false
 
-                    /*
-                     * Tell VoiceService that the response
-                     * is completely finished.
-                     *
-                     * It will start the next listening cycle.
-                     */
                     try {
 
                         startService(
@@ -1067,10 +1031,6 @@ class MainActivity : ComponentActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
-
-        // =====================================================
-        // DIALOG
-        // =====================================================
 
         AlertDialog.Builder(this)
 
