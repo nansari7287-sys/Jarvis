@@ -19,12 +19,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.jarvis.data.PreferencesManager
 import com.example.jarvis.ui.ChatAdapter
+import com.example.jarvis.ui.JarvisOrbView
 import com.example.jarvis.ui.MainViewModel
+import com.example.jarvis.ui.OrbState
 import com.example.jarvis.ui.VoiceOverlayManager
 import com.example.jarvis.utils.PermissionHelper
 import com.example.jarvis.voice.SpeechRecognizerManager
 import com.example.jarvis.voice.TextToSpeechManager
 import com.example.jarvis.voice.VoiceSessionManager
+import com.example.jarvis.voice.VoiceService
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -39,8 +42,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var voiceSession: VoiceSessionManager
     private lateinit var voiceOverlay: VoiceOverlayManager
 
+    // UI ELEMENTS
     private lateinit var micButton: ImageButton
     private lateinit var messageInput: EditText
+    private lateinit var orbView: JarvisOrbView
 
     private var backgroundVoiceCommandActive = false
 
@@ -83,7 +88,7 @@ class MainActivity : ComponentActivity() {
             VoiceOverlayManager(this)
 
         // =====================================================
-        // VIEWS
+        // VIEWS BINDING
         // =====================================================
 
         messageInput =
@@ -97,13 +102,16 @@ class MainActivity : ComponentActivity() {
         micButton =
             findViewById(R.id.micButton)
 
+        orbView = 
+            findViewById(R.id.jarvisOrbView)
+
         val recyclerView =
             findViewById<RecyclerView>(
                 R.id.messageRecyclerView
             )
 
         // =====================================================
-        // CHAT
+        // CHAT RECYCLER VIEW SETUP
         // =====================================================
 
         adapter =
@@ -116,7 +124,7 @@ class MainActivity : ComponentActivity() {
             adapter
 
         // =====================================================
-        // MANUAL VOICE SESSION
+        // MANUAL VOICE SESSION (WITH ORB STATES)
         // =====================================================
 
         voiceSession =
@@ -142,6 +150,8 @@ class MainActivity : ComponentActivity() {
                         messageInput.setSelection(
                             messageInput.length()
                         )
+                        
+                        orbView.setOrbState(OrbState.THINKING)
 
                         processUserCommand(
                             cleanText
@@ -156,31 +166,27 @@ class MainActivity : ComponentActivity() {
                         when (state) {
 
                             VoiceSessionManager.State.IDLE -> {
-
                                 updateMicState(false)
-
-                                voiceOverlay.hide()
+                                voiceOverlay.updateState(OrbState.IDLE)
+                                orbView.setOrbState(OrbState.IDLE)
                             }
 
                             VoiceSessionManager.State.LISTENING -> {
-
                                 updateMicState(true)
-
-                                voiceOverlay.show()
+                                voiceOverlay.updateState(OrbState.LISTENING)
+                                orbView.setOrbState(OrbState.LISTENING)
                             }
 
                             VoiceSessionManager.State.PROCESSING -> {
-
                                 updateMicState(true)
-
-                                voiceOverlay.show()
+                                voiceOverlay.updateState(OrbState.THINKING)
+                                orbView.setOrbState(OrbState.THINKING)
                             }
 
                             VoiceSessionManager.State.SPEAKING -> {
-
                                 updateMicState(true)
-
-                                voiceOverlay.show()
+                                voiceOverlay.updateState(OrbState.SPEAKING)
+                                orbView.setOrbState(OrbState.SPEAKING)
                             }
                         }
                     }
@@ -189,6 +195,8 @@ class MainActivity : ComponentActivity() {
                 onError = { error ->
 
                     runOnUiThread {
+                        
+                        orbView.setOrbState(OrbState.ERROR)
 
                         if (
                             error.contains(
@@ -218,7 +226,7 @@ class MainActivity : ComponentActivity() {
             )
 
         // =====================================================
-        // GEMINI RESPONSE
+        // GEMINI RESPONSE LISTENER
         // =====================================================
 
         vm.setResponseListener { response ->
@@ -247,14 +255,21 @@ class MainActivity : ComponentActivity() {
                     return@runOnUiThread
                 }
 
+                orbView.setOrbState(OrbState.SPEAKING)
+                
                 tts.speak(
-                    response
+                    response,
+                    onFinished = {
+                        runOnUiThread {
+                            orbView.setOrbState(OrbState.IDLE)
+                        }
+                    }
                 )
             }
         }
 
         // =====================================================
-        // SEND
+        // SEND BUTTON CLICK
         // =====================================================
 
         sendButton.setOnClickListener {
@@ -265,6 +280,8 @@ class MainActivity : ComponentActivity() {
                     .trim()
 
             if (text.isNotBlank()) {
+                
+                orbView.setOrbState(OrbState.THINKING)
 
                 processUserCommand(
                     text
@@ -275,7 +292,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // MICROPHONE
+        // MICROPHONE BUTTON CLICK
         // =====================================================
 
         micButton.setOnClickListener {
@@ -306,45 +323,33 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // SETTINGS
+        // TOP NAVIGATION BAR / SETTINGS
         // =====================================================
 
         findViewById<View>(
             R.id.settingsButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             showSettings()
         }
 
-        // =====================================================
-        // MENU
-        // =====================================================
-
         findViewById<View>(
             R.id.menuButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             showMenu()
         }
 
-        // =====================================================
-        // SEARCH
-        // =====================================================
-
         findViewById<View>(
             R.id.searchButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             showSearch()
         }
 
-        // =====================================================
-        // HISTORY
-        // =====================================================
-
         findViewById<View>(
             R.id.historyButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             Toast.makeText(
                 this,
@@ -354,12 +359,12 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // TABS
+        // BOTTOM TABS
         // =====================================================
 
         findViewById<View>(
             R.id.chatTab
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             Toast.makeText(
                 this,
@@ -370,14 +375,14 @@ class MainActivity : ComponentActivity() {
 
         findViewById<View>(
             R.id.toolsTab
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             showTools()
         }
 
         findViewById<View>(
             R.id.assistTab
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             Toast.makeText(
                 this,
@@ -387,12 +392,12 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // QUICK ACTIONS
+        // QUICK ACTIONS CARDS
         // =====================================================
 
         findViewById<View>(
             R.id.webButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             openUrl(
                 "https://www.google.com"
@@ -401,41 +406,41 @@ class MainActivity : ComponentActivity() {
 
         findViewById<View>(
             R.id.youtubeButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             openYouTube()
         }
 
         findViewById<View>(
             R.id.instagramButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             openInstagram()
         }
 
         findViewById<View>(
             R.id.whatsappButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             openWhatsApp()
         }
 
         findViewById<View>(
             R.id.appsButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             showApps()
         }
 
         findViewById<View>(
             R.id.moreButton
-        ).setOnClickListener {
+        )?.setOnClickListener {
 
             showMore()
         }
 
         // =====================================================
-        // CHAT STATE
+        // CHAT STATE OBSERVER
         // =====================================================
 
         lifecycleScope.launch {
@@ -458,7 +463,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // =====================================================
-        // BACKGROUND VOICE COMMAND
+        // BACKGROUND VOICE COMMAND INTENT
         // =====================================================
 
         handleVoiceIntent(
@@ -467,7 +472,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // RECEIVE VOICE COMMAND
+    // RECEIVE VOICE COMMAND NOTIFICATIONS
     // =========================================================
 
     override fun onNewIntent(
@@ -521,6 +526,8 @@ class MainActivity : ComponentActivity() {
                 messageInput.length()
             )
 
+            orbView.setOrbState(OrbState.THINKING)
+            
             processUserCommand(
                 command
             )
@@ -562,6 +569,8 @@ class MainActivity : ComponentActivity() {
         voiceSession.start()
 
         updateMicState(true)
+        
+        orbView.setOrbState(OrbState.LISTENING)
 
         Toast.makeText(
             this,
@@ -585,6 +594,8 @@ class MainActivity : ComponentActivity() {
         updateMicState(false)
 
         voiceOverlay.hide()
+        
+        orbView.setOrbState(OrbState.IDLE)
 
         Toast.makeText(
             this,
@@ -594,7 +605,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // MANUAL VOICE RESPONSE
+    // MANUAL VOICE RESPONSE (TTS HANDLER)
     // =========================================================
 
     private fun speakInVoiceMode(
@@ -608,6 +619,7 @@ class MainActivity : ComponentActivity() {
         }
 
         voiceSession.setSpeaking()
+        orbView.setOrbState(OrbState.SPEAKING)
 
         speech.stop()
 
@@ -623,6 +635,7 @@ class MainActivity : ComponentActivity() {
                     ) {
 
                         voiceSession.setSpeaking()
+                        orbView.setOrbState(OrbState.SPEAKING)
                     }
                 }
             },
@@ -636,6 +649,9 @@ class MainActivity : ComponentActivity() {
                     ) {
 
                         voiceSession.resumeListening()
+                        orbView.setOrbState(OrbState.LISTENING)
+                    } else {
+                        orbView.setOrbState(OrbState.IDLE)
                     }
                 }
             }
@@ -650,14 +666,7 @@ class MainActivity : ComponentActivity() {
         text: String
     ) {
 
-        /*
-         * IMPORTANT:
-         *
-         * Do NOT tell VoiceService to resume listening
-         * when TTS starts.
-         *
-         * Otherwise JARVIS could listen to its own speech.
-         */
+        orbView.setOrbState(OrbState.SPEAKING)
 
         tts.speak(
 
@@ -666,13 +675,7 @@ class MainActivity : ComponentActivity() {
             onStarted = {
 
                 runOnUiThread {
-
-                    /*
-                     * JARVIS is speaking.
-                     *
-                     * VoiceService remains alive,
-                     * but command listening stays stopped.
-                     */
+                    // System is speaking, maintain state
                 }
             },
 
@@ -680,14 +683,10 @@ class MainActivity : ComponentActivity() {
 
                 runOnUiThread {
 
-                    /*
-                     * TTS is completely finished.
-                     *
-                     * Only now can VoiceService start
-                     * the next listening cycle.
-                     */
                     backgroundVoiceCommandActive =
                         false
+                        
+                    orbView.setOrbState(OrbState.IDLE)
 
                     try {
 
@@ -711,7 +710,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // MIC UI
+    // MIC UI OPACITY CONTROLLER
     // =========================================================
 
     private fun updateMicState(
@@ -727,7 +726,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // COMMAND ROUTER
+    // COMMAND ROUTER & LOCAL INTENTS
     // =========================================================
 
     private fun processUserCommand(
@@ -753,9 +752,9 @@ class MainActivity : ComponentActivity() {
                 )
                 .trim()
 
-        // =====================================================
+        // -----------------------------------------------------
         // WAKE ONLY
-        // =====================================================
+        // -----------------------------------------------------
 
         if (
             normalized.isBlank()
@@ -768,14 +767,16 @@ class MainActivity : ComponentActivity() {
                 speakInVoiceMode(
                     "Yes, boss. Aaj kya karna hai?"
                 )
+            } else {
+                orbView.setOrbState(OrbState.IDLE)
             }
 
             return
         }
 
-        // =====================================================
+        // -----------------------------------------------------
         // INSTAGRAM
-        // =====================================================
+        // -----------------------------------------------------
 
         if (
             containsAny(
@@ -796,9 +797,9 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // =====================================================
+        // -----------------------------------------------------
         // YOUTUBE
-        // =====================================================
+        // -----------------------------------------------------
 
         if (
             containsAny(
@@ -819,9 +820,9 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // =====================================================
+        // -----------------------------------------------------
         // WHATSAPP
-        // =====================================================
+        // -----------------------------------------------------
 
         if (
             containsAny(
@@ -842,9 +843,9 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // =====================================================
+        // -----------------------------------------------------
         // GOOGLE
-        // =====================================================
+        // -----------------------------------------------------
 
         if (
             containsAny(
@@ -867,9 +868,9 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // =====================================================
-        // GEMINI
-        // =====================================================
+        // -----------------------------------------------------
+        // GEMINI AI CLOUD
+        // -----------------------------------------------------
 
         if (
             voiceSession.isActive()
@@ -885,7 +886,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // COMMAND RESULT
+    // COMMAND RESULT TTS DELEGATOR
     // =========================================================
 
     private fun speakCommandResult(
@@ -913,9 +914,16 @@ class MainActivity : ComponentActivity() {
 
             return
         }
+        
+        orbView.setOrbState(OrbState.SPEAKING)
 
         tts.speak(
-            text
+            text,
+            onFinished = {
+                runOnUiThread {
+                    orbView.setOrbState(OrbState.IDLE)
+                }
+            }
         )
     }
 
@@ -934,7 +942,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // SETTINGS
+    // SETTINGS DIALOG
     // =========================================================
 
     private fun showSettings() {
@@ -953,9 +961,9 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        // =====================================================
+        // -----------------------------------------------------
         // GEMINI API KEY
-        // =====================================================
+        // -----------------------------------------------------
 
         val apiInput =
             EditText(this).apply {
@@ -978,9 +986,9 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        // =====================================================
+        // -----------------------------------------------------
         // VOICE WAKE
-        // =====================================================
+        // -----------------------------------------------------
 
         val wakeSwitch =
             Switch(this).apply {
@@ -1094,7 +1102,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // START BACKGROUND SERVICE
+    // START BACKGROUND WAKE SERVICE
     // =========================================================
 
     private fun startBackgroundVoiceService() {
@@ -1152,7 +1160,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // STOP BACKGROUND SERVICE
+    // STOP BACKGROUND WAKE SERVICE
     // =========================================================
 
     private fun stopBackgroundVoiceService() {
@@ -1174,7 +1182,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // SEARCH
+    // SEARCH DIALOG
     // =========================================================
 
     private fun showSearch() {
@@ -1227,7 +1235,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // MENU
+    // MENU DIALOG
     // =========================================================
 
     private fun showMenu() {
@@ -1282,7 +1290,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // TOOLS
+    // TOOLS DIALOG
     // =========================================================
 
     private fun showTools() {
@@ -1324,7 +1332,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // APPS
+    // APPS DIALOG
     // =========================================================
 
     private fun showApps() {
@@ -1366,7 +1374,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // MORE
+    // MORE MENU
     // =========================================================
 
     private fun showMore() {
@@ -1437,7 +1445,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // DEVELOPER
+    // DEVELOPER INFO
     // =========================================================
 
     private fun showDeveloper() {
@@ -1490,7 +1498,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // INSTAGRAM
+    // QUICK APP INTENTS
     // =========================================================
 
     private fun openInstagram() {
@@ -1517,10 +1525,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // =========================================================
-    // YOUTUBE
-    // =========================================================
-
     private fun openYouTube() {
 
         try {
@@ -1545,10 +1549,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // =========================================================
-    // WHATSAPP
-    // =========================================================
-
     private fun openWhatsApp() {
 
         try {
@@ -1572,10 +1572,6 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
-
-    // =========================================================
-    // URL
-    // =========================================================
 
     private fun openUrl(
         url: String
@@ -1607,7 +1603,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // RESUME
+    // LIFECYCLE RESUME
     // =========================================================
 
     override fun onResume() {
@@ -1631,7 +1627,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // =========================================================
-    // DESTROY
+    // LIFECYCLE DESTROY
     // =========================================================
 
     override fun onDestroy() {
@@ -1659,11 +1655,6 @@ class MainActivity : ComponentActivity() {
         vm.setResponseListener(
             null
         )
-
-        /*
-         * VoiceService intentionally remains alive
-         * when Voice Wake Mode is enabled.
-         */
 
         super.onDestroy()
     }
