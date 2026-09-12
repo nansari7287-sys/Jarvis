@@ -1,21 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ========================================================= -->
+    <!-- CORE SYSTEM & HARDWARE PERMISSIONS                        -->
+    <!-- ========================================================= -->
 
-    <!-- Network -->
+    <!-- Network & Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
-    <!-- Microphone -->
+    <!-- Microphone & Audio Control (For Voice Engine & Muting Beeps) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
-    <!-- Foreground service -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    
+    <!-- Background & Power Management (To keep JARVIS alive) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <!-- Microphone foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- Android 13+ notifications -->
+    <!-- Screen, UI & Overlay (For Floating Neon Orb) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+
+    <!-- App Discovery & Automation (Crucial for Opening Apps) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Hardware Feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Android 13+ Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ========================================================= -->
+    <!-- FUTURE AI AUTOMATION PERMISSIONS (Calls, SMS, Contacts)   -->
+    <!-- ========================================================= -->
+    
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+
+    <!-- ========================================================= -->
+    <!-- APPLICATION CONFIGURATION                                 -->
+    <!-- ========================================================= -->
 
     <application
         android:allowBackup="true"
@@ -29,45 +66,41 @@
         <!-- Main JARVIS Activity -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
-
-                <action
-                    android:name="android.intent.action.MAIN" />
-
-                <category
-                    android:name="android.intent.category.LAUNCHER" />
-
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
         </activity>
 
-        <!-- JARVIS Voice Foreground Service -->
+        <!-- JARVIS Voice Engine (Background Continuous Listening) -->
+        <!-- Path fixed to point to the 'voice' package -->
         <service
-            android:name=".VoiceService"
+            android:name=".voice.VoiceService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- JARVIS Accessibility Service -->
+        <!-- JARVIS Automation Engine (Accessibility Service for Clicking/Typing) -->
+        <!-- Path fixed to point to the 'automation' package -->
         <service
-            android:name=".accessibility.JarvisAccessibilityService"
+            android:name=".automation.JarvisAccessibilityService"
             android:enabled="true"
-            android:exported="false"
+            android:exported="true"
+            android:label="JARVIS Automation Engine"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
 
             <intent-filter>
-
-                <action
-                    android:name="android.accessibilityservice.AccessibilityService" />
-
+                <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
 
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/jarvis_accessibility_service" />
-
+                android:resource="@xml/accessibility_service_config" />
         </service>
 
     </application>
