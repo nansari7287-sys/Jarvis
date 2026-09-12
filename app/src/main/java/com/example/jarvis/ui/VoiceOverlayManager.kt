@@ -1,171 +1,162 @@
 package com.example.jarvis.ui
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
 import android.app.Activity
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.TextView
-import com.example.jarvis.voice.VoiceState
 
 /**
- * JARVIS voice overlay.
- *
- * Voice wake hone par screen ke upar compact JARVIS orb/status
- * dikhata hai. Existing Activity UI ko replace nahi karta.
+ * JARVIS Next-Gen Holographic Voice Overlay.
+ * 
+ * Features added:
+ * - Glassmorphism Glowing Background
+ * - Overshoot Entry & Decelerate Exit Animations
+ * - Neon Glowing Text Shadows
+ * - Haptic Engine Integration for State Changes
  */
 class VoiceOverlayManager(
     private val activity: Activity
 ) {
 
     private var overlayRoot: FrameLayout? = null
+    private var overlayContainer: FrameLayout? = null
     private var orbView: JarvisOrbView? = null
     private var statusText: TextView? = null
 
-    private var currentState =
-        VoiceState.IDLE
+    private var currentState = OrbState.IDLE
+    private var isVisible = false
 
     // =========================================================
-    // SHOW
+    // INITIALIZATION & SHOW
     // =========================================================
 
     fun show() {
 
-        if (overlayRoot != null) {
-            return
+        if (isVisible) return
+
+        if (overlayRoot == null) {
+            buildOverlay()
         }
 
-        val decor =
-            activity.window.decorView as ViewGroup
+        isVisible = true
+        overlayRoot?.visibility = View.VISIBLE
 
-        val root =
-            FrameLayout(activity)
+        // Cinematic Pop-In Animation (Scale + Alpha + TranslationY)
+        overlayContainer?.let { container ->
+            container.translationY = -150f
+            container.alpha = 0f
+            container.scaleX = 0.8f
+            container.scaleY = 0.8f
 
-        root.setBackgroundColor(
-            Color.TRANSPARENT
-        )
-
-        val container =
-            FrameLayout(activity).apply {
-
-                background =
-                    createContainerBackground()
-
-                elevation =
-                    dp(12f)
-
-                setPadding(
-                    dp(12f).toInt(),
-                    dp(10f).toInt(),
-                    dp(12f).toInt(),
-                    dp(10f).toInt()
-                )
-            }
-
-        // -----------------------------------------------------
-        // ORB
-        // -----------------------------------------------------
-
-        val orb =
-            JarvisOrbView(activity).apply {
-
-                setVoiceState(
-                    currentState
-                )
-            }
-
-        val orbParams =
-            FrameLayout.LayoutParams(
-                dp(74f).toInt(),
-                dp(74f).toInt()
+            val animator = ObjectAnimator.ofPropertyValuesHolder(
+                container,
+                PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f),
+                PropertyValuesHolder.ofFloat(View.ALPHA, 1f),
+                PropertyValuesHolder.ofFloat(View.SCALE_X, 1f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f)
             ).apply {
-
-                gravity =
-                    Gravity.CENTER_VERTICAL
+                duration = 450
+                interpolator = OvershootInterpolator(1.2f)
             }
+            animator.start()
+        }
 
-        container.addView(
-            orb,
-            orbParams
-        )
+        triggerHapticFeedback()
+    }
+
+    // =========================================================
+    // BUILD OVERLAY UI (GLASSMORPHISM & GLOW)
+    // =========================================================
+
+    private fun buildOverlay() {
+
+        val decor = activity.window.decorView as ViewGroup
+
+        val root = FrameLayout(activity).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            elevation = dp(20f)
+        }
+
+        val container = FrameLayout(activity).apply {
+            background = createGlassmorphismBackground()
+            elevation = dp(15f)
+            setPadding(
+                dp(12f).toInt(),
+                dp(10f).toInt(),
+                dp(16f).toInt(),
+                dp(10f).toInt()
+            )
+        }
 
         // -----------------------------------------------------
-        // STATUS
+        // SCI-FI ORB
         // -----------------------------------------------------
 
-        val status =
-            TextView(activity).apply {
+        val orb = JarvisOrbView(activity).apply {
+            // ERROR FIXED: Updated from setVoiceState to setOrbState
+            setOrbState(currentState)
+        }
 
-                text =
-                    stateText(
-                        currentState
-                    )
-
-                setTextColor(
-                    Color.WHITE
-                )
-
-                textSize =
-                    13f
-
-                maxLines = 1
-
-                setPadding(
-                    dp(12f).toInt(),
-                    0,
-                    0,
-                    0
-                )
-            }
-
-        val statusParams =
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                gravity =
-                    Gravity.CENTER_VERTICAL
-
-                leftMargin =
-                    dp(74f).toInt()
-            }
-
-        container.addView(
-            status,
-            statusParams
-        )
+        val orbParams = FrameLayout.LayoutParams(
+            dp(70f).toInt(),
+            dp(70f).toInt()
+        ).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        
+        container.addView(orb, orbParams)
 
         // -----------------------------------------------------
-        // CONTAINER POSITION
+        // GLOWING NEON STATUS TEXT
         // -----------------------------------------------------
 
-        val containerParams =
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                dp(94f).toInt()
-            ).apply {
+        val status = TextView(activity).apply {
+            text = stateText(currentState)
+            setTextColor(Color.WHITE)
+            textSize = 15f
+            maxLines = 1
+            // Adding Neon Text Glow
+            setShadowLayer(15f, 0f, 0f, Color.parseColor("#00FFFF"))
+            setPadding(dp(76f).toInt(), 0, 0, 0)
+        }
 
-                gravity =
-                    Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        val statusParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        }
 
-                topMargin =
-                    dp(55f).toInt()
+        container.addView(status, statusParams)
 
-                leftMargin =
-                    dp(16f).toInt()
+        // -----------------------------------------------------
+        // CONTAINER POSITIONING (Top Center Float)
+        // -----------------------------------------------------
 
-                rightMargin =
-                    dp(16f).toInt()
-            }
+        val containerParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            dp(90f).toInt()
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            topMargin = dp(60f).toInt()
+        }
 
-        root.addView(
-            container,
-            containerParams
-        )
-
+        root.addView(container, containerParams)
         decor.addView(
             root,
             ViewGroup.LayoutParams(
@@ -174,170 +165,161 @@ class VoiceOverlayManager(
             )
         )
 
-        overlayRoot =
-            root
-
-        orbView =
-            orb
-
-        statusText =
-            status
-
-        updateState(
-            currentState
-        )
+        overlayRoot = root
+        overlayContainer = container
+        orbView = orb
+        statusText = status
     }
 
     // =========================================================
-    // STATE
+    // DYNAMIC STATE UPDATES
     // =========================================================
 
-    fun updateState(
-        state: VoiceState
-    ) {
+    fun updateState(state: OrbState) {
+        
+        // Agar pehle se same state hai, toh re-render mat karo
+        if (currentState == state) return
+        currentState = state
 
-        currentState =
-            state
+        orbView?.setOrbState(state)
 
-        val orb =
-            orbView
-
-        val status =
-            statusText
-
-        if (orb != null) {
-
-            orb.setVoiceState(
-                state
-            )
+        statusText?.let { tv ->
+            tv.text = stateText(state)
+            
+            // State ke hisaab se neon text ka color change karna
+            val glowColor = when (state) {
+                OrbState.LISTENING -> Color.parseColor("#00FF00") // Green
+                OrbState.THINKING -> Color.parseColor("#8A2BE2")  // Purple
+                OrbState.SPEAKING -> Color.parseColor("#FF00FF")  // Magenta
+                OrbState.ERROR -> Color.parseColor("#FF0000")     // Red
+                else -> Color.parseColor("#00FFFF")               // Cyan
+            }
+            tv.setShadowLayer(20f, 0f, 0f, glowColor)
         }
 
-        if (status != null) {
-
-            status.text =
-                stateText(
-                    state
-                )
-        }
-
-        if (state == VoiceState.IDLE) {
-
+        if (state == OrbState.IDLE) {
             hide()
         } else {
-
-            overlayRoot?.visibility =
-                View.VISIBLE
+            show()
+            // Haptic trigger on important state changes
+            if (state == OrbState.LISTENING || state == OrbState.THINKING) {
+                triggerHapticFeedback()
+            }
         }
     }
 
     // =========================================================
-    // HIDE
+    // CINEMATIC HIDE
     // =========================================================
 
     fun hide() {
+        if (!isVisible || overlayContainer == null) return
+        isVisible = false
 
-        overlayRoot?.visibility =
-            View.GONE
+        // Smooth Slide Up & Fade Out
+        val animator = ObjectAnimator.ofPropertyValuesHolder(
+            overlayContainer,
+            PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, -150f),
+            PropertyValuesHolder.ofFloat(View.ALPHA, 0f),
+            PropertyValuesHolder.ofFloat(View.SCALE_X, 0.8f),
+            PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.8f)
+        ).apply {
+            duration = 350
+            interpolator = DecelerateInterpolator(1.5f)
+        }
+
+        animator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                if (!isVisible) {
+                    overlayRoot?.visibility = View.GONE
+                }
+            }
+        })
+        
+        animator.start()
     }
 
     // =========================================================
-    // DESTROY
+    // DESTROY & CLEANUP
     // =========================================================
 
     fun destroy() {
-
-        val root =
-            overlayRoot
-
-        if (root != null) {
-
-            val parent =
-                root.parent as? ViewGroup
-
-            parent?.removeView(
-                root
-            )
+        overlayRoot?.let { root ->
+            val parent = root.parent as? ViewGroup
+            parent?.removeView(root)
         }
 
         overlayRoot = null
+        overlayContainer = null
         orbView = null
         statusText = null
     }
 
     // =========================================================
-    // STATUS TEXT
+    // TEXT GENERATOR
     // =========================================================
 
-    private fun stateText(
-        state: VoiceState
-    ): String {
-
+    private fun stateText(state: OrbState): String {
         return when (state) {
-
-            VoiceState.IDLE ->
-                "JARVIS"
-
-            VoiceState.STANDBY ->
-                "Ready"
-
-            VoiceState.LISTENING ->
-                "Listening..."
-
-            VoiceState.THINKING ->
-                "Thinking..."
-
-            VoiceState.EXECUTING ->
-                "Executing..."
-
-            VoiceState.SPEAKING ->
-                "Speaking..."
+            OrbState.IDLE -> "Standby"
+            OrbState.LISTENING -> "Listening..."
+            OrbState.THINKING -> "Processing Data..."
+            OrbState.SPEAKING -> "System Active..."
+            OrbState.ERROR -> "System Error"
         }
     }
 
     // =========================================================
-    // BACKGROUND
+    // PREMIUM GLASSMORPHISM BACKGROUND
     // =========================================================
 
-    private fun createContainerBackground():
-        GradientDrawable {
-
+    private fun createGlassmorphismBackground(): GradientDrawable {
         return GradientDrawable().apply {
-
-            setColor(
-                Color.argb(
-                    235,
-                    8,
-                    16,
-                    22
-                )
-            )
-
-            cornerRadius =
-                dp(28f)
-
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(35f) // Deep curved pill shape
+            
+            // Dark transparent background
+            setColor(Color.argb(200, 10, 15, 25))
+            
+            // Glowing Cyber-Neon Border
             setStroke(
-                dp(1f).toInt(),
-                Color.argb(
-                    150,
-                    60,
-                    220,
-                    230
-                )
+                dp(1.5f).toInt(),
+                Color.argb(180, 0, 229, 255)
             )
         }
     }
 
     // =========================================================
-    // DP
+    // HAPTIC ENGINE (FUTURISTIC FEEL)
     // =========================================================
 
-    private fun dp(
-        value: Float
-    ): Float {
+    private fun triggerHapticFeedback() {
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
 
-        return value *
-            activity.resources
-                .displayMetrics
-                .density
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Creates a crisp, premium "tick" feel on modern devices
+                vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(30)
+            }
+        } catch (e: Exception) {
+            // Ignore if device lacks vibration motor
+        }
+    }
+
+    // =========================================================
+    // UTILITIES
+    // =========================================================
+
+    private fun dp(value: Float): Float {
+        return value * activity.resources.displayMetrics.density
     }
 }
