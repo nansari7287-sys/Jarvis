@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ========================================================= -->
+    <!-- LAYER 1: OUTER AMBIENT GLOW (Fades into darkness)         -->
+    <!-- ========================================================= -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="180dp"
+                android:startColor="#2200E5FF" 
+                android:centerColor="#0800E5FF"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+
+    <!-- ========================================================= -->
+    <!-- LAYER 2: FUTURISTIC DASHED RING (Mechanical HUD Look)     -->
+    <!-- ========================================================= -->
+    <!-- Padding se isko thoda andar ki taraf push kiya gaya hai -->
+    <item 
+        android:top="15dp" 
+        android:bottom="15dp" 
+        android:left="15dp" 
+        android:right="15dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="#4D00E5FF"
+                android:dashWidth="8dp"
+                android:dashGap="6dp" />
+            <solid android:color="#00000000"/> <!-- Transparent Center -->
+        </shape>
+    </item>
+
+    <!-- ========================================================= -->
+    <!-- LAYER 3: SOLID INNER TECH RING (Sharp borders)            -->
+    <!-- ========================================================= -->
+    <item 
+        android:top="28dp" 
+        android:bottom="28dp" 
+        android:left="28dp" 
+        android:right="28dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="1dp"
+                android:color="#9900E5FF" />
+            <solid android:color="#00000000"/>
+        </shape>
+    </item>
+
+    <!-- ========================================================= -->
+    <!-- LAYER 4: INNER INTENSE CORE GLOW                          -->
+    <!-- ========================================================= -->
+    <item 
+        android:top="45dp" 
+        android:bottom="45dp" 
+        android:left="45dp" 
+        android:right="45dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="80dp"
+                android:startColor="#6600E5FF"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+
+</layer-list>
