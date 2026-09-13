@@ -1,5 +1,6 @@
 package com.example.jarvis.voice
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,6 +11,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
@@ -23,6 +25,9 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -35,6 +40,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.example.jarvis.MainActivity
 import com.example.jarvis.ui.JarvisOrbView
 import com.example.jarvis.ui.OrbState
@@ -42,15 +48,16 @@ import java.util.Locale
 
 /**
  * ============================================================================
- * J.A.R.V.I.S. BACKGROUND VOICE ENGINE (ULTIMATE GOD MODE - V3.0)
+ * J.A.R.V.I.S. BACKGROUND VOICE ENGINE (ULTIMATE GOD MODE - V4.0)
  * ============================================================================
- * 
- * Production-ready Background Service featuring:
+ * Architect: Drako X Naeem
+ * Features:
+ * - Aggressive Beep Muting (Zero Tuluung Sound)
+ * - Haptic Feedback (Vibration) on Wake Word
  * - Draggable System Alert Window (Floating UI)
- * - Network Awareness (Prevents API crashes)
- * - Bluetooth SCO Audio Routing (For Earbuds/Headphones)
- * - Aggressive Audio Multi-Stream Muting
- * - Memory-safe Speech Recognition Loop
+ * - Safe Runtime Permission Checks
+ * - Network Awareness & Memory-safe Loop
+ * ============================================================================
  */
 class VoiceService : Service(), RecognitionListener {
 
@@ -72,7 +79,6 @@ class VoiceService : Service(), RecognitionListener {
     private var floatingText: TextView? = null
     private lateinit var windowParams: WindowManager.LayoutParams
 
-    // Drag functionality variables
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
@@ -88,7 +94,6 @@ class VoiceService : Service(), RecognitionListener {
     private var retryCount = 0
     private var audioFocusRequest: AudioFocusRequest? = null
     
-    // Core Engine State Enum
     private enum class EngineState {
         OFFLINE, STANDBY, LISTENING, PROCESSING, SPEAKING, ERROR
     }
@@ -121,6 +126,7 @@ class VoiceService : Service(), RecognitionListener {
                     "THINKING" -> setEngineState(EngineState.PROCESSING)
                     "SPEAKING" -> setEngineState(EngineState.SPEAKING)
                     "ERROR" -> setEngineState(EngineState.ERROR)
+                    "LISTENING" -> setEngineState(EngineState.LISTENING)
                     "IDLE" -> setEngineState(EngineState.STANDBY)
                 }
             }
@@ -134,7 +140,6 @@ class VoiceService : Service(), RecognitionListener {
         super.onCreate()
         Log.i(TAG, "Booting J.A.R.V.I.S. Core Engine...")
 
-        // Initialize System Services
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -142,9 +147,13 @@ class VoiceService : Service(), RecognitionListener {
 
         acquireWakeLock()
         createNotificationChannel()
-        initializeSpeechRecognizer()
         
-        // Register Broadcast Receiver safely
+        if (hasAudioPermission()) {
+            initializeSpeechRecognizer()
+        } else {
+            Log.e(TAG, "FATAL: Audio permission missing. Engine cannot start.")
+        }
+
         val filter = IntentFilter(ACTION_UPDATE_STATE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(stateReceiver, filter, RECEIVER_NOT_EXPORTED)
@@ -154,16 +163,22 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!hasAudioPermission()) {
+            Log.w(TAG, "Engine halted: Missing RECORD_AUDIO permission.")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         when (intent?.action) {
             ACTION_ENABLE_WAKE -> {
                 Log.i(TAG, "Engaging Wake Protocol...")
                 isWakeModeActive = true
                 startForeground(NOTIFICATION_ID, buildSystemNotification("Sensors Online & Monitoring"))
                 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                if (hasOverlayPermission()) {
                     mountFloatingUI()
                 } else {
-                    Log.w(TAG, "SYSTEM_ALERT_WINDOW permission denied. Orb will not be visible.")
+                    Log.w(TAG, "SYSTEM_ALERT_WINDOW permission denied. Floating UI disabled.")
                 }
                 
                 routeAudioToBluetoothIfAvailable()
@@ -188,37 +203,49 @@ class VoiceService : Service(), RecognitionListener {
     override fun onBind(intent: Intent?): IBinder? = null
 
     // =========================================================
+    // SECURITY PERMISSION CHECKS
+    // =========================================================
+    private fun hasAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasOverlayPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else {
+            true
+        }
+    }
+
+    // =========================================================
     // 2. DRAGGABLE FLOATING UI (SYSTEM ALERT WINDOW)
     // =========================================================
     @SuppressLint("ClickableViewAccessibility")
     private fun mountFloatingUI() {
         if (floatingLayout != null) return
 
-        // Main Container
         floatingLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(24, 24, 24, 24)
         }
 
-        // The Glowing Orb
         floatingOrb = JarvisOrbView(this).apply { 
             setOrbState(OrbState.IDLE) 
         }
 
-        // The Status Text
         floatingText = TextView(this).apply {
             text = "System Initializing..."
-            setTextColor(Color.parseColor("#00E5FF"))
-            textSize = 11f
+            setTextColor(Color.parseColor("#00E5FF")) // Jarvis Cyan
+            textSize = 12f
             gravity = Gravity.CENTER
-            setShadowLayer(10f, 0f, 0f, Color.parseColor("#00E5FF"))
+            setShadowLayer(15f, 0f, 0f, Color.parseColor("#00E5FF"))
+            setPadding(0, 8, 0, 0)
         }
 
-        floatingLayout?.addView(floatingOrb, LinearLayout.LayoutParams(130, 130))
+        floatingLayout?.addView(floatingOrb, LinearLayout.LayoutParams(140, 140))
         floatingLayout?.addView(floatingText, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
 
-        // Window Parameters
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -240,7 +267,6 @@ class VoiceService : Service(), RecognitionListener {
             y = 200
         }
 
-        // Implement Drag & Drop Logic
         floatingLayout?.setOnTouchListener { view, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -248,8 +274,6 @@ class VoiceService : Service(), RecognitionListener {
                     initialY = windowParams.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
-                    
-                    // Visual feedback on touch
                     view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start()
                     true
                 }
@@ -271,7 +295,7 @@ class VoiceService : Service(), RecognitionListener {
             windowManager.addView(floatingLayout, windowParams)
             setEngineState(EngineState.STANDBY)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to mount Floating UI: \${e.message}")
+            Log.e(TAG, "Failed to mount Floating UI: ${e.message}")
         }
     }
 
@@ -285,17 +309,16 @@ class VoiceService : Service(), RecognitionListener {
                 EngineState.STANDBY -> Pair(OrbState.IDLE, "Standby")
                 EngineState.LISTENING -> Pair(OrbState.LISTENING, "Listening...")
                 EngineState.PROCESSING -> Pair(OrbState.THINKING, "Processing...")
-                EngineState.SPEAKING -> Pair(OrbState.SPEAKING, "System Active")
-                EngineState.ERROR -> Pair(OrbState.ERROR, "Network Error")
+                EngineState.SPEAKING -> Pair(OrbState.SPEAKING, "Transmitting")
+                EngineState.ERROR -> Pair(OrbState.ERROR, "System Fault")
                 EngineState.OFFLINE -> Pair(OrbState.IDLE, "Offline")
             }
 
             floatingOrb?.setOrbState(uiState.first)
             floatingText?.text = uiState.second
 
-            // Handle layout animations
             if (state == EngineState.STANDBY || state == EngineState.OFFLINE) {
-                floatingLayout?.alpha = 0.6f
+                floatingLayout?.alpha = 0.5f
             } else {
                 floatingLayout?.alpha = 1.0f
             }
@@ -310,27 +333,26 @@ class VoiceService : Service(), RecognitionListener {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
             speechRecognizer?.setRecognitionListener(this)
         } else {
-            Log.e(TAG, "Speech Recognition Framework missing on this device.")
+            Log.e(TAG, "Speech Recognition Framework missing.")
             stopSelf()
         }
     }
 
     private fun startContinuousListening() {
-        if (isListening || !isWakeModeActive) return
+        if (isListening || !isWakeModeActive || !hasAudioPermission()) return
 
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toString())
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            // Optimize silences for faster processing
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1200)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200)
         }
 
         try {
             requestAudioFocus()
-            muteSystemBeeps() // KILL THE GOOGLE BEEP
+            muteSystemBeeps() // THE SILENT PROTOCOL
             
             speechRecognizer?.startListening(intent)
             isListening = true
@@ -353,7 +375,7 @@ class VoiceService : Service(), RecognitionListener {
             abandonAudioFocus()
             if (!isWakeModeActive) setEngineState(EngineState.OFFLINE)
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping recognizer: \${e.message}")
+            Log.e(TAG, "Error stopping recognizer: ${e.message}")
         }
     }
 
@@ -373,7 +395,7 @@ class VoiceService : Service(), RecognitionListener {
     private fun handleRecognizerCrash() {
         if (retryCount < MAX_RETRIES) {
             retryCount++
-            Log.w(TAG, "Recognizer crash. Backoff retry attempt \$retryCount")
+            Log.w(TAG, "Recognizer crash. Backoff retry attempt $retryCount")
             restartListeningWithDelay((retryCount * 1000).toLong())
         } else {
             Log.e(TAG, "FATAL: Recognizer max retries reached.")
@@ -387,7 +409,7 @@ class VoiceService : Service(), RecognitionListener {
     // =========================================================
     private fun processRecognizedText(text: String) {
         val normalized = text.lowercase(Locale.getDefault()).trim()
-        Log.i(TAG, "Acoustic Input: \$normalized")
+        Log.i(TAG, "Acoustic Input: $normalized")
 
         val isWakeWord = normalized.contains("jarvis") || 
                          normalized.contains("hey jarvis") || 
@@ -395,15 +417,16 @@ class VoiceService : Service(), RecognitionListener {
                          normalized.contains("wake up")
 
         if (isWakeWord) {
-            // Check Network Before Firing Intent (Prevents the technical error read-out)
             if (!isNetworkAvailable()) {
                 setEngineState(EngineState.ERROR)
-                floatingText?.text = "No Internet!"
+                floatingText?.text = "Offline Mode"
+                triggerHapticFeedback(500)
                 restartListeningWithDelay(2000)
                 return
             }
 
-            Log.i(TAG, "Wake Word Detected! Routing to Main Engine...")
+            Log.i(TAG, "Wake Word Authorized. Routing to Main Engine...")
+            triggerHapticFeedback(100) // Tactile feedback instead of a beep
             stopContinuousListening()
             setEngineState(EngineState.PROCESSING)
             
@@ -414,7 +437,6 @@ class VoiceService : Service(), RecognitionListener {
             }
             startActivity(launchIntent)
         } else {
-            // False alarm, ignore silently
             restartListeningWithDelay(50)
         }
     }
@@ -422,18 +444,26 @@ class VoiceService : Service(), RecognitionListener {
     // =========================================================
     // 6. RECOGNIZER CALLBACKS
     // =========================================================
-    override fun onReadyForSpeech(params: Bundle?) {}
+    override fun onReadyForSpeech(params: Bundle?) {
+        // Unmute slightly after mic opens to catch any delayed system sounds safely
+        mainHandler.postDelayed({ restoreSystemBeeps() }, 100)
+    }
+    
     override fun onBeginningOfSpeech() { 
         if (currentState != EngineState.PROCESSING) setEngineState(EngineState.LISTENING) 
     }
+    
     override fun onRmsChanged(rmsdB: Float) {}
     override fun onBufferReceived(buffer: ByteArray?) {}
     override fun onEndOfSpeech() { isListening = false }
     
     override fun onError(error: Int) {
+        isListening = false
+        restoreSystemBeeps() // Safety restore
+        
         when (error) {
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT, SpeechRecognizer.ERROR_NO_MATCH -> {
-                restartListeningWithDelay(50) // Normal silence
+                restartListeningWithDelay(100) 
             }
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
                 restartListeningWithDelay(1500)
@@ -443,6 +473,7 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     override fun onResults(results: Bundle?) {
+        isListening = false
         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         if (!matches.isNullOrEmpty()) {
             processRecognizedText(matches[0])
@@ -455,7 +486,6 @@ class VoiceService : Service(), RecognitionListener {
         val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         if (!matches.isNullOrEmpty()) {
             val partial = matches[0].lowercase(Locale.getDefault())
-            // Aggressive early wake word detection
             if (partial.contains("jarvis")) {
                 speechRecognizer?.stopListening()
                 processRecognizedText(partial)
@@ -472,14 +502,11 @@ class VoiceService : Service(), RecognitionListener {
         if (isMuted) return
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val streamsToMute = intArrayOf(
-                    AudioManager.STREAM_MUSIC, 
-                    AudioManager.STREAM_SYSTEM, 
-                    AudioManager.STREAM_NOTIFICATION, 
-                    AudioManager.STREAM_ALARM,
-                    AudioManager.STREAM_RING
+                val streams = intArrayOf(
+                    AudioManager.STREAM_MUSIC, AudioManager.STREAM_SYSTEM, 
+                    AudioManager.STREAM_NOTIFICATION, AudioManager.STREAM_ALARM, AudioManager.STREAM_RING
                 )
-                for (stream in streamsToMute) {
+                for (stream in streams) {
                     audioManager.adjustStreamVolume(stream, AudioManager.ADJUST_MUTE, 0)
                 }
                 isMuted = true
@@ -491,19 +518,32 @@ class VoiceService : Service(), RecognitionListener {
         if (!isMuted) return
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val streamsToRestore = intArrayOf(
-                    AudioManager.STREAM_MUSIC, 
-                    AudioManager.STREAM_SYSTEM, 
-                    AudioManager.STREAM_NOTIFICATION, 
-                    AudioManager.STREAM_ALARM,
-                    AudioManager.STREAM_RING
+                val streams = intArrayOf(
+                    AudioManager.STREAM_MUSIC, AudioManager.STREAM_SYSTEM, 
+                    AudioManager.STREAM_NOTIFICATION, AudioManager.STREAM_ALARM, AudioManager.STREAM_RING
                 )
-                for (stream in streamsToRestore) {
+                for (stream in streams) {
                     audioManager.adjustStreamVolume(stream, AudioManager.ADJUST_UNMUTE, 0)
                 }
                 isMuted = false
             }
         } catch (e: Exception) { Log.e(TAG, "Restore protocol failed.") }
+    }
+
+    private fun triggerHapticFeedback(durationMs: Long) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                val effect = VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE)
+                vibratorManager.defaultVibrator.vibrate(effect)
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                vibrator.vibrate(durationMs)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Haptic exception.")
+        }
     }
 
     // =========================================================
@@ -536,7 +576,6 @@ class VoiceService : Service(), RecognitionListener {
     private fun routeAudioToBluetoothIfAvailable() {
         if (audioManager.isBluetoothScoAvailableOffCall) {
             audioManager.startBluetoothSco()
-            Log.i(TAG, "Bluetooth Audio Routing Activated.")
         }
     }
 
@@ -552,7 +591,7 @@ class VoiceService : Service(), RecognitionListener {
     private fun acquireWakeLock() {
         if (wakeLock == null) {
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JarvisCore::CpuLock")
-            wakeLock?.acquire(12 * 60 * 60 * 1000L) // Max 12 hours
+            wakeLock?.acquire(12 * 60 * 60 * 1000L) 
         }
     }
 
@@ -604,7 +643,7 @@ class VoiceService : Service(), RecognitionListener {
                 windowManager.removeView(floatingLayout)
                 floatingLayout = null
             }
-        } catch (e: Exception) { Log.e(TAG, "Cleanup warning: \${e.message}") }
+        } catch (e: Exception) { Log.e(TAG, "Cleanup warning: ${e.message}") }
 
         speechRecognizer?.destroy()
         speechRecognizer = null
