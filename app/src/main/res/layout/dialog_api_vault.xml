@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#0D111A"
+    android:padding="24dp">
+
+    <!-- VAULT HEADER -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SECURITY VAULT"
+        android:textColor="#00E5FF"
+        android:textSize="18sp"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.2"
+        android:gravity="center"
+        android:shadowColor="#00E5FF"
+        android:shadowRadius="10"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- GEMINI API KEY INPUT -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GOOGLE GEMINI API KEY:"
+        android:textColor="#00FF00"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="4dp"/>
+        
+    <EditText
+        android:id="@+id/etGeminiKey"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:background="#1A00E5FF"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:paddingHorizontal="12dp"
+        android:hint="Paste Gemini Key here..."
+        android:textColorHint="#55FFFFFF"
+        android:inputType="textPassword"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- CHATGPT API KEY INPUT -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OPENAI CHATGPT API KEY:"
+        android:textColor="#00FF00"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="4dp"/>
+        
+    <EditText
+        android:id="@+id/etChatGPTKey"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:background="#1A00E5FF"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:paddingHorizontal="12dp"
+        android:hint="Paste ChatGPT Key here..."
+        android:textColorHint="#55FFFFFF"
+        android:inputType="textPassword"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- GROK API KEY INPUT -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="xAI GROK API KEY:"
+        android:textColor="#00FF00"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="4dp"/>
+        
+    <EditText
+        android:id="@+id/etGrokKey"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:background="#1A00E5FF"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:paddingHorizontal="12dp"
+        android:hint="Paste Grok Key here..."
+        android:textColorHint="#55FFFFFF"
+        android:inputType="textPassword"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- SAVE BUTTON -->
+    <Button
+        android:id="@+id/btnSaveKeys"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="ENCRYPT &amp; SAVE"
+        android:textColor="#000000"
+        android:backgroundTint="#00E5FF"
+        android:fontFamily="sans-serif-bold"
+        android:letterSpacing="0.1"/>
+
+</LinearLayout>
