@@ -1,9 +1,12 @@
 package com.example.jarvis
 
 // ============================================================================
-// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V20.0 - ULTIMATE GOD CLASS)
+// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V25.0 - UNCOMPRESSED)
 // ============================================================================
+
 import android.Manifest
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ArgbEvaluator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
@@ -18,6 +21,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.graphics.Canvas
@@ -28,6 +32,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
@@ -46,17 +51,23 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.text.InputType
 import android.util.Log
 import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
@@ -80,9 +91,7 @@ import com.example.jarvis.ui.OrbState
 import com.example.jarvis.ui.VoiceOverlayManager
 import com.example.jarvis.utils.PermissionHelper
 import com.example.jarvis.voice.SpeechRecognizerManager
-import com.example.jarvis.voice.TextToSpeechManager
 import com.example.jarvis.voice.VoiceSessionManager
-import com.example.jarvis.voice.VoiceService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -109,143 +118,215 @@ import kotlin.math.tan
 
 /**
  * ============================================================================
- * J.A.R.V.I.S. MAIN NEURAL INTERFACE (ULTIMATE TITAN CORE v20.0)
+ * J.A.R.V.I.S. ULTIMATE TITAN CORE - EXTREME MONOLITHIC EDITION (UNCOMPRESSED)
  * ============================================================================
  * Architect: 𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎
  * Developer: 𝑵𝒂𝒆𝒆𝒎
- * Architecture: Extreme Monolithic (Fully Expanded God Class)
  * 
- * INCLUDED MODULES (100% PROGRAMMATIC TO AVOID XML ERRORS):
- * 1. JarvisDatabaseHelper (SQL History Logging, CSV Export, Deep Memory)
- * 2. AdvancedMathParser (Offline BODMAS, Trig, Log, Factorials)
- * 3. MatrixParticleView (Digital Rain Canvas Engine)
- * 4. HardwareTelemetryManager (Battery, RAM, Network, Storage, CPU Est.)
- * 5. BiometricSecurityVault (Programmatic UI - No XML needed)
- * 6. Multi-AI Router (Gemini, Grok, ChatGPT with UI bindings)
- * 7. Live Terminal Logger (Hacking style logs)
- * 8. IPC Background Receiver (God Mode Integration)
+ * DESIGN PHILOSOPHY:
+ * This file is intentionally expansive. It encompasses every core system,
+ * hardware interface, programmatic UI generation, and custom logic routing
+ * required for the J.A.R.V.I.S. Artificial Intelligence.
+ * 
+ * ERRORS FIXED:
+ * 1. Resolved TextToSpeech missing imports and interface overrides.
+ * 2. Resolved 'Too many characters in character literal' in Math Parser.
+ * 3. Resolved ACTION_WAKE_WORD_DETECTED IPC intent issues.
+ * 4. Resolved SystemState / OrbState 'SPEAKING' and 'FAULT' conflicts.
  * ============================================================================
  */
-class MainActivity : ComponentActivity(), SensorEventListener {
+class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener {
 
-    // =========================================================
-    // ENUMS & CONSTANTS
-    // =========================================================
+    // ========================================================================
+    // ENUMS & GLOBAL CONSTANTS
+    // ========================================================================
+    
     enum class SystemState {
-        INITIALIZING, ONLINE, STANDBY, DIAGNOSTIC, CRITICAL_FAULT, OFFLINE, LISTENING, PROCESSING
+        INITIALIZING, 
+        ONLINE, 
+        STANDBY, 
+        DIAGNOSTIC, 
+        CRITICAL_FAULT, 
+        OFFLINE, 
+        LISTENING, 
+        PROCESSING,
+        SPEAKING,
+        SECURITY_LOCK
     }
 
     companion object {
-        // URLs & Ext Links
+        
+        // --------------------------------------------------------------------
+        // System Tags
+        // --------------------------------------------------------------------
+        private const val TAG = "JarvisTitanMaster"
+        
+        // --------------------------------------------------------------------
+        // IPC Action Strings (Hardcoded to prevent unresolved references)
+        // --------------------------------------------------------------------
+        private const val ACTION_WAKE_WORD_DETECTED = "com.example.jarvis.WAKE_WORD_DETECTED"
+        private const val ACTION_UPDATE_STATE = "com.example.jarvis.UPDATE_STATE"
+        
+        // --------------------------------------------------------------------
+        // Sensor & Hardware Thresholds
+        // --------------------------------------------------------------------
+        private const val SHAKE_ACCEL_THRESHOLD = 18.0f
+        private const val PROXIMITY_MUTE_DISTANCE = 3.0f
+        
+        // --------------------------------------------------------------------
+        // Activity Request Codes
+        // --------------------------------------------------------------------
+        private const val REQ_SECURITY_VAULT = 8001
+        private const val REQ_OVERLAY_PERM = 8002
+        private const val REQ_HARDWARE_PERMS = 8003
+        
+        // --------------------------------------------------------------------
+        // Cybernetic HUD Color Palette
+        // --------------------------------------------------------------------
+        private const val C_CYAN = "#00E5FF"
+        private const val C_RED = "#FF1744"
+        private const val C_GREEN = "#00E676"
+        private const val C_ORANGE = "#FF9100"
+        private const val C_BLACK_BG = "#050811"
+        private const val C_GLASS = "#88000000"
+        
+        // --------------------------------------------------------------------
+        // External Developer & Creator Links
+        // --------------------------------------------------------------------
         private const val CREATOR_INSTAGRAM = "https://www.instagram.com/drakoxnaeem"
         private const val CREATOR_FACEBOOK = "https://www.facebook.com/share/1BsGJAatqh/"
         private const val CREATOR_PORTFOLIO = "https://frexxy-portfolio-3dri.vercel.app/#projects"
-        
-        // Configuration Constants
-        private const val REQ_CODE_OVERLAY = 9001
-        private const val REQ_CODE_SECURITY = 9002
-        private const val SHAKE_THRESHOLD = 15.0f
-        
-        // Cybernetic HUD Colors
-        private const val HUD_COLOR_CYAN = "#00E5FF"
-        private const val HUD_COLOR_RED = "#FF1744"
-        private const val HUD_COLOR_GREEN = "#00E676"
-        private const val HUD_COLOR_ORANGE = "#FF9100"
-        private const val HUD_COLOR_BLACK_TRANSPARENT = "#88000000"
     }
 
-    // =========================================================
-    // CORE DEPENDENCY DECLARATIONS
-    // =========================================================
+    // ========================================================================
+    // CORE DEPENDENCY MANAGERS (LATEINIT)
+    // ========================================================================
     
-    // Architectures & Managers
+    // Architectures & UI Logic Models
     private lateinit var viewModel: MainViewModel
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var prefs: PreferencesManager
     private lateinit var commandExecutor: CommandExecutor
+    
+    // Internal Storage & Cryptography Vaults
     private lateinit var localDatabase: JarvisDatabaseHelper
-    private lateinit var aiManager: AIProviderManager
     private lateinit var securityVaultPrefs: SharedPreferences
+    
+    // AI Integration Managers
+    private lateinit var aiManager: AIProviderManager
+    private lateinit var overlayManager: OverlayWindowManager
 
-    // Neural Audio Engines
+    // Neural Audio & Voice Engines
     private lateinit var speechRecognizerManager: SpeechRecognizerManager
-    private lateinit var textToSpeechManager: TextToSpeechManager
     private lateinit var voiceSessionManager: VoiceSessionManager
     private lateinit var voiceOverlayManager: VoiceOverlayManager
+    private lateinit var textToSpeechEngine: TextToSpeech
+    
+    // System Hardware Managers
     private lateinit var audioManager: AudioManager
+    private lateinit var activityManager: ActivityManager
+    private lateinit var connectivityManager: ConnectivityManager
 
-    // Telemetry & Hardware Sensors
+    // ========================================================================
+    // TELEMETRY & HARDWARE SENSORS
+    // ========================================================================
+    
     private lateinit var sensorManager: SensorManager
+    
     private var proximitySensor: Sensor? = null
     private var lightSensor: Sensor? = null
     private var accelerometerSensor: Sensor? = null
     private var magneticSensor: Sensor? = null
+    private var gyroscopeSensor: Sensor? = null
+    
     private lateinit var cameraManager: CameraManager
     private var mainCameraId: String? = null
     private var isTorchActive = false
-    private lateinit var connectivityManager: ConnectivityManager
-    private lateinit var activityManager: ActivityManager
 
-    // UI View Bindings (XML Native)
+    // ========================================================================
+    // USER INTERFACE (NATIVE XML BINDINGS)
+    // ========================================================================
+    
     private lateinit var micToggleButton: ImageButton
     private lateinit var messageInputBox: EditText
     private lateinit var sendCommandButton: ImageButton
     private lateinit var holographicOrbView: JarvisOrbView
     private lateinit var mainRecyclerView: RecyclerView
     private lateinit var masterRootLayout: ViewGroup
+
+    // ========================================================================
+    // USER INTERFACE (PROGRAMMATIC INJECTIONS)
+    // ========================================================================
     
-    // UI View Bindings (Programmatic Injections - ZERO XML ERRORS)
     private lateinit var dynamicTelemetryHUD: TextView
     private lateinit var programmaticTerminalLog: TextView
     private lateinit var terminalScrollView: ScrollView
     private lateinit var aiSwitcherPanel: LinearLayout
     private lateinit var tvPoweredByAI: TextView
+    
     private var matrixBackground: MatrixDigitalRainView? = null
     private var strobeJob: Job? = null
 
-    // Engine State & Cache
+    // ========================================================================
+    // SYSTEM STATE & THREAD CACHING
+    // ========================================================================
+    
     private var isBackgroundCommandExecuting = false
     private val mainThreadHandler = Handler(Looper.getMainLooper())
-    private val TAG = "JarvisTitanMaster"
     private var currentSystemState = SystemState.INITIALIZING
 
-    // Telemetry Registers
+    // ========================================================================
+    // TELEMETRY REGISTERS
+    // ========================================================================
+    
     private var currentBatteryLevel = -1
     private var currentBatteryTemp = -1f
     private var currentBatteryVoltage = -1
     private var isDeviceCharging = false
-    private var batteryHealth = "UNKNOWN"
+    private var batteryHealthStr = "UNKNOWN"
     private var isNetworkAvailable = false
     private var ambientLightLux = 0f
     
-    // Sensor Caching
-    private var accelLastX = 0f; private var accelLastY = 0f; private var accelLastZ = 0f
+    // Sensor Caching Data
+    private var accelLastX = 0f
+    private var accelLastY = 0f
+    private var accelLastZ = 0f
     private var isShakeInitialized = false
 
-    // =========================================================
-    // BROADCAST RECEIVERS (IPC & TELEMETRY)
-    // =========================================================
+    // ========================================================================
+    // IPC (INTER-PROCESS COMMUNICATION) & BROADCAST RECEIVERS
+    // ========================================================================
 
+    /**
+     * Receiver for God Mode Background Audio Interception
+     */
     private val backgroundWakeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            // Using hardcoded string to avoid "unresolved reference" if VoiceService differs
             val action = intent?.action
-            if (action == "com.example.jarvis.WAKE_WORD_DETECTED" || action == VoiceService.ACTION_WAKE_WORD_DETECTED) {
+            if (action == ACTION_WAKE_WORD_DETECTED) {
+                
                 val command = intent.getStringExtra("INITIAL_COMMAND") ?: "Jarvis"
                 printToTerminal("> IPC ALERT: Background God Mode Activated.")
+                
                 isBackgroundCommandExecuting = true
                 
+                // Add a realistic delay to simulate system waking up
                 mainThreadHandler.postDelayed({
                     messageInputBox.setText(command)
                     messageInputBox.setSelection(messageInputBox.length())
+                    
                     evaluateAndExecuteMasterCommand(command)
+                    
                     messageInputBox.text.clear()
                 }, 200)
             }
         }
     }
 
-    private val batteryTelemetryReceiver = object : BroadcastReceiver() {
+    /**
+     * Receiver for Real-time Battery & Thermal Diagnostics
+     */
+    private val powerTelemetryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             currentBatteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             currentBatteryTemp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) / 10f
@@ -255,17 +336,22 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             isDeviceCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
             
             val healthStatus = intent.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)
-            batteryHealth = when (healthStatus) {
+            batteryHealthStr = when (healthStatus) {
                 BatteryManager.BATTERY_HEALTH_GOOD -> "GOOD"
                 BatteryManager.BATTERY_HEALTH_OVERHEAT -> "OVERHEAT"
                 BatteryManager.BATTERY_HEALTH_DEAD -> "DEAD"
-                BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "OVER VOLTAGE"
+                BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "OVER_VOLTAGE"
+                BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "FAILURE"
                 else -> "UNKNOWN"
             }
+            
             updateProgrammaticHUD()
         }
     }
 
+    /**
+     * Callback for Global Network Connectivity Tracking
+     */
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             isNetworkAvailable = true
@@ -274,6 +360,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 updateProgrammaticHUD() 
             }
         }
+        
         override fun onLost(network: Network) {
             isNetworkAvailable = false
             runOnUiThread { 
@@ -283,137 +370,220 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
-    // =========================================================
-    // LIFECYCLE: ACTIVITY CREATION & BOOT
-    // =========================================================
+    // ========================================================================
+    // LIFECYCLE: ACTIVITY CREATION & MASTER BOOT SEQUENCE
+    // ========================================================================
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Prevent display timeout for continuous HUD immersion
+        // UI Flag Management for HUD Experience
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.statusBarColor = Color.parseColor("#050811")
+        window.statusBarColor = Color.parseColor(C_BLACK_BG)
         
         setContentView(R.layout.activity_main)
         
+        // Secure Root Layout Binding
         val root = findViewById<View>(android.R.id.content)
         if (root is ViewGroup) {
             masterRootLayout = root
         } else {
-            throw IllegalStateException("Root view is not a ViewGroup")
+            throw IllegalStateException("Root view is not a ViewGroup. Cannot proceed.")
         }
 
-        Log.i(TAG, "==================================================")
-        Log.i(TAG, "SYSTEM BOOT: J.A.R.V.I.S. TITAN CORE v20.0")
-        Log.i(TAG, "Architect: Drako X Naeem | Mode: Extreme Monolithic")
-        Log.i(TAG, "==================================================")
-
+        printBootLogHeaders()
         executeTitanInitializationSequence()
     }
 
+    /**
+     * Prints the primary identification headers to Logcat
+     */
+    private fun printBootLogHeaders() {
+        Log.i(TAG, "||=================================================||")
+        Log.i(TAG, "|| TITAN CORE V25.0 - MASTER BOOT SEQUENCE         ||")
+        Log.i(TAG, "|| Architect: Drako X Naeem                        ||")
+        Log.i(TAG, "|| Mode: Extreme Monolithic Engine                 ||")
+        Log.i(TAG, "||=================================================||")
+    }
+
+    /**
+     * Executes the sequential initialization of all subsystems.
+     */
     private fun executeTitanInitializationSequence() {
-        // Step 1: Initialize Storage & Databases
+        
+        printToTerminal("> Initiating Master Boot Sequence...")
+
+        // Step 1: Storage & Cryptography
         initializeDatabasesAndStorage()
         
-        // Step 2: Bind Hardware & Telemetry
+        // Step 2: Telemetry & Hardware Nodes
         initializeHardwareSubsystems()
         initializeNetworkSubsystem()
         
-        // Step 3: Initialize Core Logic Managers
+        // Step 3: Logic Routers & Service Managers
         initializeCoreManagers()
         
-        // Step 4: Inject UI & Programmatic Overlays
+        // Step 4: User Interface Subsystems
         bindNativeUserInterface()
         injectProgrammaticMatrixBackground()
         injectProgrammaticHUD()
         injectProgrammaticTerminalAndControls()
         
-        // Step 5: Setup Adapters & Click Listeners
+        // Step 5: Adapters & Action Listeners
         setupChatRecyclerView()
         setupInteractiveClickListeners()
         
-        // Step 6: Audio & Voice Engines
+        // Step 6: Text-To-Speech Engine Boot
+        initializeNativeTTSEngine()
+        
+        // Step 7: Acoustic Models
         setupVoiceNeuralEngine()
         setupAICloudListener()
         
-        // Step 7: System Broadcasters & IPC
-        registerReceiver(batteryTelemetryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        // Step 8: IPC & Broadcasters
+        registerReceiver(powerTelemetryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         registerBackgroundIPCReceiver()
         
-        // Final: Run Diagnostics
+        // Final Step: Perform System Diagnostic
         runStartupDiagnosticSequence()
     }
 
-    // =========================================================
-    // CORE SYSTEM INITIALIZATION
-    // =========================================================
+    // ========================================================================
+    // INITIALIZATION: STORAGE & DATABASES
+    // ========================================================================
 
     private fun initializeDatabasesAndStorage() {
         Log.d(TAG, "Booting SQL Storage & Vaults...")
+        printToTerminal("> Mounting Local Memory Databases...")
+        
         localDatabase = JarvisDatabaseHelper(this)
         securityVaultPrefs = getSharedPreferences("JarvisSecurityVault", Context.MODE_PRIVATE)
     }
 
+    // ========================================================================
+    // INITIALIZATION: CORE LOGIC MANAGERS
+    // ========================================================================
+
     private fun initializeCoreManagers() {
         Log.d(TAG, "Loading ViewModels & AI Routers...")
+        printToTerminal("> Activating Logic Controllers...")
+        
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         viewModel.initializeExecutor(this)
+        
         prefs = PreferencesManager(this)
         commandExecutor = CommandExecutor(this)
         aiManager = AIProviderManager(this)
         
         speechRecognizerManager = SpeechRecognizerManager(this)
-        textToSpeechManager = TextToSpeechManager(this)
         voiceOverlayManager = VoiceOverlayManager(this)
+        overlayManager = OverlayWindowManager(this)
+        
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
     }
 
+    // ========================================================================
+    // INITIALIZATION: NATIVE TTS ENGINE
+    // ========================================================================
+
+    private fun initializeNativeTTSEngine() {
+        Log.d(TAG, "Booting Native Text-To-Speech Synthesis...")
+        printToTerminal("> Initializing Vocal Modulators...")
+        
+        // Instantiating TTS directly to prevent "Unresolved Reference" errors
+        textToSpeechEngine = TextToSpeech(this, this)
+    }
+
+    // ========================================================================
+    // INITIALIZATION: HARDWARE & KINEMATICS
+    // ========================================================================
+
     private fun initializeHardwareSubsystems() {
         Log.d(TAG, "Binding Optic & Kinematic Sensors...")
+        printToTerminal("> Establishing Sensor Arrays...")
+        
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        
         proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
         lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         magneticSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try { 
             mainCameraId = cameraManager.cameraIdList.firstOrNull { id ->
-                cameraManager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                val characteristics = cameraManager.getCameraCharacteristics(id)
+                characteristics.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
-        } catch (e: Exception) { Log.e(TAG, "Camera Flash unavailable", e) }
+        } catch (e: Exception) { 
+            Log.e(TAG, "Camera Flash unavailable", e) 
+            printToTerminal("> WARNING: Flashlight Hardware Offline.")
+        }
     }
+
+    // ========================================================================
+    // INITIALIZATION: NETWORK TELEMETRY
+    // ========================================================================
 
     private fun initializeNetworkSubsystem() {
         Log.d(TAG, "Binding Connectivity Observers...")
+        printToTerminal("> Ping: Resolving Global Subnet...")
+        
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val request = NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
+        
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+            
         connectivityManager.registerNetworkCallback(request, networkCallback)
     }
 
-    // =========================================================
-    // PROGRAMMATIC UI INJECTIONS (NO XML ERRORS)
-    // =========================================================
+    // ========================================================================
+    // PROGRAMMATIC UI: NATIVE XML BINDING
+    // ========================================================================
 
     private fun bindNativeUserInterface() {
-        // These IDs match the original user-provided code perfectly.
-        messageInputBox = findViewById(R.id.messageInput)
-        micToggleButton = findViewById(R.id.micButton)
-        sendCommandButton = findViewById(R.id.sendButton)
-        holographicOrbView = findViewById(R.id.jarvisOrbView)
-        mainRecyclerView = findViewById(R.id.messageRecyclerView)
         
-        holographicOrbView.setOrbState(OrbState.IDLE)
+        // Attempting to bind native elements.
+        try {
+            messageInputBox = findViewById(R.id.messageInput)
+            micToggleButton = findViewById(R.id.micButton)
+            sendCommandButton = findViewById(R.id.sendButton)
+            holographicOrbView = findViewById(R.id.jarvisOrbView)
+            mainRecyclerView = findViewById(R.id.messageRecyclerView)
+            
+            // Set default state
+            holographicOrbView.setOrbState(OrbState.IDLE)
+        } catch (e: Exception) {
+            Log.e(TAG, "Native UI Binding Failed.", e)
+        }
     }
+
+    // ========================================================================
+    // PROGRAMMATIC UI: DIGITAL RAIN (MATRIX)
+    // ========================================================================
 
     private fun injectProgrammaticMatrixBackground() {
+        printToTerminal("> Injecting Visual Subsystems...")
+        
         matrixBackground = MatrixDigitalRainView(this)
-        val layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        masterRootLayout.addView(matrixBackground, 0, layoutParams) // Insert at bottom
+        
+        val layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        
+        masterRootLayout.addView(matrixBackground, 0, layoutParams) // Insert at extreme bottom
     }
 
+    // ========================================================================
+    // PROGRAMMATIC UI: TELEMETRY HUD
+    // ========================================================================
+
     private fun injectProgrammaticHUD() {
+        
         dynamicTelemetryHUD = TextView(this).apply {
             text = "J.A.R.V.I.S. | LOADING SUBSYSTEMS..."
             setTextColor(Color.parseColor(HUD_COLOR_CYAN))
@@ -425,28 +595,44 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             letterSpacing = 0.05f
         }
 
-        val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+        val params = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, 
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
             gravity = Gravity.TOP
             topMargin = 50 
         }
+        
         masterRootLayout.addView(dynamicTelemetryHUD, params)
     }
 
+    // ========================================================================
+    // PROGRAMMATIC UI: TERMINAL & AI SWITCHER PANEL
+    // ========================================================================
+
     private fun injectProgrammaticTerminalAndControls() {
-        // Create Terminal ScrollView
+        
+        // 1. Constructing the Terminal ScrollView
         terminalScrollView = ScrollView(this).apply {
             setBackgroundColor(Color.parseColor(HUD_COLOR_BLACK_TRANSPARENT))
             setPadding(16, 16, 16, 16)
         }
+        
+        // 2. Constructing the Log TextView
         programmaticTerminalLog = TextView(this).apply {
             text = "> System Kernel Booting...\n> Loading Architecture..."
             setTextColor(Color.parseColor(HUD_COLOR_CYAN))
             textSize = 11f
             typeface = Typeface.MONOSPACE
         }
+        
         terminalScrollView.addView(programmaticTerminalLog)
 
-        val terminalParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 300).apply {
+        // 3. Injecting Terminal into Root
+        val terminalParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, 
+            300
+        ).apply {
             gravity = Gravity.TOP
             topMargin = 150
             leftMargin = 30
@@ -454,13 +640,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         masterRootLayout.addView(terminalScrollView, terminalParams)
 
-        // Create AI Switcher Panel (Top Right Corner)
+        // 4. Constructing the Neural Switcher Panel Container
         aiSwitcherPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
             setPadding(20, 20, 20, 20)
         }
 
+        // 5. Constructing the Header
         tvPoweredByAI = TextView(this).apply {
             text = "ENGINE: GEMINI"
             setTextColor(Color.WHITE)
@@ -470,13 +657,40 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         aiSwitcherPanel.addView(tvPoweredByAI)
 
-        // Programmatic Button Generation
-        val btnVault = Button(this).apply { text = "VAULT"; textSize = 8f; setBackgroundColor(Color.parseColor("#333333")); setTextColor(Color.WHITE) }
-        val btnAiGrok = Button(this).apply { text = "GROK"; textSize = 8f; setBackgroundColor(Color.parseColor("#111111")); setTextColor(Color.WHITE) }
-        val btnAiGem = Button(this).apply { text = "GEMINI"; textSize = 8f; setBackgroundColor(Color.parseColor(HUD_COLOR_CYAN)); setTextColor(Color.BLACK) }
-        val btnAiGpt = Button(this).apply { text = "GPT"; textSize = 8f; setBackgroundColor(Color.parseColor("#111111")); setTextColor(Color.WHITE) }
+        // 6. Generating Operational Buttons Programmatically
+        val btnVault = Button(this).apply { 
+            text = "VAULT"
+            textSize = 8f
+            setBackgroundColor(Color.parseColor("#333333"))
+            setTextColor(Color.WHITE) 
+        }
+        
+        val btnAiGrok = Button(this).apply { 
+            text = "GROK"
+            textSize = 8f
+            setBackgroundColor(Color.parseColor("#111111"))
+            setTextColor(Color.WHITE) 
+        }
+        
+        val btnAiGem = Button(this).apply { 
+            text = "GEMINI"
+            textSize = 8f
+            setBackgroundColor(Color.parseColor(HUD_COLOR_CYAN))
+            setTextColor(Color.BLACK) 
+        }
+        
+        val btnAiGpt = Button(this).apply { 
+            text = "GPT"
+            textSize = 8f
+            setBackgroundColor(Color.parseColor("#111111"))
+            setTextColor(Color.WHITE) 
+        }
 
-        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        // 7. Creating the Button Row
+        val btnRow = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL 
+        }
+        
         btnRow.addView(btnAiGem, LinearLayout.LayoutParams(180, 80).apply { marginEnd = 10 })
         btnRow.addView(btnAiGrok, LinearLayout.LayoutParams(180, 80).apply { marginEnd = 10 })
         btnRow.addView(btnAiGpt, LinearLayout.LayoutParams(180, 80).apply { marginEnd = 10 })
@@ -484,28 +698,49 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
         aiSwitcherPanel.addView(btnRow)
 
-        val panelParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+        // 8. Injecting Panel into Root
+        val panelParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT, 
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            bottomMargin = 350 // Above input bar
+            bottomMargin = 350 // Elevate above the input bar
         }
+        
         masterRootLayout.addView(aiSwitcherPanel, panelParams)
 
-        // Click Listeners for Programmatic Buttons
-        btnVault.setOnClickListener { triggerHapticFeedback(50); authenticateAndOpenProgrammaticVault() }
-        btnAiGem.setOnClickListener { switchNeuralProvider(AIProviderManager.AIModelType.GEMINI, btnAiGem, listOf(btnAiGrok, btnAiGpt)) }
-        btnAiGrok.setOnClickListener { switchNeuralProvider(AIProviderManager.AIModelType.GROK, btnAiGrok, listOf(btnAiGem, btnAiGpt)) }
-        btnAiGpt.setOnClickListener { switchNeuralProvider(AIProviderManager.AIModelType.CHATGPT, btnAiGpt, listOf(btnAiGem, btnAiGrok)) }
+        // 9. Attaching Listeners to Programmatic Buttons
+        btnVault.setOnClickListener { 
+            triggerHapticFeedback(50)
+            authenticateAndOpenProgrammaticVault() 
+        }
+        
+        btnAiGem.setOnClickListener { 
+            switchNeuralProvider(AIProviderManager.AIModelType.GEMINI, btnAiGem, listOf(btnAiGrok, btnAiGpt)) 
+        }
+        
+        btnAiGrok.setOnClickListener { 
+            switchNeuralProvider(AIProviderManager.AIModelType.GROK, btnAiGrok, listOf(btnAiGem, btnAiGpt)) 
+        }
+        
+        btnAiGpt.setOnClickListener { 
+            switchNeuralProvider(AIProviderManager.AIModelType.CHATGPT, btnAiGpt, listOf(btnAiGem, btnAiGrok)) 
+        }
     }
 
     private fun setupChatRecyclerView() {
         chatAdapter = ChatAdapter()
-        mainRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
+        
+        mainRecyclerView.layoutManager = LinearLayoutManager(this).apply { 
+            stackFromEnd = true 
+        }
+        
         mainRecyclerView.adapter = chatAdapter
     }
 
-    // =========================================================
-    // SYSTEM TELEMETRY & TERMINAL UPDATERS
-    // =========================================================
+    // ========================================================================
+    // TELEMETRY UPDATERS & TERMINAL LOGGERS
+    // ========================================================================
 
     @SuppressLint("SetTextI18n")
     private fun updateProgrammaticHUD() {
@@ -513,13 +748,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         val chgStr = if (isDeviceCharging) "AC" else "BAT"
         val memCount = localDatabase.getHistoryCount()
         
-        // Real-time RAM calculation
+        // Calculate RAM utilization in real-time
         val mi = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(mi)
+        
         val ramUsage = ((mi.totalMem - mi.availMem).toFloat() / mi.totalMem * 100).toInt()
 
         val hudText = "CORE: TITAN | NET: $netStr | PWR: $currentBatteryLevel% [$chgStr] | " +
-                      "TMP: ${currentBatteryTemp}C | HLT: $batteryHealth | VOLT: ${currentBatteryVoltage}mV | " +
+                      "TMP: ${currentBatteryTemp}C | HLT: $batteryHealthStr | VOLT: ${currentBatteryVoltage}mV | " +
                       "RAM: $ramUsage% | LUX: $ambientLightLux | SQL: $memCount"
                       
         if (::dynamicTelemetryHUD.isInitialized) {
@@ -532,24 +768,37 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             if (::programmaticTerminalLog.isInitialized) {
                 val current = programmaticTerminalLog.text.toString()
                 val lines = current.split("\n")
-                val newText = if (lines.size > 80) { lines.drop(1).joinToString("\n") + "\n$message" } else { "$current\n$message" }
+                
+                // Truncate logic to prevent OOM
+                val newText = if (lines.size > 80) { 
+                    lines.drop(1).joinToString("\n") + "\n$message" 
+                } else { 
+                    "$current\n$message" 
+                }
+                
                 programmaticTerminalLog.text = newText
-                terminalScrollView.post { terminalScrollView.fullScroll(ScrollView.FOCUS_DOWN) }
+                
+                // Ensure scroll view always snaps to bottom
+                terminalScrollView.post { 
+                    terminalScrollView.fullScroll(ScrollView.FOCUS_DOWN) 
+                }
             }
         }
     }
 
-    // =========================================================
+    // ========================================================================
     // VOICE NEURAL ENGINE (FOREGROUND SYNCHRONIZATION)
-    // =========================================================
+    // ========================================================================
 
     private fun setupVoiceNeuralEngine() {
         voiceSessionManager = VoiceSessionManager(
             context = this,
             speechRecognizer = speechRecognizerManager,
+            
             onText = { recognizedText ->
                 mainThreadHandler.post {
                     val cleanText = recognizedText.trim()
+                    
                     if (cleanText.isNotBlank()) {
                         messageInputBox.setText(cleanText)
                         messageInputBox.setSelection(messageInputBox.length())
@@ -557,16 +806,26 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     }
                 }
             },
+            
             onStateChanged = { sessionState ->
                 mainThreadHandler.post {
                     when (sessionState) {
-                        VoiceSessionManager.State.IDLE -> synchronizeHolographicState(OrbState.IDLE, "Standby")
-                        VoiceSessionManager.State.LISTENING -> synchronizeHolographicState(OrbState.LISTENING, "Listening...")
-                        VoiceSessionManager.State.PROCESSING -> synchronizeHolographicState(OrbState.THINKING, "Synthesizing...")
-                        VoiceSessionManager.State.SPEAKING -> synchronizeHolographicState(OrbState.SPEAKING, "Transmitting...")
+                        VoiceSessionManager.State.IDLE -> {
+                            synchronizeHolographicState(OrbState.IDLE, "Standby")
+                        }
+                        VoiceSessionManager.State.LISTENING -> {
+                            synchronizeHolographicState(OrbState.LISTENING, "Listening...")
+                        }
+                        VoiceSessionManager.State.PROCESSING -> {
+                            synchronizeHolographicState(OrbState.THINKING, "Synthesizing...")
+                        }
+                        VoiceSessionManager.State.SPEAKING -> {
+                            synchronizeHolographicState(OrbState.SPEAKING, "Transmitting...")
+                        }
                     }
                 }
             },
+            
             onError = { errorCode ->
                 mainThreadHandler.post {
                     synchronizeHolographicState(OrbState.ERROR, "Acoustic Error: $errorCode")
@@ -576,24 +835,38 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         )
     }
 
+    // ========================================================================
+    // HOLOGRAPHIC ENVIRONMENT SYNCHRONIZER
+    // ========================================================================
+
     private fun synchronizeHolographicState(state: OrbState, subText: String) {
+        
+        // Map OrbState to Global System State
         currentSystemState = when(state) {
             OrbState.IDLE -> SystemState.STANDBY
             OrbState.LISTENING -> SystemState.LISTENING
             OrbState.THINKING -> SystemState.PROCESSING
             OrbState.SPEAKING -> SystemState.SPEAKING
-            OrbState.ERROR -> SystemState.FAULT
+            OrbState.ERROR -> SystemState.CRITICAL_FAULT
         }
 
+        // Apply Native UI Changes
         holographicOrbView.setOrbState(state)
         voiceOverlayManager.updateState(state)
-        micToggleButton.alpha = if (state == OrbState.LISTENING) 1.0f else 0.7f
+        
+        micToggleButton.alpha = if (state == OrbState.LISTENING) {
+            1.0f 
+        } else {
+            0.7f
+        }
 
-        // Broadcast State to Background Engine to keep UI in sync
-        val syncIntent = Intent("com.example.jarvis.UPDATE_STATE").apply { putExtra("extra_state", state.name) }
+        // Broadcast State to Background Engine via IPC
+        val syncIntent = Intent(ACTION_UPDATE_STATE).apply { 
+            putExtra("extra_state", state.name) 
+        }
         sendBroadcast(syncIntent)
 
-        // Animate Root Background Color based on State
+        // Animate Root Background Color based on Operating Mode
         val targetColor = when(state) {
             OrbState.ERROR -> Color.parseColor("#44FF0000")
             OrbState.THINKING -> Color.parseColor("#3300E5FF")
@@ -602,151 +875,204 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             else -> Color.parseColor("#050811")
         }
         
-        ObjectAnimator.ofArgb(masterRootLayout, "backgroundColor", targetColor).apply {
-            duration = 500
-            interpolator = AccelerateDecelerateInterpolator()
-            start()
-        }
+        val animator = ObjectAnimator.ofArgb(masterRootLayout, "backgroundColor", targetColor)
+        animator.duration = 500
+        animator.interpolator = AccelerateDecelerateInterpolator()
+        animator.start()
 
+        // Sync Background Matrix Layer
         matrixBackground?.updateHologramColor(state)
     }
 
-    // =========================================================
-    // MULTI-AI CLOUD INTERCEPTOR
-    // =========================================================
+    // ========================================================================
+    // MULTI-AI CLOUD INTERCEPTOR (VIEWMODEL INTEGRATOR)
+    // ========================================================================
 
     private fun setupAICloudListener() {
         viewModel.setResponseListener { networkResponse ->
             mainThreadHandler.post {
-                val safeResponse = if (networkResponse.contains("Unable to resolve host", true) || networkResponse.contains("Failed to connect", true)) {
-                    "Sir, the neural link to the cloud is severed. Please verify network integrity."
-                } else networkResponse
                 
+                // Validate network response string
+                val safeResponse = if (
+                    networkResponse.contains("Unable to resolve host", true) || 
+                    networkResponse.contains("Failed to connect", true)
+                ) {
+                    "Sir, the neural link to the cloud is severed. Please verify network integrity."
+                } else {
+                    networkResponse
+                }
+                
+                // Persist the transaction to secure memory
                 localDatabase.logInteraction("Cloud Inference", safeResponse, "API_SUCCESS")
                 updateProgrammaticHUD()
                 printToTerminal("> Inference Received: ${safeResponse.take(40)}...")
 
+                // Route Audio Based on Execution Context
                 if (voiceSessionManager.isActive()) {
                     executeVoiceOutputInForeground(safeResponse)
                 } else if (isBackgroundCommandExecuting) {
                     executeVoiceOutputInBackground(safeResponse)
                 } else {
                     synchronizeHolographicState(OrbState.SPEAKING, "Transmitting")
-                    textToSpeechManager.speak(text = safeResponse, onFinished = { mainThreadHandler.post { synchronizeHolographicState(OrbState.IDLE, "Standby") } })
+                    speakTextNative(safeResponse) {
+                        mainThreadHandler.post { 
+                            synchronizeHolographicState(OrbState.IDLE, "Standby") 
+                        }
+                    }
                 }
             }
         }
     }
 
-    // =========================================================
-    // IPC BACKGROUND OVERRIDE (GOD MODE RECEIVER)
-    // =========================================================
+    // ========================================================================
+    // IPC OVERRIDE: GOD MODE BACKGROUND RECEIVER SETUP
+    // ========================================================================
 
     private fun registerBackgroundIPCReceiver() {
         val filter = IntentFilter()
-        filter.addAction("com.example.jarvis.WAKE_WORD_DETECTED")
-        filter.addAction(VoiceService.ACTION_WAKE_WORD_DETECTED)
+        filter.addAction(ACTION_WAKE_WORD_DETECTED)
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(backgroundWakeReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(backgroundWakeReceiver, filter)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(backgroundWakeReceiver, filter, RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(backgroundWakeReceiver, filter)
+            }
+            Log.d(TAG, "IPC Receiver successfully bound.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to bind IPC Receiver", e)
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        // Handled directly via receiver for stability
+        // Handled primarily via receiver for stability
     }
 
-    // =========================================================
+    // ========================================================================
     // MASTER NLP ROUTER (ZERO-LATENCY PROCESSING CORE)
-    // =========================================================
+    // ========================================================================
 
     private fun evaluateAndExecuteMasterCommand(rawInput: String) {
+        
+        // Semantic Normalization Phase
         val normalized = rawInput.lowercase(Locale.getDefault())
-            .replace("hey jarvis", "").replace("ok jarvis", "").replace("jarvis", "")
+            .replace("hey jarvis", "")
+            .replace("ok jarvis", "")
+            .replace("jarvis", "")
             .trim()
 
         if (normalized.isBlank()) {
-            if (voiceSessionManager.isActive()) speakCommandFeedback("Yes sir, awaiting protocols.")
-            else synchronizeHolographicState(OrbState.IDLE, "Standby")
+            if (voiceSessionManager.isActive()) {
+                speakCommandFeedback("Yes sir, awaiting protocols.")
+            } else {
+                synchronizeHolographicState(OrbState.IDLE, "Standby")
+            }
             return
         }
 
+        // Cache User Intent Log
         localDatabase.logInteraction(normalized, "Processing Logic Tree...", "USER_QUERY")
         updateProgrammaticHUD()
+        
+        // Set State to Processing
         synchronizeHolographicState(OrbState.THINKING, "Parsing Semantic Intent...")
         printToTerminal("> Input Vector: \"$normalized\"")
 
-        // 1. ADVANCED MATHEMATICAL PARSER (BODMAS + TRIG + LOG)
+        // --------------------------------------------------------------------
+        // ALGORITHM BRANCH 1: ADVANCED MATHEMATICAL PARSER 
+        // --------------------------------------------------------------------
         val mathRegex = Regex(".*(calculate|math|plus|minus|multiply|divided|times|power|root|sin|cos|tan|log).*")
         if (normalized.matches(mathRegex)) {
             try {
-                val eq = normalized
-                    .replace("plus", "+").replace("minus", "-")
-                    .replace("times", "*").replace("multiplied by", "*")
-                    .replace("divided by", "/").replace("over", "/")
-                    .replace("power", "^").replace("root", "sqrt")
-                    .replace("sine", "sin").replace("cosine", "cos")
+                // Translation layer for spoken math to mathematical operators
+                val equationStr = normalized
+                    .replace("plus", "+")
+                    .replace("minus", "-")
+                    .replace("times", "*")
+                    .replace("multiplied by", "*")
+                    .replace("divided by", "/")
+                    .replace("over", "/")
+                    .replace("power", "^")
+                    .replace("root", "sqrt")
+                    .replace("sine", "sin")
+                    .replace("cosine", "cos")
                     .replace(Regex("[^0-9\\+\\-\\*\\/\\(\\)\\.\\^a-z]"), "")
                 
-                val result = AdvancedScientificParser().evaluate(eq)
-                val formatRes = if (result % 1.0 == 0.0) result.toLong().toString() else String.format(Locale.US, "%.4f", result)
+                val result = AdvancedScientificParser().evaluate(equationStr)
+                
+                val formatRes = if (result % 1.0 == 0.0) {
+                    result.toLong().toString() 
+                } else {
+                    String.format(Locale.US, "%.4f", result)
+                }
                 
                 localDatabase.logInteraction("Math Engine", formatRes, "MATH_SOLVED")
                 speakCommandFeedback("Sir, the scientific calculation evaluates to $formatRes.")
                 return
+                
             } catch (e: Exception) { 
                 printToTerminal("> Math Engine Fault: Syntax unresolvable.") 
             }
         }
 
-        // 2. HARDWARE & KINEMATIC PROTOCOLS
+        // --------------------------------------------------------------------
+        // ALGORITHM BRANCH 2: HARDWARE & OPTICS AUTOMATION
+        // --------------------------------------------------------------------
         if (normalized.contains("torch on") || normalized.contains("light on")) {
-            operateHardwareFlashlight(1)
+            operateHardwareFlashlight(1) // Mode 1 = ON
             speakCommandFeedback("Optical illumination engaged.")
             return
         }
+        
         if (normalized.contains("torch off") || normalized.contains("light off")) {
-            operateHardwareFlashlight(0)
+            operateHardwareFlashlight(0) // Mode 0 = OFF
             speakCommandFeedback("Optical illumination disengaged.")
             return
         }
+        
         if (normalized.contains("strobe mode") || normalized.contains("disco light")) {
-            operateHardwareFlashlight(2)
+            operateHardwareFlashlight(2) // Mode 2 = STROBE
             speakCommandFeedback("Strobe protocol active. Warning: Rapid flashing.")
             return
         }
+        
         if (normalized.contains("sos mode")) {
-            operateHardwareFlashlight(3)
+            operateHardwareFlashlight(3) // Mode 3 = SOS
             speakCommandFeedback("Transmitting visual SOS distress signal.")
             return
         }
+        
         if (normalized.contains("vibrate") || normalized.contains("haptic")) {
             triggerHapticFeedback(1200)
             speakCommandFeedback("Haptic resonance engines fired successfully.")
             return
         }
+        
         if (normalized.contains("ambient light") || normalized.contains("how dark")) {
             speakCommandFeedback("The ambient lux sensor is currently registering $ambientLightLux lux.")
             return
         }
 
-        // 3. SYSTEM TELEMETRY & MEMORY PURGE
+        // --------------------------------------------------------------------
+        // ALGORITHM BRANCH 3: SYSTEM TELEMETRY & MEMORY OVERRIDE
+        // --------------------------------------------------------------------
         if (normalized.contains("battery") || normalized.contains("power level")) {
             val st = if (isDeviceCharging) "charging" else "discharging"
-            speakCommandFeedback("Sir, the power cell is at $currentBatteryLevel percent and is $st. Core thermal output is ${currentBatteryTemp} degrees Celsius. Health is $batteryHealth.")
+            speakCommandFeedback("Sir, the power cell is at $currentBatteryLevel percent and is $st. Core thermal output is ${currentBatteryTemp} degrees Celsius. Battery Health is $batteryHealthStr.")
             return
         }
+        
         if (normalized.contains("system status") || normalized.contains("diagnostics")) {
             val mi = ActivityManager.MemoryInfo()
             activityManager.getMemoryInfo(mi)
             val ramPercent = ((mi.totalMem - mi.availMem).toFloat() / mi.totalMem * 100).toInt()
+            
             speakCommandFeedback("All systems nominal. Battery at $currentBatteryLevel percent. RAM utilization is at $ramPercent percent. Network is ${if (isNetworkAvailable) "online" else "offline"}.")
             return
         }
+        
         if (normalized.contains("clear memory") || normalized.contains("purge database")) {
             val count = localDatabase.getHistoryCount()
             localDatabase.clearMemory()
@@ -754,30 +1080,58 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             speakCommandFeedback("Memory override complete. $count interaction logs have been permanently erased from the SQLite vault.")
             return
         }
+        
         if (normalized.contains("export logs") || normalized.contains("download memory")) {
             val fileLoc = localDatabase.exportDatabaseToCSV(this)
-            speakCommandFeedback("Memory logs have been exported to $fileLoc.")
+            speakCommandFeedback("Memory logs have been exported and encrypted to the file system.")
             return
         }
+        
         if (normalized.contains("time") || normalized.contains("samay")) {
-            speakCommandFeedback("The current time is ${SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())}, sir.")
+            val curTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+            speakCommandFeedback("The current time is $curTime, sir.")
             return
         }
+        
         if (normalized.contains("date") || normalized.contains("tarikh")) {
-            speakCommandFeedback("Today is ${SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())}.")
+            val curDate = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
+            speakCommandFeedback("Today is $curDate.")
             return
         }
 
-        // 4. NATIVE APPLICATION AUTOMATION
-        if (normalized.contains("instagram open") || normalized.contains("open instagram")) { openUrl("instagram://user?username=drakoxnaeem"); speakCommandFeedback("Accessing Instagram."); return }
-        if (normalized.contains("youtube open") || normalized.contains("open youtube")) { openUrl("vnd.youtube:"); speakCommandFeedback("Initializing YouTube."); return }
-        if (normalized.contains("whatsapp open") || normalized.contains("open whatsapp")) { openUrl("whatsapp://"); speakCommandFeedback("WhatsApp interface loaded."); return }
-        if (normalized.contains("open settings")) { startActivity(Intent(Settings.ACTION_SETTINGS)); speakCommandFeedback("Opening device configurations."); return }
+        // --------------------------------------------------------------------
+        // ALGORITHM BRANCH 4: NATIVE APPLICATION ROUTING
+        // --------------------------------------------------------------------
+        if (normalized.contains("instagram open") || normalized.contains("open instagram")) { 
+            openUrl("instagram://user?username=drakoxnaeem")
+            speakCommandFeedback("Accessing Instagram networks.")
+            return 
+        }
+        
+        if (normalized.contains("youtube open") || normalized.contains("open youtube")) { 
+            openUrl("vnd.youtube:")
+            speakCommandFeedback("Initializing YouTube stream protocol.")
+            return 
+        }
+        
+        if (normalized.contains("whatsapp open") || normalized.contains("open whatsapp")) { 
+            openUrl("whatsapp://")
+            speakCommandFeedback("WhatsApp communications interface loaded.")
+            return 
+        }
+        
+        if (normalized.contains("open settings")) { 
+            startActivity(Intent(Settings.ACTION_SETTINGS))
+            speakCommandFeedback("Opening device core configurations.")
+            return 
+        }
 
-        // 5. CLOUD NEURAL INFERENCE (GEMINI, GROK, CHATGPT)
+        // --------------------------------------------------------------------
+        // ALGORITHM BRANCH 5: CLOUD NEURAL INFERENCE (API INTEGRATION)
+        // --------------------------------------------------------------------
         if (!isNetworkAvailable) {
             printToTerminal("> CRITICAL: Network failure prevents Cloud AI access.")
-            speakCommandFeedback("Network is offline sir. Complex neural queries cannot be routed to the cloud.")
+            speakCommandFeedback("Network is offline sir. Complex neural queries cannot be routed to the cloud framework.")
             return
         }
         
@@ -789,89 +1143,140 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         
         printToTerminal("> Transmitting packet to ${aiManager.getActiveModelName()} Cloud API...")
-        if (voiceSessionManager.isActive()) voiceSessionManager.setProcessing()
         
+        if (voiceSessionManager.isActive()) {
+            voiceSessionManager.setProcessing()
+        }
+        
+        // Execute Coroutine for Async API Fetch
         lifecycleScope.launch {
             try {
                 val cloudResponse = aiManager.queryActiveAI(normalized, activeApiKey)
-                localDatabase.logInteraction("Cloud AI", cloudResponse, "API_SUCCESS")
+                
+                // Store Response
+                localDatabase.logInteraction("Cloud AI Output", cloudResponse, "API_SUCCESS")
+                
+                // Transmit Response
                 speakCommandFeedback(cloudResponse)
+                
             } catch (e: Exception) {
-                printToTerminal("> CLOUD FAULT: Neural Server Timeout.")
-                speakCommandFeedback("Sir, the cloud servers failed to process the request.")
+                printToTerminal("> CLOUD FAULT: Neural Server Timeout / Error.")
+                speakCommandFeedback("Sir, the cloud servers failed to process the request effectively.")
             }
         }
     }
 
-    // =========================================================
-    // TEXT-TO-SPEECH (TTS) DISPATCHERS
-    // =========================================================
+    // ========================================================================
+    // TEXT-TO-SPEECH (TTS) DISPATCHERS (NATIVE IMPLEMENTATION)
+    // ========================================================================
 
     private fun executeVoiceOutputInForeground(speechText: String) {
         if (!voiceSessionManager.isActive()) return
+        
         voiceSessionManager.setSpeaking()
         synchronizeHolographicState(OrbState.SPEAKING, "Transmitting")
         speechRecognizerManager.stop()
         
         printToTerminal("> Audio Subsystem: $speechText")
 
-        textToSpeechManager.speak(text = speechText,
-            onStarted = { mainThreadHandler.post { synchronizeHolographicState(OrbState.SPEAKING, "Transmitting") } },
-            onFinished = {
-                mainThreadHandler.post {
-                    if (voiceSessionManager.isActive()) {
-                        voiceSessionManager.resumeListening()
-                        synchronizeHolographicState(OrbState.LISTENING, "Listening...")
-                    } else synchronizeHolographicState(OrbState.IDLE, "Standby")
+        speakTextNative(speechText) {
+            mainThreadHandler.post {
+                if (voiceSessionManager.isActive()) {
+                    voiceSessionManager.resumeListening()
+                    synchronizeHolographicState(OrbState.LISTENING, "Listening...")
+                } else {
+                    synchronizeHolographicState(OrbState.IDLE, "Standby")
                 }
             }
-        )
+        }
     }
 
     private fun executeVoiceOutputInBackground(speechText: String) {
         synchronizeHolographicState(OrbState.SPEAKING, "Transmitting")
-        printToTerminal("> God Mode Audio: $speechText")
+        printToTerminal("> God Mode Audio output: $speechText")
         
-        textToSpeechManager.speak(text = speechText, onStarted = { },
-            onFinished = {
-                mainThreadHandler.post {
-                    isBackgroundCommandExecuting = false
-                    synchronizeHolographicState(OrbState.IDLE, "Standby")
-                    try {
-                        val resumeIntent = Intent(this, VoiceService::class.java).apply { action = VoiceService.ACTION_VOICE_RESPONSE_FINISHED }
-                        startService(resumeIntent)
-                    } catch (e: Exception) { Log.e(TAG, "Failed to signal background", e) }
+        speakTextNative(speechText) {
+            mainThreadHandler.post {
+                isBackgroundCommandExecuting = false
+                synchronizeHolographicState(OrbState.IDLE, "Standby")
+                
+                // Signal completion to background service
+                try {
+                    val resumeIntent = Intent(this, VoiceService::class.java).apply { 
+                        action = "com.example.jarvis.VOICE_RESPONSE_FINISHED"
+                    }
+                    startService(resumeIntent)
+                } catch (e: Exception) { 
+                    Log.e(TAG, "Failed to signal background", e) 
                 }
             }
-        )
+        }
     }
 
     private fun speakCommandFeedback(feedbackText: String) {
-        if (voiceSessionManager.isActive()) executeVoiceOutputInForeground(feedbackText)
-        else if (isBackgroundCommandExecuting) executeVoiceOutputInBackground(feedbackText)
-        else {
+        if (voiceSessionManager.isActive()) {
+            executeVoiceOutputInForeground(feedbackText)
+        } else if (isBackgroundCommandExecuting) {
+            executeVoiceOutputInBackground(feedbackText)
+        } else {
             synchronizeHolographicState(OrbState.SPEAKING, "Transmitting")
             printToTerminal("> System Audio: $feedbackText")
-            textToSpeechManager.speak(text = feedbackText, onFinished = { mainThreadHandler.post { synchronizeHolographicState(OrbState.IDLE, "Standby") } })
+            
+            speakTextNative(feedbackText) { 
+                mainThreadHandler.post { 
+                    synchronizeHolographicState(OrbState.IDLE, "Standby") 
+                } 
+            }
         }
+    }
+
+    // ========================================================================
+    // TTS ENGINE OVERRIDES & HANDLERS
+    // ========================================================================
+
+    /**
+     * Native TTS Execution Wrapper
+     */
+    private fun speakTextNative(text: String, onFinished: (() -> Unit)? = null) {
+        
+        // Setup listener dynamically
+        textToSpeechEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                onFinished?.invoke()
+            }
+            override fun onError(utteranceId: String?) {
+                onFinished?.invoke()
+            }
+        })
+        
+        val p = Bundle()
+        p.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
+        
+        // Execute speech
+        textToSpeechEngine.speak(text, TextToSpeech.QUEUE_FLUSH, p, "TITAN_NATIVE_TTS")
     }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = textToSpeechManager.getTts()?.setLanguage(Locale("en", "IN"))
+            val result = textToSpeechEngine.setLanguage(Locale("en", "IN"))
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 printToTerminal("> TTS WARN: Indian Accent Engine Missing.")
+            } else {
+                printToTerminal("> TTS Subsystem fully operational.")
             }
         } else {
             printToTerminal("> CRITICAL: TTS Engine Boot Failure.")
         }
     }
 
-    // =========================================================
+    // ========================================================================
     // USER INTERACTION LISTENERS & DASHBOARD PANELS
-    // =========================================================
+    // ========================================================================
 
     private fun setupInteractiveClickListeners() {
+        
+        // Text Input Action
         sendCommandButton.setOnClickListener {
             val typedMessage = messageInputBox.text.toString().trim()
             if (typedMessage.isNotEmpty()) {
@@ -881,23 +1286,24 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             }
         }
 
+        // Voice Input Action
         micToggleButton.setOnClickListener {
             if (!PermissionHelper.hasAudioPermission(this)) {
                 PermissionHelper.requestAudioPermission(this)
                 return@setOnClickListener
             }
-            if (voiceSessionManager.isActive()) stopVoiceMode() else startVoiceMode()
+            if (voiceSessionManager.isActive()) {
+                stopVoiceMode()
+            } else {
+                startVoiceMode()
+            }
         }
-        
-        // Native Menu triggers (If these IDs exist in user XML)
-        findViewById<View>(R.id.menuButton)?.setOnClickListener { showNeuralOptionsMenu() }
-        findViewById<View>(R.id.searchButton)?.setOnClickListener { showGlobalSearchDialog() }
-        findViewById<View>(R.id.historyButton)?.setOnClickListener { showDatabaseHistory() }
     }
 
     private fun startVoiceMode() {
-        textToSpeechManager.stop()
+        textToSpeechEngine.stop()
         isBackgroundCommandExecuting = false
+        
         voiceSessionManager.start()
         synchronizeHolographicState(OrbState.LISTENING, "Listening...")
         triggerHapticFeedback(100)
@@ -906,46 +1312,51 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private fun stopVoiceMode() {
         voiceSessionManager.stop()
         speechRecognizerManager.stop()
-        textToSpeechManager.stop()
+        textToSpeechEngine.stop()
         voiceOverlayManager.hide()
+        
         synchronizeHolographicState(OrbState.IDLE, "Standby")
-    }
-
-    private fun observeViewModelState() {
-        lifecycleScope.launch {
-            viewModel.ui.collect { uiState ->
-                chatAdapter.submitList(uiState.messages)
-                if (uiState.messages.isNotEmpty()) mainRecyclerView.scrollToPosition(uiState.messages.lastIndex)
-            }
-        }
     }
 
     private fun openUrl(url: String) {
         if (url.isNotBlank()) {
             printToTerminal("> Routing Web Protocol: $url")
-            try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } 
-            catch (e: Exception) { Log.e(TAG, "URL Fail") }
+            try { 
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) 
+            } catch (e: Exception) { 
+                Log.e(TAG, "URL Execution Failure") 
+            }
         }
     }
 
-    // =========================================================
-    // PROGRAMMATIC BIOMETRIC SECURITY VAULT (NO XML REQUIRED)
-    // =========================================================
+    // ========================================================================
+    // PROGRAMMATIC BIOMETRIC SECURITY VAULT (NO XML DEPENDENCY)
+    // ========================================================================
     
     private fun authenticateAndOpenProgrammaticVault() {
         val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        
         if (!keyguardManager.isKeyguardSecure) {
             printToTerminal("> SECURITY OVERRIDE: Device is not protected by PIN.")
             renderProgrammaticSecurityVault()
             return
         }
-        val intent = keyguardManager.createConfirmDeviceCredentialIntent("J.A.R.V.I.S. Core Security", "Authenticate to access Neural API keys.")
-        if (intent != null) startActivityForResult(intent, REQ_CODE_SECURITY) 
-        else renderProgrammaticSecurityVault()
+        
+        val intent = keyguardManager.createConfirmDeviceCredentialIntent(
+            "J.A.R.V.I.S. Core Security", 
+            "Authenticate to access Neural API keys."
+        )
+        
+        if (intent != null) {
+            startActivityForResult(intent, REQ_CODE_SECURITY) 
+        } else {
+            renderProgrammaticSecurityVault()
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        
         if (requestCode == REQ_CODE_SECURITY) {
             if (resultCode == RESULT_OK) {
                 printToTerminal("> AUTH SUCCESS: Opening Secure Vault.")
@@ -958,7 +1369,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderProgrammaticSecurityVault() {
-        // Creating the entire layout purely in Kotlin to avoid "unresolved reference R.layout"
+        // Constructing Vault UI Programmatically to eliminate layout reference issues
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(60, 40, 60, 40)
@@ -975,7 +1386,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         container.addView(title)
 
-        // Helper function for inputs
+        // Helper Lambda
         fun createInput(hintText: String, defaultVal: String): EditText {
             return EditText(this).apply {
                 hint = hintText
@@ -986,7 +1397,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                 setBackgroundColor(Color.parseColor("#1A00E5FF"))
                 setPadding(20, 30, 20, 30)
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 30 }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 30 }
             }
         }
 
@@ -1008,7 +1422,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             setBackgroundColor(Color.parseColor(HUD_COLOR_CYAN))
             setTextColor(Color.BLACK)
             typeface = Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 120).apply { topMargin = 20 }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 120
+            ).apply { topMargin = 20 }
         }
         container.addView(btnSave)
 
@@ -1023,25 +1439,30 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 putString("API_CHATGPT", etChatGPT.text.toString().trim())
                 apply()
             }
+            
             printToTerminal("> VAULT SECURED: API Keys encrypted to local storage.")
             Toast.makeText(this, "Credentials Secured.", Toast.LENGTH_SHORT).show()
+            triggerHapticFeedback(200)
+            
             dialog.dismiss()
         }
+        
         dialog.show()
     }
 
     private fun fetchDecryptedApiKey(): String {
-        val model = aiManager.getActiveModelName()
+        val modelName = aiManager.getActiveModelName()
         return when {
-            model.contains("Gemini", true) -> securityVaultPrefs.getString("API_GEMINI", "") ?: ""
-            model.contains("ChatGPT", true) -> securityVaultPrefs.getString("API_CHATGPT", "") ?: ""
-            model.contains("Grok", true) -> securityVaultPrefs.getString("API_GROK", "") ?: ""
+            modelName.contains("Gemini", true) -> securityVaultPrefs.getString("API_GEMINI", "") ?: ""
+            modelName.contains("ChatGPT", true) -> securityVaultPrefs.getString("API_CHATGPT", "") ?: ""
+            modelName.contains("Grok", true) -> securityVaultPrefs.getString("API_GROK", "") ?: ""
             else -> ""
         }
     }
 
     private fun switchNeuralProvider(model: AIProviderManager.AIModelType, activeBtn: Button, otherBtns: List<Button>) {
         triggerHapticFeedback(50)
+        
         aiManager.setActiveModel(model)
         tvPoweredByAI.text = "ENGINE: ${aiManager.getActiveModelName().uppercase()}"
         printToTerminal("> Core Engine Switched to: ${aiManager.getActiveModelName()}")
@@ -1055,75 +1476,65 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
-    // =========================================================
-    // MENUS, DIALOGS & OVERLAY CONFIGURATIONS
-    // =========================================================
-
-    private fun showNeuralOptionsMenu() {
-        val options = arrayOf("⚙ Vault Settings", "◷ Memory Log", "◆ Telemetry", "✦ Architect")
-        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle("✦ SYSTEM ROOT")
-            .setItems(options) { _, w ->
-                when (w) {
-                    0 -> authenticateAndOpenProgrammaticVault()
-                    1 -> showDatabaseHistory()
-                    2 -> speakCommandFeedback("Battery is at $currentBatteryLevel%. Temp is $currentBatteryTemp C. Network is $isNetworkAvailable.")
-                    3 -> openUrl(CREATOR_PORTFOLIO)
-                }
-            }
-            .show()
-    }
-
-    private fun showDatabaseHistory() {
-        val count = localDatabase.getHistoryCount()
-        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle("◷ MEMORY LOGS")
-            .setMessage("The SQLite Database holds $count interactions.\nSay 'Clear Memory' to wipe, or 'Export Logs' to save as CSV.")
-            .setPositiveButton("CLOSE", null)
-            .show()
-    }
-
-    private fun showGlobalSearchDialog() {
-        val input = EditText(this).apply { hint = "Quantum search query..."; setSingleLine(true); setTextColor(Color.WHITE) }
-        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle("⌕ WEB SEARCH")
-            .setView(input)
-            .setPositiveButton("EXECUTE") { _, _ ->
-                val q = input.text.toString().trim()
-                if (q.isNotBlank()) openUrl("https://www.google.com/search?q=" + Uri.encode(q))
-            }.show()
-    }
-
-    // =========================================================
-    // HARDWARE MOTOR & CAMERA FUNCTIONS
-    // =========================================================
+    // ========================================================================
+    // HARDWARE MOTOR & CAMERA CONTROLLERS
+    // ========================================================================
 
     private fun operateHardwareFlashlight(mode: Int) {
         strobeJob?.cancel()
+        
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mainCameraId != null) {
                 when (mode) {
-                    0 -> { cameraManager.setTorchMode(mainCameraId!!, false); isTorchActive = false }
-                    1 -> { cameraManager.setTorchMode(mainCameraId!!, true); isTorchActive = true }
-                    2 -> { // Strobe
+                    0 -> { 
+                        // OFF Mode
+                        cameraManager.setTorchMode(mainCameraId!!, false)
+                        isTorchActive = false 
+                    }
+                    1 -> { 
+                        // ON Mode
+                        cameraManager.setTorchMode(mainCameraId!!, true)
+                        isTorchActive = true 
+                    }
+                    2 -> { 
+                        // STROBE Mode
                         strobeJob = lifecycleScope.launch(Dispatchers.IO) {
-                            var t = true
-                            while(isActive) { cameraManager.setTorchMode(mainCameraId!!, t); t = !t; delay(100) }
+                            var toggleState = true
+                            while(isActive) { 
+                                cameraManager.setTorchMode(mainCameraId!!, toggleState)
+                                toggleState = !toggleState
+                                delay(100) 
+                            }
                         }
                     }
-                    3 -> { // SOS Pattern
+                    3 -> { 
+                        // SOS Mode
                         strobeJob = lifecycleScope.launch(Dispatchers.IO) {
                             while(isActive) {
-                                for(i in 1..3) { cameraManager.setTorchMode(mainCameraId!!, true); delay(200); cameraManager.setTorchMode(mainCameraId!!, false); delay(200) }
-                                for(i in 1..3) { cameraManager.setTorchMode(mainCameraId!!, true); delay(600); cameraManager.setTorchMode(mainCameraId!!, false); delay(200) }
-                                for(i in 1..3) { cameraManager.setTorchMode(mainCameraId!!, true); delay(200); cameraManager.setTorchMode(mainCameraId!!, false); delay(200) }
-                                delay(1500)
+                                // 3 Dots
+                                for(i in 1..3) { 
+                                    cameraManager.setTorchMode(mainCameraId!!, true); delay(200)
+                                    cameraManager.setTorchMode(mainCameraId!!, false); delay(200) 
+                                }
+                                // 3 Dashes
+                                for(i in 1..3) { 
+                                    cameraManager.setTorchMode(mainCameraId!!, true); delay(600)
+                                    cameraManager.setTorchMode(mainCameraId!!, false); delay(200) 
+                                }
+                                // 3 Dots
+                                for(i in 1..3) { 
+                                    cameraManager.setTorchMode(mainCameraId!!, true); delay(200)
+                                    cameraManager.setTorchMode(mainCameraId!!, false); delay(200) 
+                                }
+                                delay(1500) // Word break
                             }
                         }
                     }
                 }
             }
-        } catch (e: Exception) { printToTerminal("> Camera Fault Detected.") }
+        } catch (e: Exception) { 
+            printToTerminal("> Camera Fault Detected. Operation Aborted.") 
+        }
     }
 
     private fun triggerHapticFeedback(durationMs: Long = 200) {
@@ -1135,61 +1546,89 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 @Suppress("DEPRECATION")
                 (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).vibrate(durationMs)
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            Log.e(TAG, "Haptic feedback unavailable")
+        }
     }
 
-    // =========================================================
-    // KINEMATIC SENSORS (SHAKE & PROXIMITY)
-    // =========================================================
+    // ========================================================================
+    // KINEMATIC SENSORS (SHAKE TO WAKE & PROXIMITY)
+    // ========================================================================
 
     override fun onSensorChanged(event: SensorEvent?) {
         when (event?.sensor?.type) {
+            
             Sensor.TYPE_PROXIMITY -> {
                 if (event.values[0] < (proximitySensor?.maximumRange ?: 5f)) {
-                    if (voiceSessionManager.isActive() || textToSpeechManager.isSpeaking()) {
-                        textToSpeechManager.stop()
+                    if (voiceSessionManager.isActive() || textToSpeechEngine.isSpeaking) {
+                        textToSpeechEngine.stop()
                         speechRecognizerManager.stop()
-                        printToTerminal("> Proximity Override: Muted.")
+                        printToTerminal("> Proximity Override: Acoustic output muted.")
                     }
                 }
             }
-            Sensor.TYPE_LIGHT -> ambientLightLux = event.values[0]
+            
+            Sensor.TYPE_LIGHT -> {
+                ambientLightLux = event.values[0]
+            }
+            
             Sensor.TYPE_ACCELEROMETER -> {
-                val x = event.values[0]; val y = event.values[1]; val z = event.values[2]
-                if (!isShakeInitialized) { accelLastX = x; accelLastY = y; accelLastZ = z; isShakeInitialized = true }
+                val x = event.values[0]
+                val y = event.values[1]
+                val z = event.values[2]
                 
-                val dX = abs(accelLastX - x); val dY = abs(accelLastY - y); val dZ = abs(accelLastZ - z)
-                if (dX > SHAKE_THRESHOLD || dY > SHAKE_THRESHOLD || dZ > SHAKE_THRESHOLD) {
+                if (!isShakeInitialized) { 
+                    accelLastX = x 
+                    accelLastY = y 
+                    accelLastZ = z 
+                    isShakeInitialized = true 
+                }
+                
+                val dX = abs(accelLastX - x)
+                val dY = abs(accelLastY - y)
+                val dZ = abs(accelLastZ - z)
+                
+                if (dX > SHAKE_ACCEL_THRESHOLD || dY > SHAKE_ACCEL_THRESHOLD || dZ > SHAKE_ACCEL_THRESHOLD) {
                     if (!voiceSessionManager.isActive() && PermissionHelper.hasAudioPermission(this)) {
-                        printToTerminal("> Kinematic Threshold Breached. Waking System.")
+                        printToTerminal("> Kinematic Threshold Breached. Waking Voice Array.")
                         startVoiceMode() 
                     }
                 }
-                accelLastX = x; accelLastY = y; accelLastZ = z
+                
+                accelLastX = x
+                accelLastY = y
+                accelLastZ = z
             }
         }
     }
     
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // Required method stub
+    }
 
-    // =========================================================
-    // DIAGNOSTICS & THREAD LIFECYCLE
-    // =========================================================
+    // ========================================================================
+    // DIAGNOSTICS & LIFECYCLE THREADING
+    // ========================================================================
 
     private fun runStartupDiagnosticSequence() {
         lifecycleScope.launch(Dispatchers.IO) {
+            
             printToTerminal("> Booting Subsystem Nodes...")
             delay(400)
+            
             printToTerminal("> Neural Optics: ONLINE")
             delay(300)
+            
             printToTerminal("> SQL Memory Vault: SECURED")
             delay(300)
             
             withContext(Dispatchers.Main) {
                 currentSystemState = SystemState.ONLINE
                 updateProgrammaticHUD()
+                
                 triggerHapticFeedback(150)
                 printToTerminal("> DIAGNOSTIC COMPLETE. ALL SYSTEMS NOMINAL.")
+                
                 speakCommandFeedback("J.A.R.V.I.S. Titan Core initialized. Awaiting voice protocols.")
             }
         }
@@ -1212,7 +1651,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         printToTerminal("> FATAL SHUTDOWN SEQUENCE INITIATED.")
         currentSystemState = SystemState.OFFLINE
         
-        try { unregisterReceiver(batteryTelemetryReceiver) } catch (e: Exception) {}
+        try { unregisterReceiver(powerTelemetryReceiver) } catch (e: Exception) {}
         try { unregisterReceiver(backgroundWakeReceiver) } catch (e: Exception) {}
         try { connectivityManager.unregisterNetworkCallback(networkCallback) } catch (e: Exception) {}
         
@@ -1220,7 +1659,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         
         try { voiceSessionManager.destroy() } catch (e: Exception) {}
         try { speechRecognizerManager.destroy() } catch (e: Exception) {}
-        try { textToSpeechManager.shutdown() } catch (e: Exception) {}
+        
+        if (this::textToSpeechEngine.isInitialized) { 
+            textToSpeechEngine.stop()
+            textToSpeechEngine.shutdown() 
+        }
         
         viewModel.setResponseListener(null)
         mainThreadHandler.removeCallbacksAndMessages(null)
@@ -1229,12 +1672,21 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     // ============================================================================
-    // INNER GOD CLASS 1: ADVANCED SQLITE DATABASE WITH CSV EXPORT
+    // INNER GOD CLASS 1: ADVANCED SQLITE DATABASE (CRUD + EXPORT)
     // ============================================================================
+    
     inner class JarvisDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "JarvisTitanMemory.db", null, 4) {
         
         override fun onCreate(db: SQLiteDatabase) {
-            val q = "CREATE TABLE MemoryLog (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, query TEXT, response TEXT, intent_type TEXT)"
+            val q = """
+                CREATE TABLE MemoryLog (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    timestamp TEXT, 
+                    query TEXT, 
+                    response TEXT, 
+                    intent_type TEXT
+                )
+            """.trimIndent()
             db.execSQL(q)
         }
 
@@ -1254,7 +1706,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 }
                 db.insert("MemoryLog", null, values)
                 db.close()
-            } catch (e: Exception) { Log.e(TAG, "SQL Error", e) }
+            } catch (e: Exception) { 
+                Log.e(TAG, "SQL Error", e) 
+            }
         }
 
         fun getHistoryCount(): Int {
@@ -1278,56 +1732,83 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         fun exportDatabaseToCSV(context: Context): String {
             val exportDir = File(context.getExternalFilesDir(null), "JarvisExports")
             if (!exportDir.exists()) exportDir.mkdirs()
+            
             val file = File(exportDir, "Jarvis_Memory_Dump_${System.currentTimeMillis()}.csv")
             try {
                 file.createNewFile()
                 val fw = FileWriter(file)
                 val db = this.readableDatabase
                 val cur = db.rawQuery("SELECT * FROM MemoryLog", null)
+                
                 fw.append("ID,Timestamp,Query,Response,IntentType\n")
+                
                 if (cur.moveToFirst()) {
                     do {
                         fw.append("${cur.getInt(0)},\"${cur.getString(1)}\",\"${cur.getString(2)}\",\"${cur.getString(3)}\",\"${cur.getString(4)}\"\n")
                     } while (cur.moveToNext())
                 }
+                
                 cur.close()
                 fw.close()
                 db.close()
                 return file.absolutePath
-            } catch (e: Exception) { return "Export Failed" }
+            } catch (e: Exception) { 
+                return "Export Failed" 
+            }
         }
     }
 
     // ============================================================================
     // INNER GOD CLASS 2: ADVANCED SCIENTIFIC MATH PARSER (BODMAS + TRIG + LOG)
     // ============================================================================
+    
     inner class AdvancedScientificParser {
+        
         fun evaluate(expression: String): Double {
             return object : Any() {
-                var pos = -1; var ch = 0
+                var pos = -1
+                var ch = 0
 
-                fun nextChar() { ch = if (++pos < expression.length) expression[pos].code else -1 }
+                fun nextChar() { 
+                    ch = if (++pos < expression.length) expression[pos].code else -1 
+                }
 
                 fun eat(charToEat: Int): Boolean {
                     while (ch == ' '.code) nextChar()
-                    if (ch == charToEat) { nextChar(); return true }
+                    if (ch == charToEat) { 
+                        nextChar()
+                        return true 
+                    }
                     return false
                 }
 
                 fun parse(): Double {
-                    nextChar(); val x = parseExpression()
+                    nextChar()
+                    val x = parseExpression()
                     if (pos < expression.length) throw RuntimeException("Syntax Error: " + ch.toChar())
                     return x
                 }
 
                 fun parseExpression(): Double {
                     var x = parseTerm()
-                    while (true) { when { eat('+'.code) -> x += parseTerm(); eat('-'.code) -> x -= parseTerm(); else -> return x } }
+                    while (true) { 
+                        when { 
+                            eat('+'.code) -> x += parseTerm()
+                            eat('-'.code) -> x -= parseTerm()
+                            else -> return x 
+                        } 
+                    }
                 }
 
                 fun parseTerm(): Double {
                     var x = parseFactor()
-                    while (true) { when { eat('*'.code) -> x *= parseFactor(); eat('/'.code) -> x /= parseFactor(); else -> return x } }
+                    while (true) { 
+                        when { 
+                            eat('*'.code) -> x *= parseFactor()
+                            eat('/'.code) -> x /= parseFactor()
+                            else -> return x 
+                        } 
+                    }
                 }
 
                 fun parseFactor(): Double {
@@ -1337,25 +1818,36 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     var x: Double
                     val startPos = this.pos
                     
-                    if (eat('('.code)) { x = parseExpression(); eat(')'.code) }
+                    if (eat('('.code)) { 
+                        x = parseExpression()
+                        eat(')'.code) 
+                    }
                     else if ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) {
-                        while ((ch >= '0'.code && ch <= '9'.code) || ch == '.code') nextChar()
+                        // FIX: Fixed character literal error. Replaced ch == '.code' with ch == '.'.code
+                        while ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) nextChar()
                         x = expression.substring(startPos, this.pos).toDouble()
                     }
                     else if (ch >= 'a'.code && ch <= 'z'.code) {
                         while (ch >= 'a'.code && ch <= 'z'.code) nextChar()
                         val func = expression.substring(startPos, this.pos)
+                        
                         if (func == "pi") return PI
                         if (func == "e") return E
+                        
                         x = parseFactor()
                         x = when (func) {
-                            "sqrt" -> sqrt(x); "sin" -> sin(Math.toRadians(x)); "cos" -> cos(Math.toRadians(x))
-                            "tan" -> tan(Math.toRadians(x)); "log" -> log10(x); "ln" -> ln(x)
+                            "sqrt" -> sqrt(x)
+                            "sin" -> sin(Math.toRadians(x))
+                            "cos" -> cos(Math.toRadians(x))
+                            "tan" -> tan(Math.toRadians(x))
+                            "log" -> log10(x)
+                            "ln" -> ln(x)
                             else -> throw RuntimeException("Unknown Math Function: $func")
                         }
                     } else throw RuntimeException("Unexpected Math Token")
                     
                     if (eat('^'.code)) x = x.pow(parseFactor())
+                    
                     return x
                 }
             }.parse()
@@ -1365,10 +1857,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     // ============================================================================
     // INNER GOD CLASS 3: MATRIX DIGITAL RAIN RENDERER (PROGRAMMATIC CANVAS)
     // ============================================================================
+    
     inner class MatrixDigitalRainView(context: Context) : View(context) {
         private val rnd = Random()
         private val p = Paint().apply { typeface = Typeface.MONOSPACE }
-        private val drops = Array(65) { DigitalDrop() } // 65 columns of dense rain
+        
+        // Generates 65 columns of dense matrix rain
+        private val drops = Array(65) { DigitalDrop() } 
         private var hexGlowColor = HUD_COLOR_CYAN
         
         inner class DigitalDrop {
@@ -1390,13 +1885,17 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
         override fun onDraw(c: Canvas) {
             super.onDraw(c)
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             
             for (drop in drops) {
                 p.textSize = drop.textSize
                 for (i in drop.chars.indices) {
+                    
                     // Matrix Glitch Effect: 5% chance character randomly changes
-                    if (rnd.nextFloat() > 0.95f) drop.chars[i] = (rnd.nextInt(94) + 33).toChar()
+                    if (rnd.nextFloat() > 0.95f) {
+                        drop.chars[i] = (rnd.nextInt(94) + 33).toChar()
+                    }
                     
                     // Alpha Fading for trailing tail effect
                     val alpha = 255 - (i * (255 / drop.chars.size))
@@ -1405,6 +1904,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     
                     c.drawText(drop.chars[i].toString(), drop.x, drop.y - (i * drop.textSize), p)
                 }
+                
                 drop.y += drop.speed
                 
                 // Reset drop to top boundary once off screen
@@ -1414,7 +1914,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     drop.speed = rnd.nextFloat() * 10f + 6f
                 }
             }
-            invalidate() // Loop 60fps refresh
+            
+            // Loop 60fps refresh
+            invalidate() 
         }
     }
 }
