@@ -1,7 +1,7 @@
 package com.example.jarvis
 
 // ============================================================================
-// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V25.0 - UNCOMPRESSED)
+// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V30.0 - UNCOMPRESSED)
 // ============================================================================
 
 import android.Manifest
@@ -89,9 +89,12 @@ import com.example.jarvis.ui.JarvisOrbView
 import com.example.jarvis.ui.MainViewModel
 import com.example.jarvis.ui.OrbState
 import com.example.jarvis.ui.VoiceOverlayManager
+import com.example.jarvis.ui.OverlayWindowManager
 import com.example.jarvis.utils.PermissionHelper
 import com.example.jarvis.voice.SpeechRecognizerManager
+import com.example.jarvis.voice.TextToSpeechManager
 import com.example.jarvis.voice.VoiceSessionManager
+import com.example.jarvis.voice.VoiceService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -108,13 +111,19 @@ import java.util.concurrent.Executor
 import kotlin.math.E
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.asin
+import kotlin.math.atan
 import kotlin.math.cos
+import kotlin.math.cosh
 import kotlin.math.ln
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sinh
 import kotlin.math.sqrt
 import kotlin.math.tan
+import kotlin.math.tanh
 
 /**
  * ============================================================================
@@ -124,15 +133,15 @@ import kotlin.math.tan
  * Developer: 𝑵𝒂𝒆𝒆𝒎
  * 
  * DESIGN PHILOSOPHY:
- * This file is intentionally expansive. It encompasses every core system,
- * hardware interface, programmatic UI generation, and custom logic routing
- * required for the J.A.R.V.I.S. Artificial Intelligence.
+ * This file is intentionally expansive and highly detailed. It encompasses every 
+ * core system, hardware interface, programmatic UI generation, and custom logic 
+ * routing required for the J.A.R.V.I.S. Artificial Intelligence.
  * 
- * ERRORS FIXED:
- * 1. Resolved TextToSpeech missing imports and interface overrides.
- * 2. Resolved 'Too many characters in character literal' in Math Parser.
- * 3. Resolved ACTION_WAKE_WORD_DETECTED IPC intent issues.
- * 4. Resolved SystemState / OrbState 'SPEAKING' and 'FAULT' conflicts.
+ * ERRORS FIXED IN V30.0:
+ * 1. Resolved Unresolved reference: OverlayWindowManager (Import Added)
+ * 2. Resolved HUD_COLOR_CYAN / HUD_COLOR_BLACK_TRANSPARENT mismatches.
+ * 3. Resolved VoiceService unresolved reference for IPC intent casting.
+ * 4. Resolved REQ_CODE_SECURITY naming mismatch.
  * ============================================================================
  */
 class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener {
@@ -157,12 +166,12 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     companion object {
         
         // --------------------------------------------------------------------
-        // System Tags
+        // System Logging Tags
         // --------------------------------------------------------------------
         private const val TAG = "JarvisTitanMaster"
         
         // --------------------------------------------------------------------
-        // IPC Action Strings (Hardcoded to prevent unresolved references)
+        // IPC Action Strings
         // --------------------------------------------------------------------
         private const val ACTION_WAKE_WORD_DETECTED = "com.example.jarvis.WAKE_WORD_DETECTED"
         private const val ACTION_UPDATE_STATE = "com.example.jarvis.UPDATE_STATE"
@@ -174,21 +183,21 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         private const val PROXIMITY_MUTE_DISTANCE = 3.0f
         
         // --------------------------------------------------------------------
-        // Activity Request Codes
+        // Activity Request Codes (Fixed from Build Error)
         // --------------------------------------------------------------------
-        private const val REQ_SECURITY_VAULT = 8001
-        private const val REQ_OVERLAY_PERM = 8002
-        private const val REQ_HARDWARE_PERMS = 8003
+        private const val REQ_CODE_SECURITY = 9002
+        private const val REQ_CODE_OVERLAY = 9001
+        private const val REQ_HARDWARE_PERMS = 9003
         
         // --------------------------------------------------------------------
-        // Cybernetic HUD Color Palette
+        // Cybernetic HUD Color Palette (Fixed from Build Error)
         // --------------------------------------------------------------------
-        private const val C_CYAN = "#00E5FF"
-        private const val C_RED = "#FF1744"
-        private const val C_GREEN = "#00E676"
-        private const val C_ORANGE = "#FF9100"
-        private const val C_BLACK_BG = "#050811"
-        private const val C_GLASS = "#88000000"
+        private const val HUD_COLOR_CYAN = "#00E5FF"
+        private const val HUD_COLOR_RED = "#FF1744"
+        private const val HUD_COLOR_GREEN = "#00E676"
+        private const val HUD_COLOR_ORANGE = "#FF9100"
+        private const val HUD_COLOR_BLACK_BG = "#050811"
+        private const val HUD_COLOR_BLACK_TRANSPARENT = "#88000000"
         
         // --------------------------------------------------------------------
         // External Developer & Creator Links
@@ -221,6 +230,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private lateinit var voiceSessionManager: VoiceSessionManager
     private lateinit var voiceOverlayManager: VoiceOverlayManager
     private lateinit var textToSpeechEngine: TextToSpeech
+    private lateinit var textToSpeechManager: TextToSpeechManager // Legacy Support
     
     // System Hardware Managers
     private lateinit var audioManager: AudioManager
@@ -377,9 +387,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // UI Flag Management for HUD Experience
+        // Prevent display timeout for continuous HUD immersion
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.statusBarColor = Color.parseColor(C_BLACK_BG)
+        window.statusBarColor = Color.parseColor(HUD_COLOR_BLACK_BG)
         
         setContentView(R.layout.activity_main)
         
@@ -400,7 +410,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
      */
     private fun printBootLogHeaders() {
         Log.i(TAG, "||=================================================||")
-        Log.i(TAG, "|| TITAN CORE V25.0 - MASTER BOOT SEQUENCE         ||")
+        Log.i(TAG, "|| TITAN CORE V30.0 - MASTER BOOT SEQUENCE         ||")
         Log.i(TAG, "|| Architect: Drako X Naeem                        ||")
         Log.i(TAG, "|| Mode: Extreme Monolithic Engine                 ||")
         Log.i(TAG, "||=================================================||")
@@ -493,6 +503,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         
         // Instantiating TTS directly to prevent "Unresolved Reference" errors
         textToSpeechEngine = TextToSpeech(this, this)
+        textToSpeechManager = TextToSpeechManager(this) // Kept for legacy compatibility
     }
 
     // ========================================================================
@@ -545,8 +556,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     // ========================================================================
 
     private fun bindNativeUserInterface() {
-        
-        // Attempting to bind native elements.
+        // Attempting to bind native elements gracefully.
         try {
             messageInputBox = findViewById(R.id.messageInput)
             micToggleButton = findViewById(R.id.micButton)
@@ -558,6 +568,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             holographicOrbView.setOrbState(OrbState.IDLE)
         } catch (e: Exception) {
             Log.e(TAG, "Native UI Binding Failed.", e)
+            printToTerminal("> WARNING: Some XML Views missing. Using Programmatic Fallbacks.")
         }
     }
 
@@ -575,7 +586,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             ViewGroup.LayoutParams.MATCH_PARENT
         )
         
-        masterRootLayout.addView(matrixBackground, 0, layoutParams) // Insert at extreme bottom
+        masterRootLayout.addView(matrixBackground, 0, layoutParams) // Insert at extreme bottom layer
     }
 
     // ========================================================================
@@ -851,13 +862,16 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
 
         // Apply Native UI Changes
-        holographicOrbView.setOrbState(state)
-        voiceOverlayManager.updateState(state)
+        if (::holographicOrbView.isInitialized) {
+            holographicOrbView.setOrbState(state)
+        }
         
-        micToggleButton.alpha = if (state == OrbState.LISTENING) {
-            1.0f 
-        } else {
-            0.7f
+        if (::voiceOverlayManager.isInitialized) {
+            voiceOverlayManager.updateState(state)
+        }
+        
+        if (::micToggleButton.isInitialized) {
+            micToggleButton.alpha = if (state == OrbState.LISTENING) 1.0f else 0.7f
         }
 
         // Broadcast State to Background Engine via IPC
@@ -868,11 +882,11 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
 
         // Animate Root Background Color based on Operating Mode
         val targetColor = when(state) {
-            OrbState.ERROR -> Color.parseColor("#44FF0000")
-            OrbState.THINKING -> Color.parseColor("#3300E5FF")
-            OrbState.LISTENING -> Color.parseColor("#3300FF00")
-            OrbState.SPEAKING -> Color.parseColor("#33FF9100")
-            else -> Color.parseColor("#050811")
+            OrbState.ERROR -> Color.parseColor("#44FF0000") // Red Hue
+            OrbState.THINKING -> Color.parseColor("#3300E5FF") // Cyan Hue
+            OrbState.LISTENING -> Color.parseColor("#3300FF00") // Green Hue
+            OrbState.SPEAKING -> Color.parseColor("#33FF9100") // Orange Hue
+            else -> Color.parseColor(HUD_COLOR_BLACK_BG)
         }
         
         val animator = ObjectAnimator.ofArgb(masterRootLayout, "backgroundColor", targetColor)
@@ -1277,25 +1291,29 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private fun setupInteractiveClickListeners() {
         
         // Text Input Action
-        sendCommandButton.setOnClickListener {
-            val typedMessage = messageInputBox.text.toString().trim()
-            if (typedMessage.isNotEmpty()) {
-                synchronizeHolographicState(OrbState.THINKING, "Processing...")
-                evaluateAndExecuteMasterCommand(typedMessage)
-                messageInputBox.text.clear()
+        if (::sendCommandButton.isInitialized) {
+            sendCommandButton.setOnClickListener {
+                val typedMessage = messageInputBox.text.toString().trim()
+                if (typedMessage.isNotEmpty()) {
+                    synchronizeHolographicState(OrbState.THINKING, "Processing...")
+                    evaluateAndExecuteMasterCommand(typedMessage)
+                    messageInputBox.text.clear()
+                }
             }
         }
 
         // Voice Input Action
-        micToggleButton.setOnClickListener {
-            if (!PermissionHelper.hasAudioPermission(this)) {
-                PermissionHelper.requestAudioPermission(this)
-                return@setOnClickListener
-            }
-            if (voiceSessionManager.isActive()) {
-                stopVoiceMode()
-            } else {
-                startVoiceMode()
+        if (::micToggleButton.isInitialized) {
+            micToggleButton.setOnClickListener {
+                if (!PermissionHelper.hasAudioPermission(this)) {
+                    PermissionHelper.requestAudioPermission(this)
+                    return@setOnClickListener
+                }
+                if (voiceSessionManager.isActive()) {
+                    stopVoiceMode()
+                } else {
+                    startVoiceMode()
+                }
             }
         }
     }
@@ -1373,7 +1391,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(60, 40, 60, 40)
-            setBackgroundColor(Color.parseColor("#050811"))
+            setBackgroundColor(Color.parseColor(HUD_COLOR_BLACK_BG))
         }
 
         val title = TextView(this).apply {
@@ -1823,7 +1841,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                         eat(')'.code) 
                     }
                     else if ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) {
-                        // FIX: Fixed character literal error. Replaced ch == '.code' with ch == '.'.code
+                        // FIX: Ensure correct character code reference
                         while ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) nextChar()
                         x = expression.substring(startPos, this.pos).toDouble()
                     }
@@ -1840,6 +1858,12 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                             "sin" -> sin(Math.toRadians(x))
                             "cos" -> cos(Math.toRadians(x))
                             "tan" -> tan(Math.toRadians(x))
+                            "asin" -> Math.toDegrees(asin(x))
+                            "acos" -> Math.toDegrees(acos(x))
+                            "atan" -> Math.toDegrees(atan(x))
+                            "sinh" -> sinh(x)
+                            "cosh" -> cosh(x)
+                            "tanh" -> tanh(x)
                             "log" -> log10(x)
                             "ln" -> ln(x)
                             else -> throw RuntimeException("Unknown Math Function: $func")
@@ -1862,8 +1886,8 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         private val rnd = Random()
         private val p = Paint().apply { typeface = Typeface.MONOSPACE }
         
-        // Generates 65 columns of dense matrix rain
-        private val drops = Array(65) { DigitalDrop() } 
+        // Generates 75 columns of dense matrix rain
+        private val drops = Array(75) { DigitalDrop() } 
         private var hexGlowColor = HUD_COLOR_CYAN
         
         inner class DigitalDrop {
