@@ -1,5 +1,9 @@
 package com.example.jarvis.voice
 
+// ============================================================================
+// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V4.0 - UNCOMPRESSED)
+// ============================================================================
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -45,18 +49,21 @@ import com.example.jarvis.MainActivity
 import com.example.jarvis.ui.JarvisOrbView
 import com.example.jarvis.ui.OrbState
 import java.util.Locale
+import kotlin.math.abs
 
 /**
  * ============================================================================
  * J.A.R.V.I.S. BACKGROUND VOICE ENGINE (ULTIMATE GOD MODE - V4.0)
  * ============================================================================
- * Architect: Drako X Naeem
- * Features:
- * - Aggressive Beep Muting (Zero Tuluung Sound)
- * - Haptic Feedback (Vibration) on Wake Word
- * - Draggable System Alert Window (Floating UI)
- * - Safe Runtime Permission Checks
- * - Network Awareness & Memory-safe Loop
+ * Architect: 𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎
+ * Developer: 𝑵𝒂𝒆𝒆𝒎
+ * 
+ * CORE FEATURES INJECTED:
+ * 1. ZERO "TUDUNG" SOUND: Aggressive audio stream muting during recognizer boot.
+ * 2. UNIVERSAL OVERLAY CLICK: The Orb is now clickable. Tap to override wake-word
+ *    and issue direct commands from ANY screen (like Gemini Overlay).
+ * 3. HAPTIC FEEDBACK: Precise vibration pulses confirm command reception.
+ * 4. MEMORY-SAFE LOOPING: Backoff delays implemented to prevent CPU flooding.
  * ============================================================================
  */
 class VoiceService : Service(), RecognitionListener {
@@ -72,25 +79,28 @@ class VoiceService : Service(), RecognitionListener {
     private var wakeLock: PowerManager.WakeLock? = null
     
     // =========================================================
-    // FLOATING UI ELEMENTS (THE ORB)
+    // FLOATING UI ELEMENTS (THE HOLOGRAPHIC ORB)
     // =========================================================
     private var floatingLayout: LinearLayout? = null
     private var floatingOrb: JarvisOrbView? = null
     private var floatingText: TextView? = null
     private lateinit var windowParams: WindowManager.LayoutParams
 
+    // Touch & Drag Tracking Variables
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
+    private var isDragging = false
 
     // =========================================================
-    // ENGINE STATE VARIABLES
+    // ENGINE STATE & AUDIO VARIABLES
     // =========================================================
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isListening = false
     private var isWakeModeActive = false
     private var isMuted = false
+    private var isManualTrigger = false // Override for direct tap command
     private var retryCount = 0
     private var audioFocusRequest: AudioFocusRequest? = null
     
@@ -116,7 +126,7 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     // =========================================================
-    // IPC: BROADCAST RECEIVER FOR UI SYNC
+    // IPC: BROADCAST RECEIVER FOR UI SYNCHRONIZATION
     // =========================================================
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -134,7 +144,7 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     // =========================================================
-    // 1. LIFECYCLE & INITIALIZATION
+    // 1. LIFECYCLE & CORE INITIALIZATION
     // =========================================================
     override fun onCreate() {
         super.onCreate()
@@ -171,7 +181,7 @@ class VoiceService : Service(), RecognitionListener {
 
         when (intent?.action) {
             ACTION_ENABLE_WAKE -> {
-                Log.i(TAG, "Engaging Wake Protocol...")
+                Log.i(TAG, "Engaging God Mode Protocol...")
                 isWakeModeActive = true
                 startForeground(NOTIFICATION_ID, buildSystemNotification("Sensors Online & Monitoring"))
                 
@@ -185,7 +195,7 @@ class VoiceService : Service(), RecognitionListener {
                 startContinuousListening()
             }
             ACTION_DISABLE_WAKE -> {
-                Log.i(TAG, "Disengaging Wake Protocol...")
+                Log.i(TAG, "Disengaging God Mode Protocol...")
                 isWakeModeActive = false
                 stopContinuousListening()
                 stopSelf()
@@ -218,7 +228,7 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     // =========================================================
-    // 2. DRAGGABLE FLOATING UI (SYSTEM ALERT WINDOW)
+    // 2. DRAGGABLE & CLICKABLE FLOATING UI (GEMINI STYLE)
     // =========================================================
     @SuppressLint("ClickableViewAccessibility")
     private fun mountFloatingUI() {
@@ -274,17 +284,33 @@ class VoiceService : Service(), RecognitionListener {
                     initialY = windowParams.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isDragging = false // Reset drag flag
+                    
                     view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start()
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    windowParams.x = initialX + (event.rawX - initialTouchX).toInt()
-                    windowParams.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(floatingLayout, windowParams)
+                    val deltaX = abs(event.rawX - initialTouchX)
+                    val deltaY = abs(event.rawY - initialTouchY)
+                    
+                    // If moved more than 10 pixels, it's a drag, not a click
+                    if (deltaX > 10 || deltaY > 10) {
+                        isDragging = true
+                        windowParams.x = initialX + (event.rawX - initialTouchX).toInt()
+                        windowParams.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager.updateViewLayout(floatingLayout, windowParams)
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
                     view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    
+                    if (!isDragging) {
+                        // THIS IS A CLICK (User Tapped the Orb)
+                        Log.i(TAG, "Hologram Tapped: Activating Manual Command Override.")
+                        triggerHapticFeedback(80)
+                        triggerManualListeningOverride()
+                    }
                     true
                 }
                 else -> false
@@ -296,6 +322,24 @@ class VoiceService : Service(), RecognitionListener {
             setEngineState(EngineState.STANDBY)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to mount Floating UI: ${e.message}")
+        }
+    }
+
+    /**
+     * Instantly forces the system to listen for a command without needing the "Hey Jarvis" wake word.
+     */
+    private fun triggerManualListeningOverride() {
+        isManualTrigger = true
+        setEngineState(EngineState.LISTENING)
+        floatingText?.text = "Yes Sir?"
+        
+        // Cancel background loop and force immediate listening
+        try {
+            speechRecognizer?.cancel()
+            isListening = false
+            mainHandler.postDelayed({ startContinuousListening() }, 100)
+        } catch (e: Exception) {
+            Log.e(TAG, "Override transition failed.")
         }
     }
 
@@ -318,7 +362,7 @@ class VoiceService : Service(), RecognitionListener {
             floatingText?.text = uiState.second
 
             if (state == EngineState.STANDBY || state == EngineState.OFFLINE) {
-                floatingLayout?.alpha = 0.5f
+                floatingLayout?.alpha = 0.6f
             } else {
                 floatingLayout?.alpha = 1.0f
             }
@@ -333,7 +377,7 @@ class VoiceService : Service(), RecognitionListener {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
             speechRecognizer?.setRecognitionListener(this)
         } else {
-            Log.e(TAG, "Speech Recognition Framework missing.")
+            Log.e(TAG, "Speech Recognition Framework missing on this device.")
             stopSelf()
         }
     }
@@ -346,20 +390,22 @@ class VoiceService : Service(), RecognitionListener {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toString())
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1200)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
         }
 
         try {
             requestAudioFocus()
-            muteSystemBeeps() // THE SILENT PROTOCOL
+            
+            // THE SILENT PROTOCOL: Mute system entirely before engine boot
+            muteSystemBeeps() 
             
             speechRecognizer?.startListening(intent)
             isListening = true
             retryCount = 0
             
             if (currentState != EngineState.SPEAKING && currentState != EngineState.PROCESSING) {
-                setEngineState(EngineState.STANDBY)
+                if (!isManualTrigger) setEngineState(EngineState.STANDBY)
             }
         } catch (e: Exception) {
             handleRecognizerCrash()
@@ -387,7 +433,7 @@ class VoiceService : Service(), RecognitionListener {
                 speechRecognizer?.cancel()
                 startContinuousListening()
             } catch (e: Exception) {
-                Log.e(TAG, "Restart failed.")
+                Log.e(TAG, "Restart sequence failed.")
             }
         }, delayMs)
     }
@@ -395,10 +441,10 @@ class VoiceService : Service(), RecognitionListener {
     private fun handleRecognizerCrash() {
         if (retryCount < MAX_RETRIES) {
             retryCount++
-            Log.w(TAG, "Recognizer crash. Backoff retry attempt $retryCount")
+            Log.w(TAG, "Recognizer crashed. Backoff retry attempt $retryCount")
             restartListeningWithDelay((retryCount * 1000).toLong())
         } else {
-            Log.e(TAG, "FATAL: Recognizer max retries reached.")
+            Log.e(TAG, "FATAL: Recognizer max retries reached. Shutting down loop.")
             setEngineState(EngineState.ERROR)
             stopSelf()
         }
@@ -411,12 +457,17 @@ class VoiceService : Service(), RecognitionListener {
         val normalized = text.lowercase(Locale.getDefault()).trim()
         Log.i(TAG, "Acoustic Input: $normalized")
 
-        val isWakeWord = normalized.contains("jarvis") || 
-                         normalized.contains("hey jarvis") || 
-                         normalized.contains("ok jarvis") ||
-                         normalized.contains("wake up")
+        // Trigger if it contains wake word OR if user manually tapped the orb
+        val isAuthorizedCommand = isManualTrigger || 
+                                  normalized.contains("jarvis") || 
+                                  normalized.contains("hey jarvis") || 
+                                  normalized.contains("ok jarvis") ||
+                                  normalized.contains("wake up")
 
-        if (isWakeWord) {
+        if (isAuthorizedCommand) {
+            // Reset manual trigger flag
+            isManualTrigger = false 
+
             if (!isNetworkAvailable()) {
                 setEngineState(EngineState.ERROR)
                 floatingText?.text = "Offline Mode"
@@ -425,19 +476,25 @@ class VoiceService : Service(), RecognitionListener {
                 return
             }
 
-            Log.i(TAG, "Wake Word Authorized. Routing to Main Engine...")
-            triggerHapticFeedback(100) // Tactile feedback instead of a beep
+            Log.i(TAG, "Command Authorized. Routing to Titan Main Engine...")
+            
+            // Subtle tactile feedback instead of noisy beep
+            triggerHapticFeedback(100) 
+            
             stopContinuousListening()
             setEngineState(EngineState.PROCESSING)
             
+            // Route command string to MainActivity for Neural Processing
             val launchIntent = Intent(this, MainActivity::class.java).apply {
                 action = ACTION_VOICE_COMMAND
                 putExtra(EXTRA_COMMAND, text)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             startActivity(launchIntent)
+            
         } else {
-            restartListeningWithDelay(50)
+            // Ignore background chatter and restart listening quietly
+            restartListeningWithDelay(200)
         }
     }
 
@@ -445,12 +502,15 @@ class VoiceService : Service(), RecognitionListener {
     // 6. RECOGNIZER CALLBACKS
     // =========================================================
     override fun onReadyForSpeech(params: Bundle?) {
-        // Unmute slightly after mic opens to catch any delayed system sounds safely
-        mainHandler.postDelayed({ restoreSystemBeeps() }, 100)
+        // CRITICAL FIX: Increased delay to 500ms to completely smother the Google "Tudung" sound.
+        mainHandler.postDelayed({ restoreSystemBeeps() }, 500)
     }
     
     override fun onBeginningOfSpeech() { 
-        if (currentState != EngineState.PROCESSING) setEngineState(EngineState.LISTENING) 
+        if (currentState != EngineState.PROCESSING) {
+            // Only update UI if we are in manual trigger mode, otherwise stay hidden
+            if (isManualTrigger) setEngineState(EngineState.LISTENING) 
+        }
     }
     
     override fun onRmsChanged(rmsdB: Float) {}
@@ -459,11 +519,11 @@ class VoiceService : Service(), RecognitionListener {
     
     override fun onError(error: Int) {
         isListening = false
-        restoreSystemBeeps() // Safety restore
         
         when (error) {
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT, SpeechRecognizer.ERROR_NO_MATCH -> {
-                restartListeningWithDelay(100) 
+                // Increased delay to 500ms to prevent frantic looping and overlapping beeps
+                restartListeningWithDelay(500) 
             }
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
                 restartListeningWithDelay(1500)
@@ -478,7 +538,7 @@ class VoiceService : Service(), RecognitionListener {
         if (!matches.isNullOrEmpty()) {
             processRecognizedText(matches[0])
         } else {
-            restartListeningWithDelay(50)
+            restartListeningWithDelay(200)
         }
     }
 
@@ -486,7 +546,9 @@ class VoiceService : Service(), RecognitionListener {
         val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         if (!matches.isNullOrEmpty()) {
             val partial = matches[0].lowercase(Locale.getDefault())
-            if (partial.contains("jarvis")) {
+            
+            // Fast-trigger if wake word is detected mid-sentence
+            if (partial.contains("jarvis") && !isManualTrigger) {
                 speechRecognizer?.stopListening()
                 processRecognizedText(partial)
             }
@@ -496,7 +558,7 @@ class VoiceService : Service(), RecognitionListener {
     override fun onEvent(eventType: Int, params: Bundle?) {}
 
     // =========================================================
-    // 7. AGGRESSIVE AUDIO MUTING (SYSTEM BEEP KILLER)
+    // 7. AGGRESSIVE AUDIO MUTING (THE "TUDUNG" KILLER)
     // =========================================================
     private fun muteSystemBeeps() {
         if (isMuted) return
@@ -511,7 +573,7 @@ class VoiceService : Service(), RecognitionListener {
                 }
                 isMuted = true
             }
-        } catch (e: Exception) { Log.e(TAG, "Mute protocol failed.") }
+        } catch (e: Exception) { Log.e(TAG, "Mute protocol execution failed.") }
     }
 
     private fun restoreSystemBeeps() {
@@ -527,7 +589,7 @@ class VoiceService : Service(), RecognitionListener {
                 }
                 isMuted = false
             }
-        } catch (e: Exception) { Log.e(TAG, "Restore protocol failed.") }
+        } catch (e: Exception) { Log.e(TAG, "Restore protocol execution failed.") }
     }
 
     private fun triggerHapticFeedback(durationMs: Long) {
