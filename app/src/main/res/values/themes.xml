@@ -1,19 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============================================================================ -->
+    <!-- J.A.R.V.I.S. TITAN CORE V300.0 - MASTER UI THEME ARCHITECTURE                -->
+    <!-- DEVELOPED FOR: DRAKOX NAEEM | STYLE: CYBERPUNK / ENTERPRISE AI               -->
+    <!-- ============================================================================ -->
 
     <style name="Theme.Jarvis" parent="Theme.MaterialComponents.DayNight.NoActionBar">
 
-        <item name="android:fontFamily">sans</item>
+        <!-- ======================================================================== -->
+        <!-- 1. CORE SYSTEM COLORS (HARDCODED HEX TO PREVENT CRASHES)                 -->
+        <!-- ======================================================================== -->
+        <item name="colorPrimary">#00E5FF</item>         <!-- Cyan / Neon Blue -->
+        <item name="colorPrimaryVariant">#00B8D4</item>  <!-- Deep Cyan -->
+        <item name="colorOnPrimary">#000000</item>       <!-- Black text on Cyan -->
+        
+        <item name="colorSecondary">#FF9100</item>       <!-- Warning Orange -->
+        <item name="colorSecondaryVariant">#FF6D00</item>
+        <item name="colorOnSecondary">#000000</item>
 
-        <item name="android:statusBarColor">@color/jarvis_background</item>
-        <item name="android:navigationBarColor">@color/jarvis_background</item>
+        <item name="colorError">#FF1744</item>           <!-- Combat Mode Red -->
+        <item name="colorOnError">#FFFFFF</item>
+
+        <item name="android:colorBackground">#050811</item> <!-- Deep Space Black/Blue -->
+        <item name="colorSurface">#0A0F1D</item>            <!-- Floating Panel Color -->
+        <item name="colorOnSurface">#00E5FF</item>          <!-- Cyan text on panels -->
+
+        <!-- ======================================================================== -->
+        <!-- 2. SYSTEM BARS & WINDOW BEHAVIOR                                         -->
+        <!-- ======================================================================== -->
+        <!-- Directly injects your jarvis_bg.png at the absolute hardware layer -->
+        <item name="android:windowBackground">@drawable/jarvis_bg</item>
+        
+        <item name="android:statusBarColor">#00000000</item> <!-- Transparent Status Bar -->
+        <item name="android:navigationBarColor">#02040A</item> <!-- Dark Nav Bar -->
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
 
-        <item name="colorPrimary">@color/jarvis_accent</item>
-        <item name="colorSecondary">@color/jarvis_accent_2</item>
+        <!-- ======================================================================== -->
+        <!-- 3. TYPOGRAPHY & FONTS (SCI-FI STYLE)                                     -->
+        <!-- ======================================================================== -->
+        <item name="android:fontFamily">monospace</item> <!-- Hacker/Terminal Font -->
+        <item name="android:textAppearance">@style/TextAppearance.Jarvis.Terminal</item>
 
-        <item name="android:windowBackground">@color/jarvis_background</item>
+        <!-- ======================================================================== -->
+        <!-- 4. COMPONENT OVERRIDES (CUSTOM WIDGETS LINKING)                          -->
+        <!-- ======================================================================== -->
+        <item name="materialButtonStyle">@style/Widget.Jarvis.Button</item>
+        <item name="textInputStyle">@style/Widget.Jarvis.TextInputLayout</item>
+        <item name="alertDialogTheme">@style/Theme.Jarvis.Dialog</item>
+        
+        <!-- Disable default touch feedback to replace with Haptic Engine -->
+        <item name="android:soundEffectsEnabled">false</item> 
 
+    </style>
+
+    <!-- ============================================================================ -->
+    <!-- COMPONENT 1: HOLOGRAPHIC BUTTON STYLE                                        -->
+    <!-- ============================================================================ -->
+    <style name="Widget.Jarvis.Button" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">#1A00E5FF</item> <!-- 10% Transparent Cyan -->
+        <item name="android:textColor">#00E5FF</item>
+        <item name="strokeColor">#00E5FF</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="cornerRadius">4dp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="rippleColor">#6600E5FF</item> <!-- Bright Cyan Ripple -->
+    </style>
+
+    <!-- ============================================================================ -->
+    <!-- COMPONENT 2: TERMINAL TEXT INPUT (EDIT TEXT) STYLE                           -->
+    <!-- ============================================================================ -->
+    <style name="Widget.Jarvis.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">#00E5FF</item>
+        <item name="boxBackgroundColor">#0A00E5FF</item> <!-- Ultra dark cyan tint -->
+        <item name="hintTextColor">#00E5FF</item>
+        <item name="android:textColorHint">#4400E5FF</item>
+        <item name="boxCornerRadiusTopStart">8dp</item>
+        <item name="boxCornerRadiusTopEnd">8dp</item>
+        <item name="boxCornerRadiusBottomStart">8dp</item>
+        <item name="boxCornerRadiusBottomEnd">8dp</item>
+    </style>
+
+    <!-- ============================================================================ -->
+    <!-- COMPONENT 3: SECURITY VAULT DIALOG BOX STYLE                                 -->
+    <!-- ============================================================================ -->
+    <style name="Theme.Jarvis.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="colorSurface">#050811</item> <!-- Pure dark surface -->
+        <item name="colorOnSurface">#00E5FF</item>
+        <item name="colorPrimary">#00E5FF</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#00E5FF</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Jarvis.Dialog</item>
+    </style>
+
+    <!-- ============================================================================ -->
+    <!-- COMPONENT 4: SHAPE APPEARANCES (CYBERPUNK EDGES)                             -->
+    <!-- ============================================================================ -->
+    <style name="ShapeAppearance.Jarvis.Dialog" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <!-- Angled sci-fi corners instead of round ones -->
+        <item name="cornerFamily">cut</item> 
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <!-- ============================================================================ -->
+    <!-- COMPONENT 5: TEXT APPEARANCE (TERMINAL LOOK)                                 -->
+    <!-- ============================================================================ -->
+    <style name="TextAppearance.Jarvis.Terminal" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textColor">#00E5FF</item>
+        <item name="android:shadowColor">#00E5FF</item>
+        <item name="android:shadowRadius">2.0</item> <!-- Glowing text effect -->
     </style>
 
 </resources>
