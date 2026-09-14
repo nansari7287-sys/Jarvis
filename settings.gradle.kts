@@ -1,28 +1,33 @@
+// ============================================================================
+// J.A.R.V.I.S. TITAN CORE - ROOT SETTINGS CONFIGURATION
+// ============================================================================
+// Architect: DrakoXNaeem
+// Description: Manages global repositories for Android, Kotlin, and Python
+// ============================================================================
+
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
-        // Chaquopy Plugin Repository
+        
+        // [CRITICAL] Chaquopy Maven Repository for Python Plugin
         maven { url = uri("https://chaquo.com/maven") }
     }
 }
 
 dependencyResolutionManagement {
+    // Forces all modules to use these centralized repositories
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // Chaquopy Dependencies Repository
+        
+        // [CRITICAL] Chaquopy Maven Repository for Python Dependencies (PIP)
         maven { url = uri("https://chaquo.com/maven") }
     }
 }
 
-rootProject.name = "jarvis"
+// System Name Declaration
+rootProject.name = "Jarvis"
 include(":app")
