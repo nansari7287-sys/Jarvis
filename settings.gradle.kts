@@ -1,7 +1,3 @@
-// ============================================================================
-// J.A.R.V.I.S. TITAN CORE - SETTINGS CONFIGURATION
-// ============================================================================
-
 pluginManagement {
     repositories {
         google()
@@ -12,7 +8,6 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    // 🔥 CRITICAL FIX: Changed to PREFER_PROJECT to allow buildscript repositories
     repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
