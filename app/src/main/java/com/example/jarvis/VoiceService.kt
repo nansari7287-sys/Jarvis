@@ -1,7 +1,7 @@
 package com.example.jarvis.voice
 
 // ============================================================================
-// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V4.0 - UNCOMPRESSED)
+// EXHAUSTIVE SYSTEM IMPORTS (TITAN CORE ARCHITECTURE V52.0 - UNCOMPRESSED)
 // ============================================================================
 
 import android.Manifest
@@ -16,6 +16,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
@@ -41,6 +42,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
@@ -53,17 +55,18 @@ import kotlin.math.abs
 
 /**
  * ============================================================================
- * J.A.R.V.I.S. BACKGROUND VOICE ENGINE (ULTIMATE GOD MODE - V4.0)
+ * J.A.R.V.I.S. BACKGROUND VOICE ENGINE (ULTIMATE GOD MODE - V52.0)
  * ============================================================================
- * Architect: 𝑫𝒓𝒂𝒌𝒐𝑿𝑵𝒂𝒆𝒆𝒎
- * Developer: 𝑵𝒂𝒆𝒆𝒎
+ * Architect: DrakoXNaeem
+ * Developer: Naeem
  * 
  * CORE FEATURES INJECTED:
  * 1. ZERO "TUDUNG" SOUND: Aggressive audio stream muting during recognizer boot.
- * 2. UNIVERSAL OVERLAY CLICK: The Orb is now clickable. Tap to override wake-word
- *    and issue direct commands from ANY screen (like Gemini Overlay).
- * 3. HAPTIC FEEDBACK: Precise vibration pulses confirm command reception.
- * 4. MEMORY-SAFE LOOPING: Backoff delays implemented to prevent CPU flooding.
+ * 2. LIVE RMS VISUALIZER: Orb scales dynamically with voice decibel input.
+ * 3. DOUBLE-TAP TERMINATION: Rapidly tap the floating orb twice to kill service.
+ * 4. ANDROID 14 COMPLIANT: Strict foreground microphone permission flags added.
+ * 5. BULLETPROOF UN-MUTE: Failsafe implemented in onTaskRemoved to prevent 
+ *    permanent system silencing on fatal application crash.
  * ============================================================================
  */
 class VoiceService : Service(), RecognitionListener {
@@ -86,12 +89,14 @@ class VoiceService : Service(), RecognitionListener {
     private var floatingText: TextView? = null
     private lateinit var windowParams: WindowManager.LayoutParams
 
-    // Touch & Drag Tracking Variables
+    // Touch, Drag & Gesture Tracking Variables
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
     private var isDragging = false
+    private var lastClickTime: Long = 0
+    private val DOUBLE_CLICK_TIME_DELTA: Long = 300 // Milliseconds
 
     // =========================================================
     // ENGINE STATE & AUDIO VARIABLES
@@ -183,7 +188,13 @@ class VoiceService : Service(), RecognitionListener {
             ACTION_ENABLE_WAKE -> {
                 Log.i(TAG, "Engaging God Mode Protocol...")
                 isWakeModeActive = true
-                startForeground(NOTIFICATION_ID, buildSystemNotification("Sensors Online & Monitoring"))
+                
+                // Android 14+ Foreground Service API constraint fix
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, buildSystemNotification("Sensors Online & Monitoring"), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+                } else {
+                    startForeground(NOTIFICATION_ID, buildSystemNotification("Sensors Online & Monitoring"))
+                }
                 
                 if (hasOverlayPermission()) {
                     mountFloatingUI()
@@ -247,13 +258,13 @@ class VoiceService : Service(), RecognitionListener {
         floatingText = TextView(this).apply {
             text = "System Initializing..."
             setTextColor(Color.parseColor("#00E5FF")) // Jarvis Cyan
-            textSize = 12f
+            textSize = 10f
             gravity = Gravity.CENTER
             setShadowLayer(15f, 0f, 0f, Color.parseColor("#00E5FF"))
             setPadding(0, 8, 0, 0)
         }
 
-        floatingLayout?.addView(floatingOrb, LinearLayout.LayoutParams(140, 140))
+        floatingLayout?.addView(floatingOrb, LinearLayout.LayoutParams(160, 160))
         floatingLayout?.addView(floatingText, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -273,8 +284,8 @@ class VoiceService : Service(), RecognitionListener {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 100
-            y = 200
+            x = 50
+            y = 250
         }
 
         floatingLayout?.setOnTouchListener { view, event ->
@@ -286,7 +297,7 @@ class VoiceService : Service(), RecognitionListener {
                     initialTouchY = event.rawY
                     isDragging = false // Reset drag flag
                     
-                    view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start()
+                    view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(100).start()
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -303,13 +314,22 @@ class VoiceService : Service(), RecognitionListener {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).setInterpolator(OvershootInterpolator()).start()
                     
                     if (!isDragging) {
-                        // THIS IS A CLICK (User Tapped the Orb)
-                        Log.i(TAG, "Hologram Tapped: Activating Manual Command Override.")
-                        triggerHapticFeedback(80)
-                        triggerManualListeningOverride()
+                        val clickTime = System.currentTimeMillis()
+                        if (clickTime - lastClickTime < DOUBLE_CLICK_TIME_DELTA) {
+                            // DOUBLE TAP DETECTED: Shut down service
+                            Log.i(TAG, "Hologram Double Tapped: Shutting down background core.")
+                            triggerHapticFeedback(200)
+                            stopSelf()
+                        } else {
+                            // SINGLE TAP DETECTED: Manual Override
+                            Log.i(TAG, "Hologram Tapped: Activating Manual Command Override.")
+                            triggerHapticFeedback(80)
+                            triggerManualListeningOverride()
+                        }
+                        lastClickTime = clickTime
                     }
                     true
                 }
@@ -444,7 +464,7 @@ class VoiceService : Service(), RecognitionListener {
             Log.w(TAG, "Recognizer crashed. Backoff retry attempt $retryCount")
             restartListeningWithDelay((retryCount * 1000).toLong())
         } else {
-            Log.e(TAG, "FATAL: Recognizer max retries reached. Shutting down loop.")
+            Log.e(TAG, "FATAL: Recognizer max retries reached. Shutting down loop to save CPU.")
             setEngineState(EngineState.ERROR)
             stopSelf()
         }
@@ -499,7 +519,7 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     // =========================================================
-    // 6. RECOGNIZER CALLBACKS
+    // 6. RECOGNIZER CALLBACKS (RMS KINEMATIC INTEGRATION)
     // =========================================================
     override fun onReadyForSpeech(params: Bundle?) {
         // CRITICAL FIX: Increased delay to 500ms to completely smother the Google "Tudung" sound.
@@ -513,12 +533,25 @@ class VoiceService : Service(), RecognitionListener {
         }
     }
     
-    override fun onRmsChanged(rmsdB: Float) {}
+    override fun onRmsChanged(rmsdB: Float) {
+        // LIVE VISUALIZER: Scale the floating orb based on voice decibel input
+        if (currentState == EngineState.LISTENING || isManualTrigger) {
+            val scaleFactor = 1.0f + (rmsdB / 20f).coerceIn(0f, 0.4f)
+            floatingOrb?.animate()?.scaleX(scaleFactor)?.scaleY(scaleFactor)?.setDuration(50)?.start()
+        }
+    }
+    
     override fun onBufferReceived(buffer: ByteArray?) {}
-    override fun onEndOfSpeech() { isListening = false }
+    
+    override fun onEndOfSpeech() { 
+        isListening = false 
+        // Reset Orb scale
+        floatingOrb?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
+    }
     
     override fun onError(error: Int) {
         isListening = false
+        floatingOrb?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
         
         when (error) {
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT, SpeechRecognizer.ERROR_NO_MATCH -> {
@@ -534,6 +567,8 @@ class VoiceService : Service(), RecognitionListener {
 
     override fun onResults(results: Bundle?) {
         isListening = false
+        floatingOrb?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
+        
         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         if (!matches.isNullOrEmpty()) {
             processRecognizedText(matches[0])
@@ -558,7 +593,7 @@ class VoiceService : Service(), RecognitionListener {
     override fun onEvent(eventType: Int, params: Bundle?) {}
 
     // =========================================================
-    // 7. AGGRESSIVE AUDIO MUTING (THE "TUDUNG" KILLER)
+    // 7. AGGRESSIVE AUDIO MUTING & FAILSAFES
     // =========================================================
     private fun muteSystemBeeps() {
         if (isMuted) return
@@ -590,6 +625,12 @@ class VoiceService : Service(), RecognitionListener {
                 isMuted = false
             }
         } catch (e: Exception) { Log.e(TAG, "Restore protocol execution failed.") }
+    }
+
+    // FAILSAFE: Guarantees un-mute if the app is swiped away in task manager
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        restoreSystemBeeps()
     }
 
     private fun triggerHapticFeedback(durationMs: Long) {
@@ -677,7 +718,7 @@ class VoiceService : Service(), RecognitionListener {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("J.A.R.V.I.S. Core Online")
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now) // Default mic icon used as fallback
             .setContentIntent(pIntent)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
@@ -693,6 +734,7 @@ class VoiceService : Service(), RecognitionListener {
         isWakeModeActive = false
         
         stopContinuousListening()
+        restoreSystemBeeps() // Absolute Failsafe
         releaseWakeLock()
         
         if (audioManager.isBluetoothScoOn) {
