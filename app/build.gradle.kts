@@ -13,6 +13,18 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // C++ Native Architectures Support (ABIs)
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+
+        // External Native Build Configuration for C++ Engine
+        externalNativeBuild {
+            cmake {
+                cppFlags += listOf("-std=c++17", "-O3", "-ffast-math")
+            }
+        }
     }
 
     buildFeatures {
@@ -27,6 +39,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    // Linking C++ CMake configuration path
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 }
 
 dependencies {
@@ -39,8 +59,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // 🔥 FIXED: 'litert' हटा दिया है ताकि Duplicate Class का एरर ना आये।
-    // सिर्फ ओरिजिनल TensorFlow रखा है।
+    // TensorFlow Lite Engine Dependencies
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
 }
