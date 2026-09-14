@@ -1,19 +1,22 @@
+// ============================================================================
+// J.A.R.V.I.S. TITAN CORE - SETTINGS CONFIGURATION
+// ============================================================================
+
 pluginManagement {
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
-        // Chaquopy Plugin Server
         maven { url = uri("https://chaquo.com/maven") }
     }
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // 🔥 CRITICAL FIX: Changed to PREFER_PROJECT to allow buildscript repositories
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
         mavenCentral()
-        // Chaquopy Dependencies (PIP) Server
         maven { url = uri("https://chaquo.com/maven") }
     }
 }
