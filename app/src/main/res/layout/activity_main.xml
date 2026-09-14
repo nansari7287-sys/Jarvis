@@ -1,242 +1,328 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.constraintlayout.widget.ConstraintLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/jarvis_background"
+    android:background="@android:color/transparent"
     android:fitsSystemWindows="true"
     tools:context=".MainActivity">
 
     <!-- ======================================================= -->
-    <!-- HEADER SECTION : STATUS & CONTROLS                      -->
+    <!-- LAYER 1: BACKGROUND GRID & SCAN LINES (AESTHETICS)      -->
+    <!-- ======================================================= -->
+    <View
+        android:id="@+id/holographicGrid"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.05"
+        android:background="#00E5FF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- ======================================================= -->
+    <!-- LAYER 2: HEADER SECTION & TELEMETRY HUD                 -->
     <!-- ======================================================= -->
     <LinearLayout
+        android:id="@+id/headerSection"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:background="@drawable/bg_neon_button"
-        android:elevation="8dp">
+        android:layout_height="wrap_content"
+        android:background="#9902050A"
+        android:elevation="10dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- App Logo -->
-        <ImageView
-            android:id="@+id/headerLogo"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:src="@drawable/jarvis_logo"
-            android:contentDescription="JARVIS Core Logo"
-            android:scaleType="centerCrop"/>
-
-        <!-- System Status Details -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:paddingStart="12dp">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="J.A.R.V.I.S."
-                android:textColor="@color/jarvis_accent"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:fontFamily="sans-serif-black"
-                android:shadowColor="@color/jarvis_accent"
-                android:shadowDx="0"
-                android:shadowDy="0"
-                android:shadowRadius="8"/>
+            <!-- App Logo (Glowing) -->
+            <ImageView
+                android:id="@+id/headerLogo"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:contentDescription="JARVIS Core Logo"
+                android:scaleType="centerCrop"
+                android:src="@drawable/jarvis_logo" /> <!-- Make sure jarvis_logo exists or use ic_launcher_round -->
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="INTELLIGENT SYSTEM CORE"
-                android:textColor="@color/jarvis_text_secondary"
-                android:textSize="10sp"
-                android:letterSpacing="0.15"
-                android:fontFamily="sans-serif-condensed"/>
-
+            <!-- System Status Details -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
-                
-                <!-- Blinking Online Dot (Can be animated in Kotlin) -->
-                <View
-                    android:layout_width="6dp"
-                    android:layout_height="6dp"
-                    android:background="@drawable/bg_input"
-                    android:backgroundTint="@color/jarvis_success"/>
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="SYSTEM ONLINE • READY"
-                    android:textColor="@color/jarvis_success"
-                    android:textSize="9sp"
+                    android:fontFamily="monospace"
                     android:letterSpacing="0.1"
-                    android:textStyle="bold"/>
+                    android:shadowColor="#00E5FF"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="10"
+                    android:text="J.A.R.V.I.S. TITAN"
+                    android:textColor="#00E5FF"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.15"
+                    android:text="INTELLIGENT SYSTEM CORE V300"
+                    android:textColor="#88FFFFFF"
+                    android:textSize="9sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Blinking Online Dot -->
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/bg_input"
+                        android:backgroundTint="#00FF00" />
+
+                    <TextView
+                        android:id="@+id/tvOnlineStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:letterSpacing="0.1"
+                        android:text="UPLINK ESTABLISHED • READY"
+                        android:textColor="#00FF00"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
+
+            <!-- Header Action Buttons -->
+            <ImageButton
+                android:id="@+id/searchButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Search Network"
+                android:src="@android:drawable/ic_menu_search"
+                app:tint="#00E5FF" />
+
+            <ImageButton
+                android:id="@+id/historyButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="History Log"
+                android:src="@android:drawable/ic_menu_recent_history"
+                app:tint="#00E5FF" />
+
+            <ImageButton
+                android:id="@+id/settingsButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="System Settings / Vault"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_manage"
+                app:tint="#00E5FF" />
         </LinearLayout>
 
-        <!-- Header Action Buttons -->
-        <ImageButton
-            android:id="@+id/searchButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_search"
-            app:tint="@color/jarvis_accent"
-            android:contentDescription="Search Network"/>
+        <!-- LIVE TELEMETRY HUD (NEW FUTURE ADDED) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#1A00E5FF"
+            android:orientation="horizontal"
+            android:padding="6dp">
 
-        <ImageButton
-            android:id="@+id/historyButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_recent_history"
-            app:tint="@color/jarvis_accent"
-            android:contentDescription="History Log"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:text="CPU: 32%"
+                android:textColor="#00E5FF"
+                android:textSize="10sp" />
 
-        <ImageButton
-            android:id="@+id/settingsButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_settings"
-            android:padding="10dp"
-            android:contentDescription="System Settings"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:text="RAM: OPTIMAL"
+                android:textColor="#00E5FF"
+                android:textSize="10sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:text="NET: 12ms"
+                android:textColor="#00E5FF"
+                android:textSize="10sp" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- ======================================================= -->
-    <!-- NAVIGATION TABS                                         -->
+    <!-- LAYER 3: NAVIGATION TABS                                -->
     <!-- ======================================================= -->
     <LinearLayout
+        android:id="@+id/tabSection"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:orientation="horizontal"
+        android:layout_height="45dp"
+        android:layout_marginTop="8dp"
         android:gravity="center"
-        android:padding="6dp"
-        android:layout_marginTop="4dp">
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        app:layout_constraintTop_toBottomOf="@id/headerSection">
 
         <TextView
             android:id="@+id/chatTab"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="#1A00E5FF"
+            android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="⌂ CHAT"
-            android:textColor="@color/jarvis_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold"
             android:letterSpacing="0.05"
-            android:background="@drawable/bg_neon_button"
-            android:foreground="?attr/selectableItemBackground"/>
+            android:text="[ CHAT ]"
+            android:textColor="#00E5FF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/toolsTab"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:layout_marginStart="6dp"
+            android:background="#1A00E5FF"
+            android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="▦ TOOLS"
-            android:textColor="@color/jarvis_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold"
             android:letterSpacing="0.05"
-            android:background="@drawable/bg_neon_button"
-            android:foreground="?attr/selectableItemBackground"/>
+            android:text="[ TOOLS ]"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/assistTab"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:layout_marginStart="6dp"
+            android:background="#1A00E5FF"
+            android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="✦ ASSIST"
-            android:textColor="@color/jarvis_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold"
             android:letterSpacing="0.05"
-            android:background="@drawable/bg_neon_button"
-            android:foreground="?attr/selectableItemBackground"/>
+            android:text="[ ASSIST ]"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- ======================================================= -->
-    <!-- CHAT INTERFACE (DYNAMIC CONTENT AREA)                   -->
+    <!-- LAYER 4: CHAT / OUTPUT INTERFACE                        -->
     <!-- ======================================================= -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/messageRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_marginBottom="8dp"
         android:clipToPadding="false"
         android:padding="12dp"
         android:scrollbars="none"
-        tools:listitem="@android:layout/simple_list_item_1"/>
+        app:layout_constraintBottom_toTopOf="@id/orbContainer"
+        app:layout_constraintTop_toBottomOf="@id/tabSection" />
 
     <!-- ======================================================= -->
-    <!-- JARVIS CORE (ROTATING NEON ORB)                         -->
+    <!-- LAYER 5: JARVIS CORE ORB (CENTERPIECE)                  -->
     <!-- ======================================================= -->
     <LinearLayout
+        android:id="@+id/orbContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_marginBottom="8dp"
         android:gravity="center"
-        android:paddingTop="10dp"
-        android:paddingBottom="16dp">
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@id/quickActionsScroll">
 
         <FrameLayout
-            android:layout_width="110dp"
-            android:layout_height="110dp">
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:background="@drawable/bg_neon_button">
             
             <!-- Custom Rotating Arc Reactor View -->
             <com.example.jarvis.ui.JarvisOrbView
                 android:id="@+id/jarvisOrbView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:layout_gravity="center"
-                android:contentDescription="JARVIS Core Engine"/>
+                android:contentDescription="JARVIS Core Engine" />
+                
+            <!-- Tech Brackets (Visual only) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:text="⌜"
+                android:textColor="#00E5FF"
+                android:textSize="24sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:text="⌟"
+                android:textColor="#00E5FF"
+                android:textSize="24sp"/>
         </FrameLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="C O R E   A C T I V E"
-            android:textColor="@color/jarvis_accent"
-            android:textSize="11sp"
+            android:layout_marginTop="12dp"
             android:letterSpacing="0.4"
-            android:textStyle="bold"
-            android:shadowColor="@color/jarvis_accent"
+            android:shadowColor="#00E5FF"
             android:shadowDx="0"
             android:shadowDy="0"
-            android:shadowRadius="12"/>
+            android:shadowRadius="15"
+            android:text="N E U R A L   C O R E"
+            android:textColor="#00E5FF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- ======================================================= -->
-    <!-- QUICK ACTION MODULES (HORIZONTAL SCROLL)                -->
+    <!-- LAYER 6: QUICK ACTION MODULES (ENHANCED SCROLL)         -->
     <!-- ======================================================= -->
     <HorizontalScrollView
+        android:id="@+id/quickActionsScroll"
         android:layout_width="match_parent"
-        android:layout_height="85dp"
-        android:scrollbars="none"
+        android:layout_height="90dp"
+        android:layout_marginBottom="12dp"
         android:clipToPadding="false"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp">
+        android:paddingHorizontal="12dp"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toTopOf="@id/inputTerminalArea">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -246,133 +332,164 @@
 
             <TextView
                 android:id="@+id/webButton"
-                android:layout_width="75dp"
-                android:layout_height="65dp"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
+                android:background="#1A00E5FF"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="◎\nWEB"
-                android:textColor="@color/jarvis_text_primary"
+                android:textColor="#00E5FF"
                 android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_neon_button"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/youtubeButton"
-                android:layout_width="75dp"
-                android:layout_height="65dp"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
                 android:layout_marginStart="8dp"
+                android:background="#1A00E5FF"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="▶\nMEDIA"
-                android:textColor="@color/jarvis_text_primary"
+                android:textColor="#00E5FF"
                 android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_neon_button"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/instagramButton"
-                android:layout_width="75dp"
-                android:layout_height="65dp"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
                 android:layout_marginStart="8dp"
+                android:background="#1A00E5FF"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="◈\nSOCIAL"
-                android:textColor="@color/jarvis_text_primary"
+                android:textColor="#00E5FF"
                 android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_neon_button"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/whatsappButton"
-                android:layout_width="75dp"
-                android:layout_height="65dp"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
                 android:layout_marginStart="8dp"
+                android:background="#1A00E5FF"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="💬\nCHAT"
-                android:textColor="@color/jarvis_text_primary"
+                android:textColor="#00E5FF"
                 android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_neon_button"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/appsButton"
-                android:layout_width="75dp"
-                android:layout_height="65dp"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
                 android:layout_marginStart="8dp"
+                android:background="#1A00E5FF"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="▦\nAPPS"
-                android:textColor="@color/jarvis_text_primary"
+                android:textColor="#00E5FF"
                 android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_neon_button"
-                android:foreground="?attr/selectableItemBackground"
+                android:textStyle="bold" />
+
+            <!-- NEW FUTURE ADDITIONS -->
+            <TextView
+                android:id="@+id/vaultButton"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
+                android:layout_marginStart="8dp"
+                android:background="#1AFF0000"
                 android:clickable="true"
-                android:focusable="true"/>
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="⍜\nVAULT"
+                android:textColor="#FF1744"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+                
+            <TextView
+                android:id="@+id/cameraButton"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
+                android:layout_marginStart="8dp"
+                android:background="#1A00E5FF"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="⌖\nOPTICS"
+                android:textColor="#00E5FF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </HorizontalScrollView>
 
     <!-- ======================================================= -->
-    <!-- INPUT TERMINAL (TEXT & VOICE)                           -->
+    <!-- LAYER 7: INPUT TERMINAL (TEXT & VOICE)                  -->
     <!-- ======================================================= -->
     <LinearLayout
+        android:id="@+id/inputTerminalArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:background="#CC02040A"
         android:gravity="center_vertical"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="16dp"
-        android:background="#02040A">
+        android:orientation="horizontal"
+        android:padding="12dp"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <EditText
             android:id="@+id/messageInput"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="60dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_input"
-            android:hint="Awaiting command sequence..."
-            android:textColor="@color/jarvis_text_primary"
-            android:textColorHint="@color/jarvis_text_secondary"
+            android:background="#1A00E5FF"
+            android:fontFamily="monospace"
+            android:hint="> AWAITING_COMMAND..."
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
-            android:textSize="15sp"
-            android:fontFamily="sans-serif"/>
+            android:paddingHorizontal="16dp"
+            android:textColor="#00E5FF"
+            android:textColorHint="#5500E5FF"
+            android:textSize="14sp" />
 
         <ImageButton
             android:id="@+id/micButton"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:layout_marginStart="8dp"
-            android:background="@drawable/bg_neon_button"
+            android:background="#3300FF00"
+            android:contentDescription="Voice Command Activation"
             android:foreground="?attr/selectableItemBackground"
-            android:src="@drawable/ic_mic"
-            android:padding="12dp"
+            android:padding="14dp"
             android:scaleType="fitCenter"
-            android:contentDescription="Voice Command Activation"/>
+            android:src="@android:drawable/ic_btn_speak_now"
+            app:tint="#00FF00" />
 
         <ImageButton
             android:id="@+id/sendButton"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:layout_marginStart="8dp"
-            android:background="@drawable/bg_neon_button"
+            android:background="#3300E5FF"
+            android:contentDescription="Execute Command"
             android:foreground="?attr/selectableItemBackground"
-            android:src="@drawable/ic_send"
-            android:padding="14dp"
+            android:padding="16dp"
             android:scaleType="fitCenter"
-            android:contentDescription="Execute Command"/>
+            android:src="@android:drawable/ic_menu_send"
+            app:tint="#00E5FF" />
     </LinearLayout>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
