@@ -1,26 +1,44 @@
-// ============================================================================
-// J.A.R.V.I.S. TITAN CORE - PROJECT-LEVEL CONFIGURATION
-// ============================================================================
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
 
-// 🔥 MASTER FIX: Using explicit classpath bypasses the "Plugin not found" error completely.
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://chaquo.com/maven") }
+android {
+    namespace = "com.example.jarvis"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.example.jarvis"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
     }
-    dependencies {
-        // Direct link to the latest stable Chaquopy engine
-        classpath("com.chaquo.python:gradle:15.6.2")
+
+    buildFeatures {
+        viewBinding = true
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
-plugins {
-    // 1. Android Application Plugin
-    id("com.android.application") version "8.13.2" apply false
-    
-    // 2. Kotlin Android Plugin
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
-    
-    // NOTE: Chaquopy is now handled by the buildscript block above.
+dependencies {
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("com.google.android.material:material:1.13.0")
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // LiteRT / TensorFlow Lite runtime for the Hey Jarvis model
+    implementation("com.google.ai.edge.litert:litert:2.1.0")
 }
