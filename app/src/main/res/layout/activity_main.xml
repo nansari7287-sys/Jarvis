@@ -5,18 +5,35 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
+    android:background="#010205"
     android:fitsSystemWindows="true"
     tools:context=".MainActivity">
 
     <!-- ======================================================= -->
-    <!-- LAYER 1: BACKGROUND GRID & SCAN LINES (AESTHETICS)      -->
+    <!-- LAYER 0: ABSOLUTE BACKGROUND (FIXES RESOLUTION ISSUE)   -->
+    <!-- centerCrop ensures the background NEVER cuts off        -->
+    <!-- ======================================================= -->
+    <ImageView
+        android:id="@+id/masterBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/jarvis_bg"
+        android:alpha="0.85"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="ContentDescription" />
+
+    <!-- ======================================================= -->
+    <!-- LAYER 1: HOLOGRAPHIC GRID & SCAN LINES (AESTHETICS)     -->
     <!-- ======================================================= -->
     <View
         android:id="@+id/holographicGrid"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:alpha="0.05"
+        android:alpha="0.08"
         android:background="#00E5FF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -30,8 +47,8 @@
         android:id="@+id/headerSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#9902050A"
-        android:elevation="10dp"
+        android:background="#D902050A"
+        android:elevation="12dp"
         android:orientation="vertical"
         android:padding="12dp"
         app:layout_constraintTop_toTopOf="parent">
@@ -42,20 +59,27 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- App Logo (Glowing) -->
-            <ImageView
-                android:id="@+id/headerLogo"
-                android:layout_width="55dp"
-                android:layout_height="55dp"
-                android:contentDescription="JARVIS Core Logo"
-                android:scaleType="centerCrop"
-                android:src="@drawable/jarvis_logo" /> <!-- Make sure jarvis_logo exists or use ic_launcher_round -->
+            <!-- App Logo (Glowing Frame) -->
+            <FrameLayout
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                android:background="#3300E5FF"
+                android:padding="2dp">
+                
+                <ImageView
+                    android:id="@+id/headerLogo"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="JARVIS Core Logo"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/jarvis_logo" /> 
+            </FrameLayout>
 
             <!-- System Status Details -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="14dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -67,25 +91,26 @@
                     android:shadowColor="#00E5FF"
                     android:shadowDx="0"
                     android:shadowDy="0"
-                    android:shadowRadius="10"
+                    android:shadowRadius="12"
                     android:text="J.A.R.V.I.S. TITAN"
                     android:textColor="#00E5FF"
-                    android:textSize="20sp"
+                    android:textSize="21sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="monospace"
-                    android:letterSpacing="0.15"
-                    android:text="INTELLIGENT SYSTEM CORE V300"
-                    android:textColor="#88FFFFFF"
-                    android:textSize="9sp" />
+                    android:letterSpacing="0.2"
+                    android:text="ENTERPRISE CORE V500"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="9sp"
+                    android:textStyle="bold"/>
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -93,16 +118,15 @@
                     <View
                         android:layout_width="8dp"
                         android:layout_height="8dp"
-                        android:background="@drawable/bg_input"
-                        android:backgroundTint="#00FF00" />
+                        android:background="#00FF00" />
 
                     <TextView
                         android:id="@+id/tvOnlineStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:letterSpacing="0.1"
-                        android:text="UPLINK ESTABLISHED • READY"
+                        android:layout_marginStart="8dp"
+                        android:letterSpacing="0.15"
+                        android:text="SECURE UPLINK ESTABLISHED"
                         android:textColor="#00FF00"
                         android:textSize="9sp"
                         android:textStyle="bold" />
@@ -112,8 +136,8 @@
             <!-- Header Action Buttons -->
             <ImageButton
                 android:id="@+id/searchButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Search Network"
                 android:src="@android:drawable/ic_menu_search"
@@ -121,8 +145,8 @@
 
             <ImageButton
                 android:id="@+id/historyButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:layout_marginStart="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="History Log"
@@ -131,8 +155,8 @@
 
             <ImageButton
                 android:id="@+id/settingsButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:layout_marginStart="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="System Settings / Vault"
@@ -141,14 +165,14 @@
                 app:tint="#00E5FF" />
         </LinearLayout>
 
-        <!-- LIVE TELEMETRY HUD (NEW FUTURE ADDED) -->
+        <!-- LIVE TELEMETRY HUD (ENHANCED) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="#1A00E5FF"
+            android:layout_marginTop="14dp"
+            android:background="#2200E5FF"
             android:orientation="horizontal"
-            android:padding="6dp">
+            android:padding="8dp">
 
             <TextView
                 android:layout_width="0dp"
@@ -156,9 +180,10 @@
                 android:layout_weight="1"
                 android:fontFamily="monospace"
                 android:gravity="center"
-                android:text="CPU: 32%"
+                android:text="CPU: OPTIMAL"
                 android:textColor="#00E5FF"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="0dp"
@@ -166,9 +191,10 @@
                 android:layout_weight="1"
                 android:fontFamily="monospace"
                 android:gravity="center"
-                android:text="RAM: OPTIMAL"
+                android:text="RAM: STABLE"
                 android:textColor="#00E5FF"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="0dp"
@@ -176,9 +202,10 @@
                 android:layout_weight="1"
                 android:fontFamily="monospace"
                 android:gravity="center"
-                android:text="NET: 12ms"
-                android:textColor="#00E5FF"
-                android:textSize="10sp" />
+                android:text="API: ACTIVE"
+                android:textColor="#00FF00"
+                android:textSize="10sp"
+                android:textStyle="bold"/>
         </LinearLayout>
     </LinearLayout>
 
@@ -200,13 +227,13 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#1A00E5FF"
+            android:background="#2200E5FF"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:letterSpacing="0.05"
-            android:text="[ CHAT ]"
+            android:letterSpacing="0.1"
+            android:text="[ CHAT MODULE ]"
             android:textColor="#00E5FF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <TextView
@@ -215,13 +242,13 @@
             android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="#1A00E5FF"
+            android:background="#2200E5FF"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:letterSpacing="0.05"
-            android:text="[ TOOLS ]"
+            android:letterSpacing="0.1"
+            android:text="[ SYS TOOLS ]"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <TextView
@@ -230,13 +257,13 @@
             android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="#1A00E5FF"
+            android:background="#2200E5FF"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:letterSpacing="0.05"
-            android:text="[ ASSIST ]"
+            android:letterSpacing="0.1"
+            android:text="[ AI ASSIST ]"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -255,70 +282,87 @@
         app:layout_constraintTop_toBottomOf="@id/tabSection" />
 
     <!-- ======================================================= -->
-    <!-- LAYER 5: JARVIS CORE ORB (CENTERPIECE)                  -->
+    <!-- LAYER 5: JARVIS CORE ORB (CENTERPIECE & HOLOGRAPHICS)   -->
     <!-- ======================================================= -->
     <LinearLayout
         android:id="@+id/orbContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="16dp"
         android:gravity="center"
         android:orientation="vertical"
         app:layout_constraintBottom_toTopOf="@id/quickActionsScroll">
 
         <FrameLayout
-            android:layout_width="140dp"
-            android:layout_height="140dp"
-            android:background="@drawable/bg_neon_button">
+            android:layout_width="160dp"
+            android:layout_height="160dp">
             
             <!-- Custom Rotating Arc Reactor View -->
             <com.example.jarvis.ui.JarvisOrbView
                 android:id="@+id/jarvisOrbView"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
+                android:layout_width="130dp"
+                android:layout_height="130dp"
                 android:layout_gravity="center"
                 android:contentDescription="JARVIS Core Engine" />
                 
-            <!-- Tech Brackets (Visual only) -->
+            <!-- Outer Targeting Brackets (Cyberpunk Visuals) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|start"
-                android:text="⌜"
+                android:text="┏"
                 android:textColor="#00E5FF"
-                android:textSize="24sp"/>
+                android:textSize="32sp"
+                android:textStyle="bold"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:text="┓"
+                android:textColor="#00E5FF"
+                android:textSize="32sp"
+                android:textStyle="bold"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:text="┗"
+                android:textColor="#00E5FF"
+                android:textSize="32sp"
+                android:textStyle="bold"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
-                android:text="⌟"
+                android:text="┛"
                 android:textColor="#00E5FF"
-                android:textSize="24sp"/>
+                android:textSize="32sp"
+                android:textStyle="bold"/>
         </FrameLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:letterSpacing="0.4"
+            android:layout_marginTop="16dp"
+            android:letterSpacing="0.5"
             android:shadowColor="#00E5FF"
             android:shadowDx="0"
             android:shadowDy="0"
             android:shadowRadius="15"
-            android:text="N E U R A L   C O R E"
+            android:text="N E U R A L   M A T R I X"
             android:textColor="#00E5FF"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <!-- ======================================================= -->
-    <!-- LAYER 6: QUICK ACTION MODULES (ENHANCED SCROLL)         -->
+    <!-- LAYER 6: QUICK ACTION MODULES (EXPANDED SCROLL)         -->
     <!-- ======================================================= -->
     <HorizontalScrollView
         android:id="@+id/quickActionsScroll"
         android:layout_width="match_parent"
         android:layout_height="90dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="16dp"
         android:clipToPadding="false"
         android:paddingHorizontal="12dp"
         android:scrollbars="none"
@@ -332,107 +376,107 @@
 
             <TextView
                 android:id="@+id/webButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:background="#1A00E5FF"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:background="#2200E5FF"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="◎\nWEB"
+                android:text="◎\nGLOBAL\nWEB"
                 android:textColor="#00E5FF"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/youtubeButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:layout_marginStart="8dp"
-                android:background="#1A00E5FF"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:layout_marginStart="10dp"
+                android:background="#2200E5FF"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="▶\nMEDIA"
+                android:text="▶\nMEDIA\nSTREAM"
                 android:textColor="#00E5FF"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/instagramButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:layout_marginStart="8dp"
-                android:background="#1A00E5FF"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:layout_marginStart="10dp"
+                android:background="#2200E5FF"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="◈\nSOCIAL"
+                android:text="◈\nSOCIAL\nGRID"
                 android:textColor="#00E5FF"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/whatsappButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:layout_marginStart="8dp"
-                android:background="#1A00E5FF"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:layout_marginStart="10dp"
+                android:background="#2200E5FF"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="💬\nCHAT"
+                android:text="💬\nSECURE\nCHAT"
                 android:textColor="#00E5FF"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/appsButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:layout_marginStart="8dp"
-                android:background="#1A00E5FF"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:layout_marginStart="10dp"
+                android:background="#2200E5FF"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="▦\nAPPS"
+                android:text="▦\nSYSTEM\nAPPS"
                 android:textColor="#00E5FF"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
-            <!-- NEW FUTURE ADDITIONS -->
+            <!-- ADDED EXTRA BUTTONS FOR MASSIVE FEEL -->
             <TextView
                 android:id="@+id/vaultButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:layout_marginStart="8dp"
-                android:background="#1AFF0000"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:layout_marginStart="10dp"
+                android:background="#33FF0000"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="⍜\nVAULT"
+                android:text="⍜\nAPI\nVAULT"
                 android:textColor="#FF1744"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
                 
             <TextView
                 android:id="@+id/cameraButton"
-                android:layout_width="80dp"
-                android:layout_height="70dp"
-                android:layout_marginStart="8dp"
-                android:background="#1A00E5FF"
+                android:layout_width="85dp"
+                android:layout_height="75dp"
+                android:layout_marginStart="10dp"
+                android:background="#2200E5FF"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="⌖\nOPTICS"
+                android:text="⌖\nOPTICS\nSCAN"
                 android:textColor="#00E5FF"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </HorizontalScrollView>
@@ -444,10 +488,11 @@
         android:id="@+id/inputTerminalArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#CC02040A"
+        android:background="#E6010205"
+        android:elevation="20dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <EditText
@@ -455,21 +500,21 @@
             android:layout_width="0dp"
             android:layout_height="60dp"
             android:layout_weight="1"
-            android:background="#1A00E5FF"
+            android:background="#2200E5FF"
             android:fontFamily="monospace"
-            android:hint="> AWAITING_COMMAND..."
+            android:hint="> AWAITING_COMMAND_INPUT..."
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
             android:paddingHorizontal="16dp"
             android:textColor="#00E5FF"
-            android:textColorHint="#5500E5FF"
-            android:textSize="14sp" />
+            android:textColorHint="#6600E5FF"
+            android:textSize="13sp" />
 
         <ImageButton
             android:id="@+id/micButton"
             android:layout_width="60dp"
             android:layout_height="60dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="12dp"
             android:background="#3300FF00"
             android:contentDescription="Voice Command Activation"
             android:foreground="?attr/selectableItemBackground"
