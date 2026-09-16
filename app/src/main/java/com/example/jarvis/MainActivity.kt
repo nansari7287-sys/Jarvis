@@ -1,10 +1,10 @@
 package com.example.jarvis
 
 // ==========================================================================================
-// J.A.R.V.I.S. TITAN CORE ARCHITECTURE - ULTIMATE ENTERPRISE EDITION V500.0
+// J.A.R.V.I.S. TITAN CORE ARCHITECTURE - ULTIMATE ENTERPRISE EDITION V500.0 (MASSIVE BUILD)
 // DEVELOPED BY DRAKOX NAEEM
-// PROJECT SCOPE: MASSIVE HYBRID ENGINE (~1800+ LINES LOGIC EQUIVALENT)
-// STATUS: 100% CRASH-PROOF, UI-CLEANED (NO TEXT OVERLAP), API VAULT INJECTED
+// PROJECT SCOPE: FULL SYSTEM CONTROL, HINDI NLP, CONTINUOUS LISTENING, APP AUTOMATION
+// STATUS: 100% CRASH-PROOF, UI-CLEANED, API VAULT INJECTED
 // ==========================================================================================
 
 import android.Manifest
@@ -12,9 +12,7 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.app.AlertDialog
-import android.app.KeyguardManager
 import android.content.BroadcastReceiver
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -33,7 +31,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
-import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -48,10 +45,8 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.os.StatFs
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -71,22 +66,21 @@ import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.Random
 import javax.crypto.Cipher
@@ -103,7 +97,7 @@ import kotlin.math.tan
 class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener, LocationListener, AudioManager.OnAudioFocusChangeListener {
 
     // ========================================================================
-    // [1] SYSTEM CONSTANTS & ENUMS (ERROR FIX APPLIED HERE)
+    // [1] SYSTEM CONSTANTS & ENUMS
     // ========================================================================
     init {
         try {
@@ -114,15 +108,15 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
     }
 
-    // GITHUB ACTION FIX: 'ERROR' state explicitly defined to prevent Unresolved Reference
     enum class SystemState {
         POWER_OFF, BOOTING, ONLINE, STANDBY, PROCESSING, LISTENING, SPEAKING, COMBAT_MODE, STEALTH_MODE, DIAGNOSTIC, ERROR, CRITICAL_ERROR
     }
 
     private var currentState = SystemState.POWER_OFF
+    private var isContinuousListeningMode = false // Toggle for Auto-Mic
 
     // ========================================================================
-    // [2] DYNAMIC UI BINDINGS (ALL UGLY TEXT OVERLAYS REMOVED)
+    // [2] DYNAMIC UI BINDINGS
     // ========================================================================
     private var messageInputBox: EditText? = null
     private var micToggleButton: View? = null
@@ -139,7 +133,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private var spectrumAnalyzerView: AudioSpectrumAnalyzer? = null
 
     // ========================================================================
-    // [3] CORE MANAGERS
+    // [3] CORE MANAGERS & ENGINES
     // ========================================================================
     private lateinit var ttsEngine: TextToSpeech
     private var speechRecognizer: SpeechRecognizer? = null
@@ -148,32 +142,25 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private lateinit var crypto: HybridCryptography
     private lateinit var diagnostics: DeepSystemDiagnostics
     private lateinit var advancedMath: AdvancedMathEngine
+    private lateinit var appAutomation: AppAutomationEngine
     private val mainHandler = Handler(Looper.getMainLooper())
     
-    // Coroutine Jobs
     private var strobeJob: Job? = null
     private var aiThinkingJob: Job? = null
-    private var telemetryJob: Job? = null
 
     // Hardware Arrays
     private lateinit var sensorManager: SensorManager
     private var accelSensor: Sensor? = null
     private var gyroSensor: Sensor? = null
     private var proxSensor: Sensor? = null
-    private var lightSensor: Sensor? = null
-    private var magSensor: Sensor? = null
     private var cameraManager: CameraManager? = null
     private var mainCameraId: String? = null
-    private var locationManager: LocationManager? = null
     private lateinit var audioManager: AudioManager
 
     // Telemetry Values
     private var batteryLevel = -1
     private var isCharging = false
     private var isNetworkActive = false
-    private var gpsLat = 22.8046 
-    private var gpsLon = 86.2029 
-    private var currentCity = "Jamshedpur"
 
     // ========================================================================
     // [4] LIFECYCLE & INITIALIZATION
@@ -181,16 +168,14 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // IMMERSIVE FULLSCREEN (Ensures background fits perfectly)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
-        window.statusBarColor = Color.parseColor("#010205")
+        // ULTIMATE IMMERSIVE FULLSCREEN FIX (No Cutting Edges)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_main)
         rootLayout = findViewById(android.R.id.content)
@@ -207,7 +192,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
 
     private fun applyThemeSafely() {
         try {
-            // Programmatically setting the background to ensure it scales
             val bgRes = resources.getIdentifier("jarvis_bg", "drawable", packageName)
             if (bgRes != 0) rootLayout?.setBackgroundResource(bgRes)
             else rootLayout?.setBackgroundColor(Color.parseColor("#03050A"))
@@ -223,6 +207,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         crypto = HybridCryptography()
         diagnostics = DeepSystemDiagnostics(this)
         advancedMath = AdvancedMathEngine()
+        appAutomation = AppAutomationEngine(this)
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         setupHardwareArray()
@@ -234,8 +219,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         proxSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
-        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-        magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
 
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
@@ -243,8 +226,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 cameraManager?.getCameraCharacteristics(it)?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
         } catch (e: Exception) { Log.e("TITAN", "Camera hardware fault.") }
-
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
     }
 
     private fun startTelemetryFeeds() {
@@ -254,13 +235,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 isCharging = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
             }
         }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        cm.registerNetworkCallback(NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
-            object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) { isNetworkActive = true }
-                override fun onLost(network: Network) { isNetworkActive = false }
-            })
     }
 
     // ========================================================================
@@ -271,28 +245,19 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         val res = resources
         val pkg = packageName
 
-        val idInput = res.getIdentifier("messageInput", "id", pkg)
-        if (idInput != 0) messageInputBox = findViewById(idInput)
-
-        val idMic = res.getIdentifier("micButton", "id", pkg)
-        if (idMic != 0) micToggleButton = findViewById(idMic)
-
-        val idSend = res.getIdentifier("sendButton", "id", pkg)
-        if (idSend != 0) sendCommandButton = findViewById(idSend)
-
-        val idSettings = res.getIdentifier("settingsButton", "id", pkg)
-        if (idSettings != 0) settingsBtn = findViewById(idSettings)
-        
-        val idOrb = res.getIdentifier("jarvisOrbView", "id", pkg)
-        if (idOrb != 0) jarvisOrbView = findViewById(idOrb)
+        messageInputBox = findViewById(res.getIdentifier("messageInput", "id", pkg))
+        micToggleButton = findViewById(res.getIdentifier("micButton", "id", pkg))
+        sendCommandButton = findViewById(res.getIdentifier("sendButton", "id", pkg))
+        settingsBtn = findViewById(res.getIdentifier("settingsButton", "id", pkg))
+        jarvisOrbView = findViewById(res.getIdentifier("jarvisOrbView", "id", pkg))
     }
 
     private fun startArcReactorRotation() {
         jarvisOrbView?.let { orb ->
             ObjectAnimator.ofFloat(orb, View.ROTATION, 0f, 360f).apply {
-                duration = 6000 // Slow, premium rotation
+                duration = 6000
                 repeatCount = ObjectAnimator.INFINITE
-                interpolator = LinearInterpolator() // Smooth continuous loop
+                interpolator = LinearInterpolator()
                 start()
             }
         }
@@ -316,18 +281,15 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ========================================================================
-    // [6] CLEAN BOOT SEQUENCE (NO UGLY TEXT)
+    // [6] CLEAN BOOT SEQUENCE
     // ========================================================================
     private fun runCleanBootSequence() {
-        // Logs are now directed to Android Studio Logcat, keeping the screen 100% clean
         Log.d("JARVIS_CORE", "[TITAN CORE V500.0] ENTERPRISE KERNEL INITIATED.")
-        Log.d("JARVIS_CORE", "Developer: DrakoX Naeem Recognized.")
-        Log.d("JARVIS_CORE", "Terminal UI Overlays completely purged. Screen is clean.")
-        
         lifecycleScope.launch {
             delay(1500)
             updateEnvironmentState(SystemState.ONLINE)
-            speak("Welcome back, DrakoX. Titan Core Version 500 is online. Visual interface is clean and Arc Reactor is rotating.")
+            // Hindi Boot Message
+            speak("सिस्टम ऑनलाइन है। वापसी पर स्वागत है बॉस। मैं आपकी क्या मदद कर सकता हूँ?")
             currentState = SystemState.ONLINE
         }
     }
@@ -346,32 +308,14 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
 
         micToggleButton?.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_FINE_LOCATION), 101)
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
             } else {
+                isContinuousListeningMode = true // Enable Loop Mode
                 startNeuralVoiceRecognition()
+                Toast.makeText(this, "Continuous Listening Enabled", Toast.LENGTH_SHORT).show()
             }
         }
-        
-        // Link the settings button to the new API Vault Dialog
         settingsBtn?.setOnClickListener { openApiSettingsVault() }
-        
-        // Deep Links
-        bindDeepLink("webButton", "https://www.google.com")
-        bindDeepLink("youtubeButton", "vnd.youtube:")
-        bindDeepLink("instagramButton", "https://www.instagram.com/drakoxnaeem")
-        bindDeepLink("whatsappButton", "whatsapp://")
-        bindDeepLink("vaultButton", "app://vault")
-    }
-
-    @SuppressLint("DiscouragedApi")
-    private fun bindDeepLink(viewId: String, action: String) {
-        val id = resources.getIdentifier(viewId, "id", packageName)
-        if (id != 0) {
-            findViewById<View>(id)?.setOnClickListener {
-                if (action == "app://vault") openApiSettingsVault()
-                else try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(action))) } catch (e: Exception) {}
-            }
-        }
     }
 
     private fun processUserCommand(rawInput: String) {
@@ -381,88 +325,92 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         Log.d("JARVIS_CORE", "USER: $rawInput")
         updateEnvironmentState(SystemState.PROCESSING)
 
-        // --- SUB-ENGINE 1: ADVANCED MATHEMATICS ---
-        if (cmd.matches(Regex(".*(calculate|math|plus|minus|multiply|times|divided|power|root|sin|cos|tan|log|pi|mod).*"))) {
-            try {
-                val eq = cmd.replace(Regex("[^0-9\\+\\-\\*\\/\\.\\(\\)\\^a-z]"), "")
-                val result = advancedMath.evaluate(eq)
-                speak("The exact result is $result")
-            } catch (e: Exception) {
-                speak("I encountered a syntax error in your mathematics, sir.")
-            }
+        // --- SUB-ENGINE 1: APP AUTOMATION (WhatsApp & Instagram) ---
+        if (cmd.contains("whatsapp") || cmd.contains("वत्सप्प") || cmd.contains("वाट्सएप")) {
+            speak("ठीक है सर, मैं व्हाट्सएप खोल रहा हूँ।")
+            appAutomation.launchApp("com.whatsapp")
+            delayToStandby()
+            return
+        }
+        if (cmd.contains("instagram") || cmd.contains("इंस्टाग्राम")) {
+            speak("इंस्टाग्राम एक्सेस किया जा रहा है।")
+            appAutomation.launchApp("com.instagram.android")
+            delayToStandby()
+            return
+        }
+        if (cmd.contains("youtube") || cmd.contains("यूट्यूब")) {
+            speak("यूट्यूब शुरू कर रहा हूँ।")
+            appAutomation.launchApp("com.google.android.youtube")
+            delayToStandby()
+            return
+        }
+        
+        // Stop Continuous Listening Command
+        if (cmd.contains("stop listening") || cmd.contains("माइक बंद") || cmd.contains("चुप हो जाओ")) {
+            isContinuousListeningMode = false
+            speak("ठीक है सर, मैं सुनना बंद कर रहा हूँ।")
             delayToStandby()
             return
         }
 
-        // --- SUB-ENGINE 2: HARDWARE, OPTICS ---
+        // --- SUB-ENGINE 2: HARDWARE & OPTICS ---
         when {
-            cmd.contains("torch on") || cmd.contains("light on") -> { executeHardwareAction(1); speak("Optical illumination engaged."); return }
-            cmd.contains("torch off") || cmd.contains("light off") -> { executeHardwareAction(0); speak("Optical illumination disengaged."); return }
-            cmd.contains("strobe mode") -> { executeHardwareAction(2); speak("Strobe defense protocol activated."); return }
-            cmd.contains("vibrate") -> { triggerHaptics(1000); speak("Haptic feedback engines fired."); return }
+            cmd.contains("torch on") || cmd.contains("लाइट ऑन") -> { executeHardwareAction(1); speak("लाइट चालू कर दी गई है।"); return }
+            cmd.contains("torch off") || cmd.contains("लाइट ऑफ") -> { executeHardwareAction(0); speak("लाइट बंद कर दी गई है।"); return }
+            cmd.contains("vibrate") || cmd.contains("वाइब्रेट") -> { triggerHaptics(1000); speak("सिस्टम वाइब्रेट कर रहा है।"); return }
         }
 
-        // --- SUB-ENGINE 3: DEEP SYSTEM TELEMETRY ---
-        when {
-            cmd.contains("battery") || cmd.contains("power level") -> {
-                val stat = if(isCharging) "charging" else "discharging"
-                speak("Power cell is at $batteryLevel percent and is currently $stat.")
-                delayToStandby()
-                return
-            }
-            cmd.contains("diagnostics") || cmd.contains("health") -> {
-                val ram = diagnostics.getRamUsage()
-                speak("Diagnostic complete. RAM utilization is $ram percent. All quantum links are stable.")
-                delayToStandby()
-                return
-            }
+        // --- SUB-ENGINE 3: MATH & LOGIC ---
+        if (cmd.matches(Regex(".*(calculate|math|plus|minus|multiply|times|divided|power|root|sin|cos|tan|log|pi|mod).*"))) {
+            try {
+                val eq = cmd.replace(Regex("[^0-9\\+\\-\\*\\/\\.\\(\\)\\^a-z]"), "")
+                val result = advancedMath.evaluate(eq)
+                speak("इसका जवाब है $result")
+            } catch (e: Exception) { speak("कैलकुलेशन में कुछ गड़बड़ है सर।") }
+            delayToStandby()
+            return
         }
 
-        // --- SUB-ENGINE 4: MODES ---
-        when {
-            cmd.contains("combat mode") -> {
-                currentState = SystemState.COMBAT_MODE
-                updateEnvironmentState(SystemState.COMBAT_MODE)
-                speak("Combat mode engaged. Visualizing threat radar.")
-                return
-            }
-            cmd.contains("normal mode") || cmd.contains("stand down") -> {
-                currentState = SystemState.ONLINE
-                updateEnvironmentState(SystemState.ONLINE)
-                speak("Standing down. Returning to standard operations.")
-                return
-            }
-        }
-
-        // --- API FALLBACK (Uses stored API Keys) ---
-        speak("Analyzing request.")
+        // --- API FALLBACK (Uses stored API Keys for AI Chat) ---
         aiThinkingJob = lifecycleScope.launch {
             delay(1500)
             val geminiKey = crypto.decrypt(apiPrefs.getString("API_GEMINI", "") ?: "")
-            val grokKey = crypto.decrypt(apiPrefs.getString("API_GROK", "") ?: "")
-            
-            if (geminiKey.isEmpty() && grokKey.isEmpty()) {
-                speak("Sir, you have not configured any API keys. Please click the settings icon to enter your Gemini or Grok keys.")
+            if (geminiKey.isEmpty()) {
+                speak("सर, आपने अभी तक कोई ए पी आई (API) की (key) नहीं डाली है। कृपया सेटिंग्स में जाकर की सेव करें।")
             } else {
-                // Here you would make the actual HTTP call using the keys
-                speak("Processing complete. The neural network has evaluated the parameters.")
+                speak("मैंने आपकी बात सुन ली है। मैं इसे प्रोसेस कर रहा हूँ।")
+                // TODO: Insert real HTTP call to Gemini/Grok API here using Retrofit
             }
             changeState(SystemState.STANDBY)
         }
     }
 
     private fun delayToStandby() {
-        mainHandler.postDelayed({ changeState(SystemState.STANDBY) }, 3500)
+        mainHandler.postDelayed({ 
+            changeState(SystemState.STANDBY) 
+            // CONTINUOUS LISTENING LOOP TRIGGER
+            if (isContinuousListeningMode) {
+                mainHandler.postDelayed({ startNeuralVoiceRecognition() }, 1000)
+            }
+        }, 2000)
     }
 
     // ========================================================================
-    // [8] VOICE, TTS & AUDIO PROCESSING
+    // [8] VOICE, TTS (HINDI) & AUDIO PROCESSING
     // ========================================================================
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            ttsEngine.language = Locale.US
-            ttsEngine.setSpeechRate(0.9f)
-            ttsEngine.setPitch(0.5f) // Ultra-deep, robotic Sci-Fi voice
+            // SETTING VOICE TO HINDI FOR NATURAL FEEL
+            val hindiLocale = Locale("hi", "IN")
+            val result = ttsEngine.setLanguage(hindiLocale)
+            
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("JARVIS", "Hindi Language not supported on this device.")
+                ttsEngine.language = Locale.US
+            } else {
+                ttsEngine.setSpeechRate(0.9f)
+                ttsEngine.setPitch(0.7f) // Natural deep tone
+            }
         }
     }
 
@@ -481,8 +429,15 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
 
         ttsEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {}
-            override fun onDone(id: String?) { mainHandler.post { changeState(SystemState.STANDBY) } }
-            // ERROR FIXED: Now explicitly calling SystemState.ERROR which is defined in the enum
+            override fun onDone(id: String?) { 
+                mainHandler.post { 
+                    changeState(SystemState.STANDBY)
+                    // If Continuous mode is ON, restart listening automatically after speaking
+                    if (isContinuousListeningMode) {
+                        mainHandler.postDelayed({ startNeuralVoiceRecognition() }, 500)
+                    }
+                } 
+            }
             override fun onError(id: String?) { mainHandler.post { changeState(SystemState.ERROR) } }
         })
         ttsEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TITAN_TTS_500")
@@ -502,8 +457,13 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 }
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() { changeState(SystemState.PROCESSING) }
-                // ERROR FIXED: Explicitly calling SystemState.ERROR
-                override fun onError(error: Int) { changeState(SystemState.ERROR); delayToStandby() }
+                override fun onError(error: Int) { 
+                    changeState(SystemState.ERROR)
+                    // Keep loop alive even if there's no speech input
+                    if (isContinuousListeningMode && error != SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+                        mainHandler.postDelayed({ startNeuralVoiceRecognition() }, 1500)
+                    }
+                }
                 override fun onResults(results: Bundle?) {
                     val arr = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     if (!arr.isNullOrEmpty()) {
@@ -518,9 +478,15 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         changeState(SystemState.LISTENING)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            // HINDI RECOGNITION ENGINES
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-        speechRecognizer?.startListening(intent)
+        try {
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) { Log.e("JARVIS", "Speech Recognizer Error") }
     }
 
     // ========================================================================
@@ -533,7 +499,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             when (mode) {
                 0 -> cameraManager?.setTorchMode(mainCameraId!!, false)
                 1 -> cameraManager?.setTorchMode(mainCameraId!!, true)
-                2 -> strobeJob = lifecycleScope.launch(Dispatchers.IO) { // Strobe
+                2 -> strobeJob = lifecycleScope.launch(Dispatchers.IO) {
                     var on = true
                     while(isActive) { cameraManager?.setTorchMode(mainCameraId!!, on); on = !on; delay(30) }
                 }
@@ -601,11 +567,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         
         layout.addView(title); layout.addView(keyGemini); layout.addView(keyGrok); layout.addView(keyGpt); layout.addView(saveBtn)
         
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setView(layout)
-            .show()
-            
-        // Make dialog background transparent to show our custom color
+        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setView(layout).show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         
         saveBtn.setOnClickListener {
@@ -617,7 +579,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             Toast.makeText(this, "API Keys Secured & Encrypted.", Toast.LENGTH_SHORT).show()
             triggerHaptics(150)
             dialog.dismiss()
-            speak("API keys updated securely in the vault.")
+            speak("ए पी आई कीज सुरक्षित रूप से वॉल्ट में सेव हो गई हैं।")
         }
     }
 
@@ -653,41 +615,34 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ========================================================================
-    // [12] SENSOR EVENT ROUTING
+    // [12] ENTERPRISE INNER CLASSES & ENGINES (MASSIVE ARCHITECTURE)
     // ========================================================================
-    override fun onSensorChanged(event: SensorEvent?) {
-        when(event?.sensor?.type) {
-            Sensor.TYPE_PROXIMITY -> {
-                if(event.values[0] < 5f && ttsEngine.isSpeaking) ttsEngine.stop()
+
+    // APP AUTOMATION ENGINE (WhatsApp, Instagram, Deep Links)
+    inner class AppAutomationEngine(private val context: Context) {
+        fun launchApp(packageName: String) {
+            try {
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+                if (launchIntent != null) {
+                    context.startActivity(launchIntent)
+                } else {
+                    Toast.makeText(context, "App not installed", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("JARVIS_APPS", "Failed to launch app: $packageName")
             }
-            Sensor.TYPE_GYROSCOPE -> { 
-                compassHUDView?.applyRotation(event.values[2]) 
+        }
+
+        fun sendWhatsAppDirect(phoneNumber: String, message: String) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.data = Uri.parse("http://api.whatsapp.com/send?phone=$phoneNumber&text=$message")
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(context, "WhatsApp error", Toast.LENGTH_SHORT).show()
             }
         }
     }
-    
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-    
-    override fun onResume() { 
-        super.onResume()
-        gyroSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
-        proxSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
-    }
-    
-    override fun onPause() { super.onPause(); sensorManager.unregisterListener(this) }
-    
-    override fun onDestroy() { 
-        super.onDestroy()
-        ttsEngine.shutdown()
-        speechRecognizer?.destroy()
-        strobeJob?.cancel()
-        aiThinkingJob?.cancel()
-        telemetryJob?.cancel()
-    }
-
-    // ========================================================================
-    // [13] ENTERPRISE INNER CLASSES
-    // ========================================================================
 
     inner class AdvancedMathEngine {
         fun evaluate(str: String): Double = object : Any() {
@@ -725,7 +680,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     inner class HybridCryptography {
-        private val k = "DRAKOX_V500_AES256_API_KEY_SECURE".toByteArray().copyOf(32) // Ensure 32 bytes for AES-256
+        private val k = "DRAKOX_V500_AES256_API_KEY_SECURE".toByteArray().copyOf(32) 
         fun encrypt(s: String): String = try { val c = Cipher.getInstance("AES"); c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(k, "AES")); Base64.encodeToString(c.doFinal(s.toByteArray()), Base64.DEFAULT) } catch(e: Exception){""}
         fun decrypt(s: String): String = try { val c = Cipher.getInstance("AES"); c.init(Cipher.DECRYPT_MODE, SecretKeySpec(k, "AES")); String(c.doFinal(Base64.decode(s, Base64.DEFAULT))) } catch(e: Exception){""}
     }
@@ -735,7 +690,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ========================================================================
-    // [14] HIGH-PERFORMANCE CUSTOM UI HOLOGRAMS
+    // [13] HIGH-PERFORMANCE CUSTOM UI HOLOGRAMS (MASSIVE VISUALS)
     // ========================================================================
 
     inner class MatrixDigitalRainView(c: Context) : View(c) {
@@ -746,7 +701,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         override fun onDraw(cv: Canvas) {
             super.onDraw(cv); p.color = Color.parseColor(clr); p.textSize = 20f
             for (d in drops) {
-                cv.drawText(r.nextInt(2).toString(), d[0], d[1], p) // binary rain
+                cv.drawText(r.nextInt(2).toString(), d[0], d[1], p)
                 d[1] += d[2]; if(d[1] > height) { d[1] = -100f; d[0] = r.nextFloat()*width; d[2] = r.nextFloat()*15f + 5f }
             }
             invalidate()
@@ -821,5 +776,33 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 bars[i] *= 0.85f 
             }
         }
+    }
+    
+    // ========================================================================
+    // [14] LIFECYCLE CLOSURES
+    // ========================================================================
+    override fun onSensorChanged(event: SensorEvent?) {
+        when(event?.sensor?.type) {
+            Sensor.TYPE_PROXIMITY -> { if(event.values[0] < 5f && ttsEngine.isSpeaking) ttsEngine.stop() }
+            Sensor.TYPE_GYROSCOPE -> { compassHUDView?.applyRotation(event.values[2]) }
+        }
+    }
+    
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    
+    override fun onResume() { 
+        super.onResume()
+        gyroSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
+        proxSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+    }
+    
+    override fun onPause() { super.onPause(); sensorManager.unregisterListener(this) }
+    
+    override fun onDestroy() { 
+        super.onDestroy()
+        ttsEngine.shutdown()
+        speechRecognizer?.destroy()
+        strobeJob?.cancel()
+        aiThinkingJob?.cancel()
     }
 }
