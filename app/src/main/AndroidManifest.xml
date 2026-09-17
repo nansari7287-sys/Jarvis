@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.jarvis">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- ============================================================================ -->
-    <!-- J.A.R.V.I.S. TITAN CORE V300.0 - MASTER PERMISSION REGISTRY                  -->
+    <!-- J.A.R.V.I.S. TITAN CORE V500.0 - MASTER PERMISSION REGISTRY                  -->
     <!-- ============================================================================ -->
 
     <!-- 1. NETWORK & CLOUD UPLINK -->
@@ -17,7 +16,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     
-    <!-- 3. BACKGROUND GOD MODE & WAKE LOCKS -->
+    <!-- 3. BACKGROUND SERVICE & WAKE LOCKS -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -28,23 +27,22 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
 
-    <!-- 5. APP AUTOMATION & DISCOVERY -->
+    <!-- 5. APP AUTOMATION & CROSS-APP CONTROL -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
-    <!-- 6. HARDWARE KINEMATICS, OPTICS & FEEDBACK -->
+    <!-- 6. HARDWARE KINEMATICS, OPTICS & SENSORS -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FLASHLIGHT" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- 7. MODERN ANDROID 13+ COMPATIBILITY -->
+    <!-- 7. STORAGE & NOTIFICATIONS -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
 
-    <!-- 8. IOT & COMMUNICATION EXPANSION -->
+    <!-- 8. TELEPHONY & BLUETOOTH INTEGRATION -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -61,7 +59,7 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
     <!-- ============================================================================ -->
-    <!-- ANDROID 11+ PACKAGE VISIBILITY (REQUIRED FOR LAUNCHING APPS)                 -->
+    <!-- ANDROID 11+ PACKAGE VISIBILITY (CROSS-APP TARGETING)                         -->
     <!-- ============================================================================ -->
     <queries>
         <package android:name="com.whatsapp" />
@@ -81,7 +79,7 @@
     </queries>
 
     <!-- ============================================================================ -->
-    <!-- APPLICATION CONFIGURATION (FIXED ICON & NAME BINDING)                        -->
+    <!-- APPLICATION CONFIGURATION                                                    -->
     <!-- ============================================================================ -->
     <application
         android:allowBackup="true"
@@ -98,7 +96,7 @@
         tools:targetApi="33">
 
         <!-- ======================================================================== -->
-        <!-- MAIN NEURAL INTERFACE ACTIVITY (UI DASHBOARD)                            -->
+        <!-- MAIN NEURAL INTERFACE ACTIVITY (FULLSCREEN HUD)                          -->
         <!-- ======================================================================== -->
         <activity
             android:name=".MainActivity"
@@ -114,22 +112,13 @@
         </activity>
 
         <!-- ======================================================================== -->
-        <!-- BACKGROUND VOICE & OVERLAY SERVICE (GOD MODE ENGINE)                     -->
+        <!-- TITAN ACCESSIBILITY SERVICE (MATCHES com.example.jarvis.accessibility)   -->
         <!-- ======================================================================== -->
         <service
-            android:name=".voice.VoiceService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
-
-        <!-- ======================================================================== -->
-        <!-- JARVIS ACCESSIBILITY AUTOMATION ENGINE (SCREEN SCRAPING & AUTO-CLICK)    -->
-        <!-- ======================================================================== -->
-        <service
-            android:name=".automation.JarvisAccessibilityService"
+            android:name=".accessibility.JarvisAccessibilityService"
             android:enabled="true"
             android:exported="true"
-            android:label="DRAKOX JARVIS Automation"
+            android:label="J.A.R.V.I.S. Titan Automation"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -140,7 +129,16 @@
         </service>
 
         <!-- ======================================================================== -->
-        <!-- AUTO-START RECEIVER (WAKES JARVIS ON PHONE BOOT)                         -->
+        <!-- BACKGROUND VOICE ENGINE                                                  -->
+        <!-- ======================================================================== -->
+        <service
+            android:name=".voice.VoiceService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- ======================================================================== -->
+        <!-- SYSTEM BOOT AUTO-LAUNCH RECEIVER                                         -->
         <!-- ======================================================================== -->
         <receiver
             android:name=".receivers.BootReceiver"
