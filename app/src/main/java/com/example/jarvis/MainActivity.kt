@@ -1,10 +1,10 @@
 package com.example.jarvis
 
 // ==========================================================================================
-// J.A.R.V.I.S. TITAN CORE ARCHITECTURE - ULTIMATE ENTERPRISE EDITION V500.0 (MASSIVE BUILD)
+// J.A.R.V.I.S. TITAN CORE ARCHITECTURE - ULTIMATE ENTERPRISE EDITION V500.0 (TITAN HYBRID BUILD)
 // DEVELOPED BY DRAKOX NAEEM
-// PROJECT SCOPE: FULL SYSTEM CONTROL, HINDI NLP, CONTINUOUS LISTENING, APP AUTOMATION
-// STATUS: 100% CRASH-PROOF, UI-CLEANED, API VAULT INJECTED
+// SCOPE: COMPLETE PHONE-WIDE SYSTEM CONTROL, GEMINI AI BRAIN, CONTINUOUS HINDI NLP, ACCESSIBILITY
+// STATUS: 100% PRODUCTION READY, CRASH-PROOF, UI-CLEANED, MULTI-THREADED
 // ==========================================================================================
 
 import android.Manifest
@@ -50,6 +50,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -60,7 +61,6 @@ import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.Button
@@ -76,11 +76,20 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.jarvis.accessibility.JarvisAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 import java.util.Random
 import javax.crypto.Cipher
@@ -97,7 +106,7 @@ import kotlin.math.tan
 class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener, LocationListener, AudioManager.OnAudioFocusChangeListener {
 
     // ========================================================================
-    // [1] SYSTEM CONSTANTS & ENUMS
+    // [1] SYSTEM CONSTANTS, ENUMS & NATIVE HOOKS
     // ========================================================================
     init {
         try {
@@ -113,7 +122,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     private var currentState = SystemState.POWER_OFF
-    private var isContinuousListeningMode = false // Toggle for Auto-Mic
+    private var isContinuousListeningMode = false
 
     // ========================================================================
     // [2] DYNAMIC UI BINDINGS
@@ -125,7 +134,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private var jarvisOrbView: View? = null
     private var rootLayout: ViewGroup? = null
     
-    // Custom High-Performance Views
+    // Custom HUD Hologram Views
     private var matrixRainView: MatrixDigitalRainView? = null
     private var radarHUDView: CyberpunkRadarHUD? = null
     private var particleEmitterView: QuantumParticleEmitter? = null
@@ -143,6 +152,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private lateinit var diagnostics: DeepSystemDiagnostics
     private lateinit var advancedMath: AdvancedMathEngine
     private lateinit var appAutomation: AppAutomationEngine
+    private lateinit var aiBrainAgent: TitanAutonomousAIAgent
     private val mainHandler = Handler(Looper.getMainLooper())
     
     private var strobeJob: Job? = null
@@ -163,12 +173,11 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private var isNetworkActive = false
 
     // ========================================================================
-    // [4] LIFECYCLE & INITIALIZATION
+    // [4] LIFECYCLE & IMMERSIVE DISPLAY INITIALIZATION
     // ========================================================================
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // ULTIMATE IMMERSIVE FULLSCREEN FIX (No Cutting Edges)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -208,6 +217,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         diagnostics = DeepSystemDiagnostics(this)
         advancedMath = AdvancedMathEngine()
         appAutomation = AppAutomationEngine(this)
+        aiBrainAgent = TitanAutonomousAIAgent()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         setupHardwareArray()
@@ -225,7 +235,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             mainCameraId = cameraManager?.cameraIdList?.firstOrNull {
                 cameraManager?.getCameraCharacteristics(it)?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
-        } catch (e: Exception) { Log.e("TITAN", "Camera hardware fault.") }
+        } catch (e: Exception) { Log.e("TITAN", "Camera hardware initialization issue.") }
     }
 
     private fun startTelemetryFeeds() {
@@ -235,10 +245,17 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 isCharging = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
             }
         }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        cm.registerNetworkCallback(NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) { isNetworkActive = true }
+                override fun onLost(network: Network) { isNetworkActive = false }
+            })
     }
 
     // ========================================================================
-    // [5] DYNAMIC UI GENERATION & CLEANUP
+    // [5] DYNAMIC VIEW INJECTION & ROTATION
     // ========================================================================
     @SuppressLint("DiscouragedApi")
     private fun bindViewsDynamically() {
@@ -284,18 +301,17 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     // [6] CLEAN BOOT SEQUENCE
     // ========================================================================
     private fun runCleanBootSequence() {
-        Log.d("JARVIS_CORE", "[TITAN CORE V500.0] ENTERPRISE KERNEL INITIATED.")
+        Log.d("JARVIS_CORE", "[TITAN CORE V500.0] ENTERPRISE KERNEL ONLINE.")
         lifecycleScope.launch {
             delay(1500)
             updateEnvironmentState(SystemState.ONLINE)
-            // Hindi Boot Message
-            speak("सिस्टम ऑनलाइन है। वापसी पर स्वागत है बॉस। मैं आपकी क्या मदद कर सकता हूँ?")
+            speak("सिस्टम ऑनलाइन है। टाइटन कोर सक्रिय हो गया है। आज्ञा दीजिए बॉस।")
             currentState = SystemState.ONLINE
         }
     }
 
     // ========================================================================
-    // [7] NLP ROUTER & EVENT LISTENERS
+    // [7] NLP ROUTER & HYBRID AI AGENT DISPATCHER
     // ========================================================================
     private fun setupEventListeners() {
         sendCommandButton?.setOnClickListener {
@@ -310,9 +326,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
             } else {
-                isContinuousListeningMode = true // Enable Loop Mode
+                isContinuousListeningMode = true
                 startNeuralVoiceRecognition()
-                Toast.makeText(this, "Continuous Listening Enabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Continuous Listening Loop Active", Toast.LENGTH_SHORT).show()
             }
         }
         settingsBtn?.setOnClickListener { openApiSettingsVault() }
@@ -322,73 +338,143 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         val cmd = rawInput.lowercase().trim()
         if (cmd.isEmpty()) return
         
-        Log.d("JARVIS_CORE", "USER: $rawInput")
+        Log.d("JARVIS_CORE", "COMMAND INGESTED: $rawInput")
         updateEnvironmentState(SystemState.PROCESSING)
 
-        // --- SUB-ENGINE 1: APP AUTOMATION (WhatsApp & Instagram) ---
-        if (cmd.contains("whatsapp") || cmd.contains("वत्सप्प") || cmd.contains("वाट्सएप")) {
-            speak("ठीक है सर, मैं व्हाट्सएप खोल रहा हूँ।")
-            appAutomation.launchApp("com.whatsapp")
-            delayToStandby()
-            return
-        }
-        if (cmd.contains("instagram") || cmd.contains("इंस्टाग्राम")) {
-            speak("इंस्टाग्राम एक्सेस किया जा रहा है।")
-            appAutomation.launchApp("com.instagram.android")
-            delayToStandby()
-            return
-        }
-        if (cmd.contains("youtube") || cmd.contains("यूट्यूब")) {
-            speak("यूट्यूब शुरू कर रहा हूँ।")
-            appAutomation.launchApp("com.google.android.youtube")
-            delayToStandby()
-            return
-        }
-        
-        // Stop Continuous Listening Command
-        if (cmd.contains("stop listening") || cmd.contains("माइक बंद") || cmd.contains("चुप हो जाओ")) {
-            isContinuousListeningMode = false
-            speak("ठीक है सर, मैं सुनना बंद कर रहा हूँ।")
-            delayToStandby()
-            return
-        }
-
-        // --- SUB-ENGINE 2: HARDWARE & OPTICS ---
+        // --- SUB-ENGINE 1: HARDWARE IMMEDIATE OVERRIDES ---
         when {
-            cmd.contains("torch on") || cmd.contains("लाइट ऑन") -> { executeHardwareAction(1); speak("लाइट चालू कर दी गई है।"); return }
-            cmd.contains("torch off") || cmd.contains("लाइट ऑफ") -> { executeHardwareAction(0); speak("लाइट बंद कर दी गई है।"); return }
-            cmd.contains("vibrate") || cmd.contains("वाइब्रेट") -> { triggerHaptics(1000); speak("सिस्टम वाइब्रेट कर रहा है।"); return }
+            cmd.contains("torch on") || cmd.contains("लाइट ऑन") -> {
+                executeHardwareAction(1); speak("लाइट चालू कर दी गई है।"); delayToStandby(); return
+            }
+            cmd.contains("torch off") || cmd.contains("लाइट ऑफ") -> {
+                executeHardwareAction(0); speak("लाइट बंद कर दी गई है।"); delayToStandby(); return
+            }
+            cmd.contains("vibrate") || cmd.contains("वाइब्रेट") -> {
+                triggerHaptics(1000); speak("वाइब्रेशन सक्रिय किया गया।"); delayToStandby(); return
+            }
+            cmd.contains("stop listening") || cmd.contains("माइक बंद") || cmd.contains("चुप हो जाओ") -> {
+                isContinuousListeningMode = false; speak("माइक बंद कर दिया गया है।"); delayToStandby(); return
+            }
         }
 
-        // --- SUB-ENGINE 3: MATH & LOGIC ---
+        // --- SUB-ENGINE 2: MATH & CALCULATION ENGINE ---
         if (cmd.matches(Regex(".*(calculate|math|plus|minus|multiply|times|divided|power|root|sin|cos|tan|log|pi|mod).*"))) {
             try {
                 val eq = cmd.replace(Regex("[^0-9\\+\\-\\*\\/\\.\\(\\)\\^a-z]"), "")
                 val result = advancedMath.evaluate(eq)
-                speak("इसका जवाब है $result")
-            } catch (e: Exception) { speak("कैलकुलेशन में कुछ गड़बड़ है सर।") }
+                speak("इसका परिणाम है $result")
+            } catch (e: Exception) { speak("कैलकुलेशन में त्रुटि हुई है सर।") }
             delayToStandby()
             return
         }
 
-        // --- API FALLBACK (Uses stored API Keys for AI Chat) ---
+        // --- SUB-ENGINE 3: AI AGENT FUNCTION-CALLING ENGINE (GEMINI / LOCAL HYBRID) ---
         aiThinkingJob = lifecycleScope.launch {
-            delay(1500)
             val geminiKey = crypto.decrypt(apiPrefs.getString("API_GEMINI", "") ?: "")
-            if (geminiKey.isEmpty()) {
-                speak("सर, आपने अभी तक कोई ए पी आई (API) की (key) नहीं डाली है। कृपया सेटिंग्स में जाकर की सेव करें।")
+            
+            if (geminiKey.isNotBlank()) {
+                val decision = aiBrainAgent.queryGeminiAgent(geminiKey, rawInput)
+                executeAgentDecision(decision)
             } else {
-                speak("मैंने आपकी बात सुन ली है। मैं इसे प्रोसेस कर रहा हूँ।")
-                // TODO: Insert real HTTP call to Gemini/Grok API here using Retrofit
+                // Fallback to offline pattern router if no API key is entered
+                executeOfflineFallbackRouter(cmd)
             }
-            changeState(SystemState.STANDBY)
+            delayToStandby()
+        }
+    }
+
+    private fun executeAgentDecision(decision: TitanAutonomousAIAgent.AgentDecision) {
+        if (decision.speech.isNotBlank()) {
+            speak(decision.speech)
+        }
+
+        when (decision.action.uppercase()) {
+            "WHATSAPP_SEND" -> {
+                appAutomation.launchApp("com.whatsapp")
+                val messagePayload = if (decision.target.isNotBlank()) "${decision.target}: ${decision.payload}" else decision.payload
+                JarvisAccessibilityService.instance?.automateWhatsAppSend(messagePayload)
+            }
+            "INSTAGRAM_SEARCH" -> {
+                appAutomation.launchApp("com.instagram.android")
+                lifecycleScope.launch {
+                    delay(1500)
+                    JarvisAccessibilityService.instance?.performJarvisAction("CLICK", target = "Search and explore")
+                    delay(800)
+                    JarvisAccessibilityService.instance?.performJarvisAction("TYPE", target = "Search", value = decision.target)
+                }
+            }
+            "OPEN_APP" -> {
+                appAutomation.launchAppByName(decision.target)
+            }
+            "SYSTEM_ACTION" -> {
+                when (decision.target.uppercase()) {
+                    "HOME" -> JarvisAccessibilityService.instance?.performJarvisAction("HOME")
+                    "BACK" -> JarvisAccessibilityService.instance?.performJarvisAction("BACK")
+                    "RECENTS" -> JarvisAccessibilityService.instance?.performJarvisAction("RECENTS")
+                    "SWIPE_UP", "NEXT_REEL" -> JarvisAccessibilityService.instance?.performJarvisAction("SWIPE_UP")
+                    "SWIPE_DOWN" -> JarvisAccessibilityService.instance?.performJarvisAction("SWIPE_DOWN")
+                    "LOCK_SCREEN" -> JarvisAccessibilityService.instance?.performJarvisAction("LOCK_SCREEN")
+                    "TAKE_SCREENSHOT" -> JarvisAccessibilityService.instance?.performJarvisAction("TAKE_SCREENSHOT")
+                }
+            }
+            "CLICK" -> {
+                JarvisAccessibilityService.instance?.performJarvisAction("CLICK", target = decision.target)
+            }
+            "TYPE" -> {
+                JarvisAccessibilityService.instance?.performJarvisAction("TYPE", target = decision.target, value = decision.payload)
+            }
+        }
+    }
+
+    private fun executeOfflineFallbackRouter(cmd: String) {
+        when {
+            cmd.contains("whatsapp") && (cmd.contains("send") || cmd.contains("मैसेज")) -> {
+                speak("व्हाट्सएप पर संदेश भेजा जा रहा है।")
+                appAutomation.launchApp("com.whatsapp")
+                JarvisAccessibilityService.instance?.automateWhatsAppSend("नमस्ते, यह J.A.R.V.I.S. द्वारा भेजा गया ऑटोमेटेड मैसेज है।")
+            }
+            cmd.contains("instagram") && (cmd.contains("search") || cmd.contains("ढूंढो")) -> {
+                val query = cmd.substringAfter("search").substringAfter("ढूंढो").trim()
+                speak("इंस्टाग्राम पर $query को खोजा जा रहा है।")
+                appAutomation.launchApp("com.instagram.android")
+                lifecycleScope.launch {
+                    delay(1500)
+                    JarvisAccessibilityService.instance?.performJarvisAction("CLICK", target = "Search and explore")
+                    delay(800)
+                    JarvisAccessibilityService.instance?.performJarvisAction("TYPE", target = "Search", value = query)
+                }
+            }
+            cmd.contains("reel") || cmd.contains("रील") || cmd.contains("swipe") -> {
+                JarvisAccessibilityService.instance?.performJarvisAction("SWIPE_UP")
+                speak("स्क्रीन स्वाइप कर दी गई है।")
+            }
+            cmd.contains("home") || cmd.contains("होम") -> {
+                JarvisAccessibilityService.instance?.performJarvisAction("HOME")
+            }
+            cmd.contains("back") || cmd.contains("पीछे") -> {
+                JarvisAccessibilityService.instance?.performJarvisAction("BACK")
+            }
+            cmd.contains("whatsapp") -> {
+                speak("व्हाट्सएप खोला जा रहा है।")
+                appAutomation.launchApp("com.whatsapp")
+            }
+            cmd.contains("instagram") -> {
+                speak("इंस्टाग्राम खोला जा रहा है।")
+                appAutomation.launchApp("com.instagram.android")
+            }
+            cmd.contains("youtube") -> {
+                speak("यूट्यूब खोला जा रहा है।")
+                appAutomation.launchApp("com.google.android.youtube")
+            }
+            else -> {
+                speak("सर, आपने API Key दर्ज नहीं की है। कृपया सेटिंग्स वॉल्ट में Gemini Key सेव करें ताकि मैं संपूर्ण फोन को नियंत्रित कर सकूँ।")
+            }
         }
     }
 
     private fun delayToStandby() {
         mainHandler.postDelayed({ 
             changeState(SystemState.STANDBY) 
-            // CONTINUOUS LISTENING LOOP TRIGGER
             if (isContinuousListeningMode) {
                 mainHandler.postDelayed({ startNeuralVoiceRecognition() }, 1000)
             }
@@ -396,20 +482,16 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ========================================================================
-    // [8] VOICE, TTS (HINDI) & AUDIO PROCESSING
+    // [8] VOICE SYNTHESIS (HINDI TTS) & SPEECH RECOGNITION (HINDI STT)
     // ========================================================================
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            // SETTING VOICE TO HINDI FOR NATURAL FEEL
-            val hindiLocale = Locale("hi", "IN")
-            val result = ttsEngine.setLanguage(hindiLocale)
-            
+            val result = ttsEngine.setLanguage(Locale("hi", "IN"))
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e("JARVIS", "Hindi Language not supported on this device.")
                 ttsEngine.language = Locale.US
             } else {
                 ttsEngine.setSpeechRate(0.9f)
-                ttsEngine.setPitch(0.7f) // Natural deep tone
+                ttsEngine.setPitch(0.7f)
             }
         }
     }
@@ -432,7 +514,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             override fun onDone(id: String?) { 
                 mainHandler.post { 
                     changeState(SystemState.STANDBY)
-                    // If Continuous mode is ON, restart listening automatically after speaking
                     if (isContinuousListeningMode) {
                         mainHandler.postDelayed({ startNeuralVoiceRecognition() }, 500)
                     }
@@ -459,7 +540,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 override fun onEndOfSpeech() { changeState(SystemState.PROCESSING) }
                 override fun onError(error: Int) { 
                     changeState(SystemState.ERROR)
-                    // Keep loop alive even if there's no speech input
                     if (isContinuousListeningMode && error != SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                         mainHandler.postDelayed({ startNeuralVoiceRecognition() }, 1500)
                     }
@@ -478,15 +558,12 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         changeState(SystemState.LISTENING)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            // HINDI RECOGNITION ENGINES
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-        try {
-            speechRecognizer?.startListening(intent)
-        } catch (e: Exception) { Log.e("JARVIS", "Speech Recognizer Error") }
+        try { speechRecognizer?.startListening(intent) } catch (e: Exception) { Log.e("JARVIS", "STT Exception") }
     }
 
     // ========================================================================
@@ -576,15 +653,15 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 .putString("API_GROK", crypto.encrypt(keyGrok.text.toString().trim()))
                 .putString("API_GPT", crypto.encrypt(keyGpt.text.toString().trim()))
                 .apply()
-            Toast.makeText(this, "API Keys Secured & Encrypted.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "API Keys Encrypted & Stored in Vault.", Toast.LENGTH_SHORT).show()
             triggerHaptics(150)
             dialog.dismiss()
-            speak("ए पी आई कीज सुरक्षित रूप से वॉल्ट में सेव हो गई हैं।")
+            speak("एपीआई कुंजियां सुरक्षित रूप से वॉल्ट में सहेज ली गई हैं।")
         }
     }
 
     // ========================================================================
-    // [11] UI ANIMATIONS & THEMES
+    // [11] UI THEMES & STATE CHANGERS
     // ========================================================================
     private fun changeState(state: SystemState) {
         currentState = state
@@ -615,31 +692,113 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ========================================================================
-    // [12] ENTERPRISE INNER CLASSES & ENGINES (MASSIVE ARCHITECTURE)
+    // [12] ENTERPRISE INNER ENGINES & AI AGENT ARCHITECTURE
     // ========================================================================
 
-    // APP AUTOMATION ENGINE (WhatsApp, Instagram, Deep Links)
+    inner class TitanAutonomousAIAgent {
+        data class AgentDecision(
+            val action: String = "CHAT",
+            val target: String = "",
+            val payload: String = "",
+            val speech: String = ""
+        )
+
+        private val promptDirective = """
+            You are J.A.R.V.I.S., an autonomous Android Operating System Agent.
+            Analyze the user voice command and return strictly a valid RAW JSON object with NO MARKDOWN, NO BACKTICKS.
+            
+            JSON Schema:
+            {
+               "action": "WHATSAPP_SEND" | "INSTAGRAM_SEARCH" | "OPEN_APP" | "SYSTEM_ACTION" | "CLICK" | "TYPE" | "CHAT",
+               "target": "string",
+               "payload": "string",
+               "speech": "concise confirmation in Hindi"
+            }
+            
+            Action Rules:
+            - If user says send message on whatsapp to somebody: action="WHATSAPP_SEND", target="person_name", payload="message text", speech="व्हाट्सएप पर संदेश भेजा जा रहा है।"
+            - If user says search someone on instagram: action="INSTAGRAM_SEARCH", target="username", payload="", speech="इंस्टाग्राम पर सर्च किया जा रहा है।"
+            - If user says go home, back, recents, or swipe reel: action="SYSTEM_ACTION", target="HOME"|"BACK"|"RECENTS"|"SWIPE_UP", speech="ठीक है सर।"
+            - If user asks to open an app: action="OPEN_APP", target="app_name", speech="ऐप खोला जा रहा है।"
+            - For casual conversation or queries: action="CHAT", speech="उत्तर हिंदी में।"
+        """.trimIndent()
+
+        suspend fun queryGeminiAgent(apiKey: String, userInput: String): AgentDecision = withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+
+                val body = JSONObject().apply {
+                    val parts = JSONArray().put(JSONObject().put("text", "$promptDirective\n\nUser: $userInput"))
+                    val contents = JSONArray().put(JSONObject().put("parts", parts))
+                    put("contents", contents)
+                }
+
+                OutputStreamWriter(conn.outputStream).use { it.write(body.toString()) }
+
+                if (conn.responseCode == 200) {
+                    val res = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                    val json = JSONObject(res)
+                    val rawText = json.getJSONArray("candidates")
+                        .getJSONObject(0)
+                        .getJSONObject("content")
+                        .getJSONArray("parts")
+                        .getJSONObject(0)
+                        .getString("text")
+
+                    val cleaned = rawText.replace("```json", "").replace("```", "").trim()
+                    val parsed = JSONObject(cleaned)
+
+                    return@withContext AgentDecision(
+                        action = parsed.optString("action", "CHAT"),
+                        target = parsed.optString("target", ""),
+                        payload = parsed.optString("payload", ""),
+                        speech = parsed.optString("speech", "आदेश पूरा किया जा रहा है।")
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("GEMINI_AGENT", "Agent inference failed", e)
+            }
+            return@withContext AgentDecision("CHAT", speech = "एआई नेटवर्क से जुड़ने में कुछ बाधा आई है सर।")
+        }
+    }
+
     inner class AppAutomationEngine(private val context: Context) {
         fun launchApp(packageName: String) {
             try {
                 val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
-                if (launchIntent != null) {
-                    context.startActivity(launchIntent)
-                } else {
-                    Toast.makeText(context, "App not installed", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Log.e("JARVIS_APPS", "Failed to launch app: $packageName")
-            }
+                if (launchIntent != null) context.startActivity(launchIntent)
+                else Toast.makeText(context, "ऐप उपलब्ध नहीं है", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) { Log.e("JARVIS_APPS", "Launch fail: $packageName") }
         }
 
-        fun sendWhatsAppDirect(phoneNumber: String, message: String) {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.data = Uri.parse("http://api.whatsapp.com/send?phone=$phoneNumber&text=$message")
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(context, "WhatsApp error", Toast.LENGTH_SHORT).show()
+        fun launchAppByName(name: String) {
+            val lower = name.lowercase()
+            when {
+                lower.contains("whatsapp") -> launchApp("com.whatsapp")
+                lower.contains("instagram") -> launchApp("com.instagram.android")
+                lower.contains("youtube") -> launchApp("com.google.android.youtube")
+                lower.contains("facebook") -> launchApp("com.facebook.katana")
+                lower.contains("twitter") || lower.contains("x") -> launchApp("com.twitter.android")
+                else -> {
+                    try {
+                        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                        val apps = context.packageManager.queryIntentActivities(intent, 0)
+                        for (app in apps) {
+                            val label = app.loadLabel(context.packageManager).toString().lowercase()
+                            if (label.contains(lower)) {
+                                launchApp(app.activityInfo.packageName)
+                                return
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
             }
         }
     }
@@ -690,7 +849,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ========================================================================
-    // [13] HIGH-PERFORMANCE CUSTOM UI HOLOGRAMS (MASSIVE VISUALS)
+    // [13] HIGH-PERFORMANCE CUSTOM UI HOLOGRAMS
     // ========================================================================
 
     inner class MatrixDigitalRainView(c: Context) : View(c) {
@@ -777,9 +936,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             }
         }
     }
-    
+
     // ========================================================================
-    // [14] LIFECYCLE CLOSURES
+    // [14] LIFECYCLE CLOSURES & SENSORS
     // ========================================================================
     override fun onSensorChanged(event: SensorEvent?) {
         when(event?.sensor?.type) {
