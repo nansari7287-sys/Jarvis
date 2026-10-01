@@ -1,6 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ═══ APP INFO ═══ -->
     <string name="app_name">DRAKOX JARVIS</string>
     <string name="jarvis_title">DRAKOX JARVIS TITAN CORE</string>
+    <string name="app_name_full">DRAKOX J.A.R.V.I.S. Titan</string>
+    <string name="app_version">V500.0</string>
+
+    <!-- ═══ UI STATUS ═══ -->
     <string name="status_online">SYSTEM ONLINE &amp; OPTIMAL</string>
+    <string name="status_offline">SYSTEM OFFLINE</string>
+    <string name="status_listening">LISTENING...</string>
+    <string name="status_processing">PROCESSING...</string>
     <string name="hint_command">Awaiting command sequence...</string>
+
+    <!-- ═══ ACCESSIBILITY SERVICE (REQUIRED - Manifest me use hote hain) ═══ -->
+    <string name="accessibility_service_label">DRAKOX JARVIS Automation</string>
+    <string name="accessibility_service_description">Universal screen automation for DRAKOX JARVIS AI voice commands. Allows the assistant to read screen content, tap buttons, type text, and perform gestures across all apps on your device — including Instagram, YouTube, WhatsApp — to execute your voice commands.</string>
+    <string name="accessibility_service_summary">Universal screen control for DRAKOX JARVIS AI assistant.</string>
+
+    <!-- ═══ VOICE SERVICE (REQUIRED - Manifest me use hota hai) ═══ -->
+    <string name="voice_service_label">DRAKOX JARVIS Voice Engine</string>
+    <string name="voice_service_description">Background voice listening service for DRAKOX JARVIS AI assistant.</string>
+
+    <!-- ═══ NOTIFICATIONS ═══ -->
+    <string name="notification_channel_id">jarvis_default_channel</string>
+    <string name="notification_channel_name">DRAKOX JARVIS Service</string>
+    <string name="notification_channel_description">Persistent notification for JARVIS background service</string>
 </resources>
