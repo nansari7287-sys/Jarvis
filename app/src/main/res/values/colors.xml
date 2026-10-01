@@ -1,40 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<!--                                                                           -->
-<!--   DRAKOX J.A.R.V.I.S. TITAN CORE V500.0 - COLOR PALETTE                  -->
-<!--                                                                           -->
-<!--   Cyberpunk + Neon Aesthetic - Khatarnak Look                            -->
-<!--                                                                           -->
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-
 <resources>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🌌 BACKGROUND LAYERS (Deep Space + Panels)                              -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- BACKGROUND -->
     <color name="jarvis_background">#020811</color>
     <color name="jarvis_background_2">#010509</color>
     <color name="jarvis_surface">#071522</color>
     <color name="jarvis_surface_2">#0B2030</color>
     <color name="jarvis_surface_3">#0F2A3F</color>
     <color name="jarvis_panel">#0A1828</color>
-    <color name="jarvis_panel_dark">#050D15</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- ⚡ NEON ACCENT COLORS (Primary Brand)                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- NEON ACCENTS -->
     <color name="jarvis_accent">#00E5FF</color>
     <color name="jarvis_accent_2">#008CFF</color>
     <color name="jarvis_neon_blue">#00BFFF</color>
     <color name="jarvis_neon_cyan">#00FFFF</color>
     <color name="jarvis_neon_purple">#B026FF</color>
     <color name="jarvis_neon_pink">#FF10F0</color>
-    <color name="jarvis_neon_magenta">#FF00AA</color>
     <color name="jarvis_neon_lime">#39FF14</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📝 TEXT COLORS (Typed Hierarchy)                                        -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- TEXT -->
     <color name="jarvis_text_primary">#F2FBFF</color>
     <color name="jarvis_text_secondary">#8EA9BA</color>
     <color name="jarvis_text_tertiary">#5A7080</color>
@@ -42,108 +26,86 @@
     <color name="jarvis_text_accent">#00E5FF</color>
     <color name="jarvis_text_inverse">#020811</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🚦 STATUS COLORS (System Feedback)                                      -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- STATUS -->
     <color name="jarvis_success">#35FF9A</color>
     <color name="jarvis_success_dark">#1FBF70</color>
     <color name="jarvis_warning">#FFB800</color>
-    <color name="jarvis_warning_dark">#CC9200</color>
     <color name="jarvis_error">#FF5577</color>
     <color name="jarvis_error_dark">#CC0033</color>
     <color name="jarvis_info">#00BFFF</color>
     <color name="jarvis_processing">#FFD500</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 💬 CHAT BUBBLES (User & AI Messages)                                    -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- CHAT -->
     <color name="jarvis_user_message">#0A2235</color>
     <color name="jarvis_user_message_border">#00BFFF</color>
     <color name="jarvis_ai_message">#071A29</color>
     <color name="jarvis_ai_message_border">#00E5FF</color>
-    <color name="jarvis_system_message">#0F0F1A</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔮 GLASS EFFECTS (Frosted Overlays)                                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- GLASS -->
     <color name="jarvis_glass_white">#1AFFFFFF</color>
     <color name="jarvis_glass_white_light">#0DFFFFFF</color>
     <color name="jarvis_glass_black">#66000000</color>
-    <color name="jarvis_glass_black_light">#33000000</color>
     <color name="jarvis_glass_cyan">#1A00E5FF</color>
-    <color name="jarvis_glass_purple">#1AB026FF</color>
     <color name="jarvis_glass_border">#3300E5FF</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎨 GRADIENT COLORS (For Backgrounds & Buttons)                          -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- GRADIENTS -->
     <color name="gradient_start">#020811</color>
     <color name="gradient_center">#071522</color>
     <color name="gradient_end">#0B2030</color>
-    <color name="gradient_neon_start">#00E5FF</color>
-    <color name="gradient_neon_end">#008CFF</color>
-    <color name="gradient_purple_start">#B026FF</color>
-    <color name="gradient_purple_end">#00E5FF</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔘 BUTTONS (States)                                                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- BUTTONS -->
     <color name="button_primary">#00E5FF</color>
     <color name="button_primary_pressed">#008CFF</color>
     <color name="button_primary_disabled">#2A4A5A</color>
     <color name="button_secondary">#0B2030</color>
-    <color name="button_secondary_pressed">#0F2A3F</color>
-    <color name="button_danger">#FF5577</color>
-    <color name="button_success">#35FF9A</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🌊 RIPPLE EFFECTS                                                       -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- RIPPLE -->
     <color name="ripple_light">#33FFFFFF</color>
     <color name="ripple_dark">#33000000</color>
     <color name="ripple_accent">#4400E5FF</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎤 MIC BUTTON STATES                                                    -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- MIC STATES -->
     <color name="mic_idle">#00E5FF</color>
     <color name="mic_listening">#FFD500</color>
     <color name="mic_processing">#008CFF</color>
     <color name="mic_error">#FF5577</color>
-    <color name="mic_disabled">#3D4D5A</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📊 PROGRESS & LOADING                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- PROGRESS -->
     <color name="progress_track">#0B2030</color>
     <color name="progress_indicator">#00E5FF</color>
-    <color name="loading_pulse">#00BFFF</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔲 DIVIDERS & BORDERS                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══ DIVIDERS & BORDERS (REQUIRED) ═══ -->
+    <color name="jarvis_divider">#1A00E5FF</color>
+    <color name="jarvis_divider_subtle">#0D00BFFF</color>
     <color name="divider">#1A00E5FF</color>
     <color name="divider_subtle">#0D00BFFF</color>
     <color name="border_neon">#00E5FF</color>
     <color name="border_dim">#1A00BFFF</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎭 SYSTEM UI (Status Bar, Nav Bar)                                      -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- SYSTEM UI -->
     <color name="status_bar">#020811</color>
     <color name="navigation_bar">#020811</color>
-    <color name="system_ui_light">#F2FBFF</color>
-    <color name="system_ui_dark">#020811</color>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🌟 BASIC COLORS                                                         -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- BASIC -->
     <color name="white">#FFFFFFFF</color>
-    <color name="white_soft">#F2FBFF</color>
     <color name="black">#FF000000</color>
-    <color name="black_soft">#020811</color>
     <color name="transparent">#00000000</color>
     <color name="transparent_black_50">#80000000</color>
     <color name="transparent_black_80">#CC000000</color>
+
+    <!-- BACKWARD COMPATIBILITY -->
+    <color name="cyber_black">#FF000000</color>
+    <color name="cyber_dark">#020811</color>
+    <color name="cyber_darker">#010509</color>
+    <color name="cyber_panel">#071522</color>
+    <color name="neon_cyan">#00E5FF</color>
+    <color name="neon_blue">#008CFF</color>
+    <color name="neon_purple">#B026FF</color>
+    <color name="neon_green">#35FF9A</color>
+    <color name="neon_red">#FF5577</color>
+    <color name="neon_yellow">#FFD500</color>
+    <color name="text_primary">#F2FBFF</color>
+    <color name="text_secondary">#8EA9BA</color>
+    <color name="text_accent">#00E5FF</color>
 
 </resources>
