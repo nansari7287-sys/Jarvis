@@ -1,179 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<!--                                                                           -->
-<!--   DRAKOX J.A.R.V.I.S. TITAN CORE V500.0 - MASTER UI THEME ARCHITECTURE   -->
-<!--                                                                           -->
-<!--   Style: Cyberpunk / Enterprise AI                                        -->
-<!--   Mode: DayNight (Dark-first)                                             -->
-<!--                                                                           -->
-<!-- ═══════════════════════════════════════════════════════════════════════════ -->
-
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎯 MASTER THEME                                                          -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- MASTER THEME                                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <style name="Theme.Jarvis" parent="Theme.MaterialComponents.DayNight.NoActionBar">
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- PRIMARY COLORS                                                     -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- PRIMARY -->
         <item name="colorPrimary">@color/jarvis_accent</item>
         <item name="colorPrimaryVariant">@color/jarvis_accent_2</item>
         <item name="colorOnPrimary">@color/jarvis_background</item>
-        <item name="colorPrimaryInverse">@color/jarvis_neon_purple</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- SECONDARY COLORS                                                   -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- SECONDARY -->
         <item name="colorSecondary">@color/jarvis_neon_purple</item>
         <item name="colorSecondaryVariant">@color/jarvis_neon_pink</item>
         <item name="colorOnSecondary">@color/jarvis_background</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- TERTIARY / ACCENT                                                  -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <item name="colorTertiary">@color/jarvis_neon_cyan</item>
-        <item name="colorOnTertiary">@color/jarvis_background</item>
-
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- ERROR / WARNING / SUCCESS                                          -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- ERROR -->
         <item name="colorError">@color/jarvis_error</item>
         <item name="colorOnError">@color/jarvis_text_primary</item>
-        <item name="colorErrorContainer">@color/jarvis_error_dark</item>
-        <item name="colorOnErrorContainer">@color/jarvis_text_primary</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- SURFACES & BACKGROUNDS                                             -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- SURFACES -->
         <item name="android:colorBackground">@color/jarvis_background</item>
         <item name="colorOnBackground">@color/jarvis_text_primary</item>
         <item name="colorSurface">@color/jarvis_surface</item>
         <item name="colorOnSurface">@color/jarvis_text_primary</item>
         <item name="colorSurfaceVariant">@color/jarvis_surface_2</item>
-        <item name="colorOnSurfaceVariant">@color/jarvis_text_secondary</item>
-        <item name="colorSurfaceInverse">@color/jarvis_surface_3</item>
-        <item name="colorOnSurfaceInverse">@color/jarvis_text_primary</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- OUTLINE & DIVIDERS                                                 -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <item name="colorOutline">@color/jarvis_accent</item>
-        <item name="colorOutlineVariant">@color/jarvis_divider</item>
-
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- SYSTEM BARS & WINDOW BEHAVIOR                                      -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- SYSTEM BARS -->
         <item name="android:windowBackground">@color/jarvis_background</item>
         <item name="android:statusBarColor">@color/status_bar</item>
         <item name="android:navigationBarColor">@color/navigation_bar</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:windowTranslucentStatus">false</item>
-        <item name="android:windowTranslucentNavigation">false</item>
-        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
-        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- TYPOGRAPHY                                                         -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- TYPOGRAPHY -->
         <item name="android:fontFamily">monospace</item>
-        <item name="android:textAppearance">@style/TextAppearance.Jarvis.Body</item>
         <item name="android:textColorPrimary">@color/jarvis_text_primary</item>
         <item name="android:textColorSecondary">@color/jarvis_text_secondary</item>
         <item name="android:textColorHint">@color/jarvis_text_tertiary</item>
-        <item name="android:textColorLink">@color/jarvis_accent</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- COMPONENT STYLES                                                   -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- COMPONENTS -->
         <item name="materialButtonStyle">@style/Widget.Jarvis.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.Jarvis.Button.Outlined</item>
-        <item name="borderlessButtonStyle">@style/Widget.Jarvis.Button.Text</item>
         <item name="textInputStyle">@style/Widget.Jarvis.TextInputLayout</item>
-        <item name="alertDialogTheme">@style/Theme.Jarvis.Dialog</item>
         <item name="materialAlertDialogTheme">@style/Theme.Jarvis.Dialog</item>
-        <item name="bottomSheetDialogTheme">@style/Theme.Jarvis.BottomSheet</item>
         <item name="toolbarStyle">@style/Widget.Jarvis.Toolbar</item>
         <item name="cardViewStyle">@style/Widget.Jarvis.CardView</item>
-        <item name="chipStyle">@style/Widget.Jarvis.Chip</item>
-        <item name="tabStyle">@style/Widget.Jarvis.Tab</item>
-        <item name="snackbarStyle">@style/Widget.Jarvis.Snackbar</item>
-        <item name="floatingActionButtonStyle">@style/Widget.Jarvis.FAB</item>
 
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- SYSTEM FEEDBACK                                                    -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
+        <!-- SYSTEM -->
         <item name="android:soundEffectsEnabled">false</item>
-        <item name="android:hapticFeedbackEnabled">true</item>
-
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- ANIMATIONS                                                         -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <item name="android:windowAnimationStyle">@style/Animation.Jarvis.Window</item>
-        <item name="android:activityOpenEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:activityOpenExitAnimation">@android:anim/fade_out</item>
-        <item name="android:activityCloseEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:activityCloseExitAnimation">@android:anim/fade_out</item>
-        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
-
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <!-- DIALOG / POPUP WINDOW                                              -->
-        <!-- ═════════════════════════════════════════════════════════════════ -->
-        <item name="android:windowIsTranslucent">false</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowActionModeOverlay">true</item>
 
     </style>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🌙 NIGHT MODE THEME OVERRIDE                                             -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <style name="Theme.Jarvis.Night" parent="Theme.Jarvis">
-        <!-- Already dark-first, no changes needed -->
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🚀 SPLASH SCREEN THEME                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <style name="Theme.Jarvis.Splash" parent="Theme.Jarvis">
-        <item name="android:windowBackground">@color/jarvis_background</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎬 TRANSPARENT THEME (For overlays)                                      -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <style name="Theme.Jarvis.Transparent" parent="Theme.Jarvis">
-        <item name="android:windowBackground">@color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:backgroundDimEnabled">false</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔵 FULLSCREEN THEME                                                      -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <style name="Theme.Jarvis.Fullscreen" parent="Theme.Jarvis">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowNoTitle">true</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔘 BUTTON STYLES                                                         -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <!-- Primary Button (Filled) -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- BUTTON STYLES                                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <style name="Widget.Jarvis.Button" parent="Widget.MaterialComponents.Button">
         <item name="backgroundTint">@color/jarvis_accent</item>
         <item name="android:textColor">@color/jarvis_background</item>
@@ -181,56 +63,31 @@
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.08</item>
         <item name="android:textAllCaps">true</item>
-        <item name="android:textSize">13sp</item>
         <item name="cornerRadius">4dp</item>
-        <item name="android:paddingLeft">20dp</item>
-        <item name="android:paddingRight">20dp</item>
-        <item name="android:minHeight">48dp</item>
         <item name="rippleColor">@color/ripple_accent</item>
-        <item name="android:stateListAnimator">@null</item>
     </style>
 
-    <!-- Outlined Button -->
     <style name="Widget.Jarvis.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
         <item name="android:textColor">@color/jarvis_accent</item>
         <item name="strokeColor">@color/jarvis_accent</item>
         <item name="strokeWidth">1.5dp</item>
         <item name="android:fontFamily">monospace</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.08</item>
-        <item name="android:textAllCaps">true</item>
         <item name="cornerRadius">4dp</item>
-        <item name="rippleColor">@color/ripple_accent</item>
     </style>
 
-    <!-- Text Button (Borderless) -->
     <style name="Widget.Jarvis.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:textColor">@color/jarvis_accent</item>
         <item name="android:fontFamily">monospace</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.08</item>
-        <item name="rippleColor">@color/ripple_accent</item>
     </style>
 
-    <!-- Mic Button (Special - Circular) -->
-    <style name="Widget.Jarvis.MicButton" parent="Widget.MaterialComponents.Button">
-        <item name="backgroundTint">@color/jarvis_surface_2</item>
-        <item name="android:textColor">@color/jarvis_accent</item>
-        <item name="cornerRadius">100dp</item>
-        <item name="android:minWidth">120dp</item>
-        <item name="android:minHeight">120dp</item>
-        <item name="android:textSize">40sp</item>
-        <item name="android:stateListAnimator">@null</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📝 TEXT INPUT STYLES                                                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TEXT INPUT                                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <style name="Widget.Jarvis.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/jarvis_accent</item>
         <item name="boxStrokeWidth">1.5dp</item>
-        <item name="boxStrokeWidthFocused">2dp</item>
         <item name="boxBackgroundColor">@color/jarvis_surface</item>
         <item name="hintTextColor">@color/jarvis_accent</item>
         <item name="android:textColorHint">@color/jarvis_text_tertiary</item>
@@ -238,94 +95,49 @@
         <item name="boxCornerRadiusTopEnd">6dp</item>
         <item name="boxCornerRadiusBottomStart">6dp</item>
         <item name="boxCornerRadiusBottomEnd">6dp</item>
-        <item name="errorTextColor">@color/jarvis_error</item>
-        <item name="errorIconTint">@color/jarvis_error</item>
     </style>
 
-    <style name="Widget.Jarvis.EditText" parent="Widget.AppCompat.EditText">
-        <item name="android:textColor">@color/jarvis_text_primary</item>
-        <item name="android:textColorHint">@color/jarvis_text_tertiary</item>
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:background">@null</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 💬 DIALOG STYLES                                                         -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- DIALOG                                                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <style name="Theme.Jarvis.Dialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
-        <item name="android:windowBackground">@color/transparent</item>
-        <item name="android:backgroundDimAmount">0.8</item>
         <item name="colorSurface">@color/jarvis_surface</item>
         <item name="colorOnSurface">@color/jarvis_text_primary</item>
         <item name="colorPrimary">@color/jarvis_accent</item>
-        <item name="colorOnPrimary">@color/jarvis_background</item>
         <item name="android:textColorPrimary">@color/jarvis_text_primary</item>
         <item name="android:textColorSecondary">@color/jarvis_text_secondary</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Jarvis.Dialog</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/TextAppearance.Jarvis.Dialog.Title</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/TextAppearance.Jarvis.Dialog.Body</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Widget.Jarvis.Button.Text</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Widget.Jarvis.Button.Text</item>
-        <item name="buttonBarNeutralButtonStyle">@style/Widget.Jarvis.Button.Text</item>
     </style>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎭 BOTTOM SHEET STYLES                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Theme.Jarvis.BottomSheet" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
-        <item name="bottomSheetStyle">@style/Widget.Jarvis.BottomSheet</item>
-        <item name="android:windowIsFloating">false</item>
-        <item name="android:backgroundDimAmount">0.7</item>
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TOOLBAR                                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <style name="Widget.Jarvis.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:background">@color/jarvis_surface</item>
+        <item name="titleTextColor">@color/jarvis_accent</item>
+        <item name="subtitleTextColor">@color/jarvis_text_secondary</item>
+        <item name="android:elevation">0dp</item>
     </style>
 
-    <style name="Widget.Jarvis.BottomSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
-        <item name="backgroundTint">@color/jarvis_surface</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Jarvis.BottomSheet</item>
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CARD VIEW                                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <style name="Widget.Jarvis.CardView" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/jarvis_surface</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="strokeColor">@color/jarvis_divider</item>
+        <item name="strokeWidth">1dp</item>
     </style>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎨 SHAPE APPEARANCES (Cyberpunk cut corners)                             -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="ShapeAppearance.Jarvis.Dialog" parent="ShapeAppearance.MaterialComponents.MediumComponent">
-        <item name="cornerFamily">cut</item>
-        <item name="cornerSize">12dp</item>
-    </style>
-
-    <style name="ShapeAppearance.Jarvis.BottomSheet" parent="ShapeAppearance.MaterialComponents.LargeComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">20dp</item>
-        <item name="cornerSizeTopRight">20dp</item>
-        <item name="cornerSizeBottomLeft">0dp</item>
-        <item name="cornerSizeBottomRight">0dp</item>
-    </style>
-
-    <style name="ShapeAppearance.Jarvis.Card" parent="ShapeAppearance.MaterialComponents.MediumComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">12dp</item>
-    </style>
-
-    <style name="ShapeAppearance.Jarvis.Chip" parent="ShapeAppearance.MaterialComponents.SmallComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">50%</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📖 TEXT APPEARANCE STYLES                                                -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <!-- Body Text -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TEXT APPEARANCE                                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <style name="TextAppearance.Jarvis.Body" parent="TextAppearance.MaterialComponents.Body1">
         <item name="android:fontFamily">monospace</item>
         <item name="android:textColor">@color/jarvis_text_primary</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:lineSpacingMultiplier">1.2</item>
     </style>
 
-    <!-- Terminal Style (Glowing) -->
     <style name="TextAppearance.Jarvis.Terminal" parent="TextAppearance.MaterialComponents.Body1">
         <item name="android:fontFamily">monospace</item>
         <item name="android:textColor">@color/jarvis_accent</item>
@@ -336,128 +148,6 @@
         <item name="android:letterSpacing">0.05</item>
     </style>
 
-    <!-- Headline -->
-    <style name="TextAppearance.Jarvis.Headline" parent="TextAppearance.MaterialComponents.Headline5">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textColor">@color/jarvis_accent</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.15</item>
-        <item name="android:shadowColor">@color/jarvis_accent</item>
-        <item name="android:shadowRadius">8.0</item>
-    </style>
-
-    <!-- Dialog Title -->
-    <style name="TextAppearance.Jarvis.Dialog.Title" parent="TextAppearance.MaterialComponents.Headline6">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textColor">@color/jarvis_accent</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.1</item>
-    </style>
-
-    <!-- Dialog Body -->
-    <style name="TextAppearance.Jarvis.Dialog.Body" parent="TextAppearance.MaterialComponents.Body1">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textColor">@color/jarvis_text_secondary</item>
-        <item name="android:lineSpacingMultiplier">1.3</item>
-    </style>
-
-    <!-- Caption -->
-    <style name="TextAppearance.Jarvis.Caption" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textColor">@color/jarvis_text_tertiary</item>
-        <item name="android:letterSpacing">0.05</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🃏 CARD VIEW STYLES                                                      -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.CardView" parent="Widget.MaterialComponents.CardView">
-        <item name="cardBackgroundColor">@color/jarvis_surface</item>
-        <item name="cardElevation">0dp</item>
-        <item name="cardCornerRadius">12dp</item>
-        <item name="strokeColor">@color/jarvis_divider</item>
-        <item name="strokeWidth">1dp</item>
-        <item name="contentPadding">16dp</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🏷️ CHIP STYLES                                                           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Chip" parent="Widget.MaterialComponents.Chip.Action">
-        <item name="chipBackgroundColor">@color/jarvis_surface_2</item>
-        <item name="android:textColor">@color/jarvis_accent</item>
-        <item name="chipStrokeColor">@color/jarvis_accent</item>
-        <item name="chipStrokeWidth">1dp</item>
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">12sp</item>
-        <item name="chipIconTint">@color/jarvis_accent</item>
-        <item name="closeIconTint">@color/jarvis_accent</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔝 TOOLBAR STYLES                                                        -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Toolbar" parent="Widget.MaterialComponents.Toolbar.Primary">
-        <item name="android:background">@color/jarvis_surface</item>
-        <item name="titleTextColor">@color/jarvis_accent</item>
-        <item name="subtitleTextColor">@color/jarvis_text_secondary</item>
-        <item name="android:elevation">0dp</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📑 TAB LAYOUT STYLES                                                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Tab" parent="Widget.MaterialComponents.TabLayout.Primary">
-        <item name="tabIndicatorColor">@color/jarvis_accent</item>
-        <item name="tabIndicatorHeight">3dp</item>
-        <item name="tabTextColor">@color/jarvis_text_secondary</item>
-        <item name="tabSelectedTextColor">@color/jarvis_accent</item>
-        <item name="tabRippleColor">@color/ripple_accent</item>
-        <item name="android:background">@color/jarvis_surface</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎈 FLOATING ACTION BUTTON STYLES                                         -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.FAB" parent="Widget.MaterialComponents.FloatingActionButton">
-        <item name="backgroundTint">@color/jarvis_accent</item>
-        <item name="tint">@color/jarvis_background</item>
-        <item name="elevation">8dp</item>
-        <item name="rippleColor">@color/ripple_accent</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🍫 SNACKBAR STYLES                                                       -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Snackbar" parent="Widget.MaterialComponents.Snackbar">
-        <item name="backgroundTint">@color/jarvis_surface_2</item>
-        <item name="android:textColor">@color/jarvis_text_primary</item>
-        <item name="actionTextColor">@color/jarvis_accent</item>
-        <item name="android:fontFamily">monospace</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎬 WINDOW ANIMATIONS                                                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Animation.Jarvis.Window" parent="@android:style/Animation.Activity">
-        <item name="android:activityOpenEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:activityOpenExitAnimation">@android:anim/fade_out</item>
-        <item name="android:activityCloseEnterAnimation">@android:anim/fade_in</item>
-        <item name="android:activityCloseExitAnimation">@android:anim/fade_out</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🎯 SPECIAL STYLES                                                        -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <!-- HUD Text (Main Title) -->
     <style name="TextAppearance.Jarvis.HUD" parent="TextAppearance.MaterialComponents.Headline2">
         <item name="android:fontFamily">monospace</item>
         <item name="android:textColor">@color/jarvis_accent</item>
@@ -465,84 +155,36 @@
         <item name="android:letterSpacing">0.3</item>
         <item name="android:shadowColor">@color/jarvis_accent</item>
         <item name="android:shadowRadius">20.0</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">0</item>
     </style>
 
-    <!-- Status Text (Green Terminal) -->
     <style name="TextAppearance.Jarvis.Status" parent="TextAppearance.MaterialComponents.Body1">
         <item name="android:fontFamily">monospace</item>
         <item name="android:textColor">@color/jarvis_success</item>
         <item name="android:letterSpacing">0.2</item>
-        <item name="android:shadowColor">@color/jarvis_success</item>
-        <item name="android:shadowRadius">6.0</item>
     </style>
 
-    <!-- Chat Message Text -->
-    <style name="TextAppearance.Jarvis.Chat" parent="TextAppearance.MaterialComponents.Body1">
+    <style name="TextAppearance.Jarvis.Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:fontFamily">monospace</item>
-        <item name="android:textColor">@color/jarvis_text_primary</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:lineSpacingMultiplier">1.4</item>
+        <item name="android:textColor">@color/jarvis_text_tertiary</item>
     </style>
 
-    <!-- Error Text -->
-    <style name="TextAppearance.Jarvis.Error" parent="TextAppearance.MaterialComponents.Body1">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textColor">@color/jarvis_error</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:shadowColor">@color/jarvis_error</item>
-        <item name="android:shadowRadius">4.0</item>
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- OTHER THEMES                                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <style name="Theme.Jarvis.Splash" parent="Theme.Jarvis">
+        <item name="android:windowBackground">@color/jarvis_background</item>
+        <item name="android:windowFullscreen">true</item>
     </style>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔀 DIVIDER STYLES                                                        -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Divider" parent="">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">1dp</item>
-        <item name="android:background">@color/jarvis_divider</item>
+    <style name="Theme.Jarvis.Transparent" parent="Theme.Jarvis">
+        <item name="android:windowBackground">@color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📊 PROGRESS BAR STYLES                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.ProgressBar" parent="Widget.AppCompat.ProgressBar.Horizontal">
-        <item name="android:progressTint">@color/jarvis_accent</item>
-        <item name="android:progressBackgroundTint">@color/progress_track</item>
-    </style>
-
-    <style name="Widget.Jarvis.ProgressBar.Circular" parent="Widget.AppCompat.ProgressBar">
-        <item name="android:indeterminateTint">@color/jarvis_accent</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 🔀 SWITCH STYLES                                                         -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Switch" parent="Widget.MaterialComponents.CompoundButton.Switch">
-        <item name="android:thumbTint">@color/jarvis_accent</item>
-        <item name="android:trackTint">@color/jarvis_surface_2</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- ✅ CHECKBOX STYLES                                                       -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.Checkbox" parent="Widget.MaterialComponents.CompoundButton.CheckBox">
-        <item name="android:buttonTint">@color/jarvis_accent</item>
-        <item name="android:textColor">@color/jarvis_text_primary</item>
-    </style>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- 📻 RADIO BUTTON STYLES                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    
-    <style name="Widget.Jarvis.RadioButton" parent="Widget.MaterialComponents.CompoundButton.RadioButton">
-        <item name="android:buttonTint">@color/jarvis_accent</item>
-        <item name="android:textColor">@color/jarvis_text_primary</item>
+    <style name="Theme.Jarvis.Fullscreen" parent="Theme.Jarvis">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
 
 </resources>
