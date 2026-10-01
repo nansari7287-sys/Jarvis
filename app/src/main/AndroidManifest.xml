@@ -2,22 +2,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ============================================================================ -->
-    <!--                                                                              -->
-    <!--   ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗    ████████╗██╗████████╗ █████╗    -->
-    <!--   ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝    ╚══██╔══╝██║╚══██╔══╝██╔══██╗   -->
-    <!--   ██║███████║██████╔╝██║   ██║██║███████╗       ██║   ██║   ██║   ███████║   -->
-    <!--   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║       ██║   ██║   ██║   ██╔══██║   -->
-    <!--   ██║██║  ██║██║  ██║ ╚████╔╝ ██║███████║       ██║   ██║   ██║   ██║  ██║   -->
-    <!--   ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝       ╚═╝   ╚═╝   ╚═╝   ╚═╝  ╚═╝   -->
-    <!--                                                                              -->
-    <!--   TITAN CORE V500.0 - MASTER PERMISSION & SERVICE REGISTRY                   -->
-    <!--                                                                              -->
-    <!-- ============================================================================ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!--                                                                          -->
+    <!--   ██████╗ ██████╗  █████╗ ██╗  ██╗ ██████╗ ██╗  ██╗                    -->
+    <!--   ██╔══██╗██╔══██╗██╔══██╗██║ ██╔╝██╔═══██╗╚██╗██╔╝                    -->
+    <!--   ██║  ██║██████╔╝███████║█████╔╝ ██║   ██║ ╚███╔╝                     -->
+    <!--   ██║  ██║██╔══██╗██╔══██║██╔═██╗ ██║   ██║ ██╔██╗                     -->
+    <!--   ██████╔╝██║  ██║██║  ██║██║  ██╗╚██████╔╝██╔╝ ██╗                    -->
+    <!--   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝                    -->
+    <!--                                                                          -->
+    <!--   J.A.R.V.I.S. TITAN CORE V500.0                                        -->
+    <!--   MASTER PERMISSION & SERVICE REGISTRY                                   -->
+    <!--                                                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 1. NETWORK & CLOUD UPLINK                                                    -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 1. NETWORK & CLOUD UPLINK                                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -27,17 +28,17 @@
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="tiramisu" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 2. ACOUSTIC SENSORS & AUDIO CONTROL                                          -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 2. ACOUSTIC SENSORS & AUDIO CONTROL                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 3. BACKGROUND SERVICES & WAKE LOCKS                                          -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 3. BACKGROUND SERVICES & WAKE LOCKS                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
@@ -50,25 +51,25 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"
         tools:targetApi="s" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 4. SYSTEM OVERLAY & UI INJECTION                                             -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 4. SYSTEM OVERLAY & UI INJECTION                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 5. APP AUTOMATION & CROSS-APP CONTROL                                        -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 5. APP AUTOMATION & CROSS-APP CONTROL                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.REORDER_TASKS" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 6. HARDWARE KINEMATICS, OPTICS & SENSORS                                     -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 6. HARDWARE, OPTICS & SENSORS                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FLASHLIGHT"
@@ -81,9 +82,9 @@
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"
         tools:targetApi="s" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 7. STORAGE & MEDIA (Android 13+ Split Permissions)                           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 7. STORAGE & MEDIA                                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -93,15 +94,15 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 8. NOTIFICATIONS                                                             -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 8. NOTIFICATIONS                                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 9. TELEPHONY, CONTACTS & MESSAGING                                           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 9. TELEPHONY, CONTACTS & MESSAGING                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
@@ -114,15 +115,15 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_MMS" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 10. CALENDAR & SCHEDULING                                                    -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 10. CALENDAR & SCHEDULING                                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 11. BLUETOOTH & CONNECTIVITY                                                 -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 11. BLUETOOTH & CONNECTIVITY                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
@@ -134,15 +135,15 @@
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.NFC" />
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 12. POWER & SYSTEM CONTROL                                                   -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 12. POWER & SYSTEM CONTROL                                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.SET_ALARM" />
 
-    <!-- ============================================================================ -->
-    <!-- HARDWARE FEATURE REQUIREMENTS                                                -->
-    <!-- ============================================================================ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- HARDWARE FEATURES                                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
@@ -158,11 +159,11 @@
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- ============================================================================ -->
-    <!-- ANDROID 11+ PACKAGE VISIBILITY (CROSS-APP TARGETING)                         -->
-    <!-- ============================================================================ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- ANDROID 11+ PACKAGE VISIBILITY                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <queries>
-        <!-- ═══ SOCIAL MEDIA APPS ═══ -->
+        <!-- SOCIAL MEDIA -->
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
         <package android:name="com.instagram.android" />
@@ -180,7 +181,7 @@
         <package android:name="com.zhiliaoapp.musically" />
         <package android:name="com.ss.android.ugc.trill" />
 
-        <!-- ═══ GOOGLE APPS ═══ -->
+        <!-- GOOGLE APPS -->
         <package android:name="com.google.android.youtube" />
         <package android:name="com.google.android.apps.youtube.music" />
         <package android:name="com.google.android.gm" />
@@ -192,7 +193,7 @@
         <package android:name="com.google.android.keep" />
         <package android:name="com.google.android.apps.translate" />
 
-        <!-- ═══ MUSIC & VIDEO ═══ -->
+        <!-- MUSIC & VIDEO -->
         <package android:name="com.spotify.music" />
         <package android:name="com.netflix.mediaclient" />
         <package android:name="com.amazon.avod.thirdpartyclient" />
@@ -202,7 +203,7 @@
         <package android:name="com.gaana" />
         <package android:name="com.saavn.android" />
 
-        <!-- ═══ SHOPPING & PAYMENTS ═══ -->
+        <!-- SHOPPING & PAYMENTS -->
         <package android:name="com.amazon.mShop.android.shopping" />
         <package android:name="com.flipkart.android" />
         <package android:name="com.myntra.android" />
@@ -210,7 +211,7 @@
         <package android:name="com.phonepe.app" />
         <package android:name="com.google.android.apps.nbu.paisa.user" />
 
-        <!-- ═══ PRODUCTIVITY ═══ -->
+        <!-- PRODUCTIVITY -->
         <package android:name="com.microsoft.office.word" />
         <package android:name="com.microsoft.office.excel" />
         <package android:name="com.microsoft.office.powerpoint" />
@@ -218,7 +219,7 @@
         <package android:name="com.slack" />
         <package android:name="com.notion.id" />
 
-        <!-- ═══ SYSTEM UTILITIES ═══ -->
+        <!-- SYSTEM UTILITIES -->
         <package android:name="com.android.settings" />
         <package android:name="com.android.camera" />
         <package android:name="com.android.gallery3d" />
@@ -229,7 +230,7 @@
         <package android:name="com.android.calendar" />
         <package android:name="com.android.vending" />
 
-        <!-- ═══ BROWSER INTENTS ═══ -->
+        <!-- BROWSER INTENTS -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
@@ -261,29 +262,19 @@
         <intent>
             <action android:name="android.provider.MediaStore.RECORD_SOUND" />
         </intent>
-
-        <!-- ═══ TTS ENGINE QUERY ═══ -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
-
-        <!-- ═══ SPEECH RECOGNITION QUERY ═══ -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
-
-        <!-- ═══ ACCESSIBILITY SERVICE QUERY ═══ -->
         <intent>
             <action android:name="android.accessibilityservice.AccessibilityService" />
         </intent>
-
-        <!-- ═══ LAUNCHER APPS (for app list) ═══ -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-
-        <!-- ═══ ALARM CLOCK INTENT ═══ -->
         <intent>
             <action android:name="android.intent.action.SET_ALARM" />
         </intent>
@@ -292,9 +283,9 @@
         </intent>
     </queries>
 
-    <!-- ============================================================================ -->
-    <!-- APPLICATION CONFIGURATION                                                    -->
-    <!-- ============================================================================ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- APPLICATION CONFIGURATION                                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -307,9 +298,9 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 1. MAIN NEURAL INTERFACE ACTIVITY (FULLSCREEN HUD)                      -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- 1. MAIN ACTIVITY (HUD)                                           -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -323,9 +314,9 @@
             </intent-filter>
         </activity>
 
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 2. TITAN ACCESSIBILITY SERVICE (UNIVERSAL SCREEN CONTROL)               -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- 2. TITAN ACCESSIBILITY SERVICE                                   -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <service
             android:name=".accessibility.JarvisAccessibilityService"
             android:enabled="true"
@@ -340,9 +331,9 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 3. BACKGROUND VOICE ENGINE (ALWAYS LISTENING)                           -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- 3. BACKGROUND VOICE ENGINE                                       -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <service
             android:name=".voice.VoiceService"
             android:enabled="true"
@@ -351,9 +342,9 @@
             android:foregroundServiceType="microphone"
             android:stopWithTask="false" />
 
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 4. SYSTEM BOOT AUTO-LAUNCH RECEIVER                                     -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- 4. BOOT RECEIVER (AUTO-START)                                    -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
         <receiver
             android:name=".receivers.BootReceiver"
             android:enabled="true"
