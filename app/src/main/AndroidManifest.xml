@@ -12,7 +12,6 @@
     <!--   ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝       ╚═╝   ╚═╝   ╚═╝   ╚═╝  ╚═╝   -->
     <!--                                                                              -->
     <!--   TITAN CORE V500.0 - MASTER PERMISSION & SERVICE REGISTRY                   -->
-    <!--   Voice-Controlled AI Assistant with Universal Device Automation             -->
     <!--                                                                              -->
     <!-- ============================================================================ -->
 
@@ -57,8 +56,6 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
-    <uses-permission android:name="android.permission.MEDIA_PROJECTION"
-        tools:ignore="ProtectedPermissions" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 5. APP AUTOMATION & CROSS-APP CONTROL                                        -->
@@ -68,8 +65,6 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.REORDER_TASKS" />
-    <uses-permission android:name="android.permission.GET_TASKS"
-        tools:ignore="ProtectedPermissions" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 6. HARDWARE KINEMATICS, OPTICS & SENSORS                                     -->
@@ -82,8 +77,6 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
-    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND"
-        tools:targetApi="tiramisu" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"
         tools:targetApi="s" />
@@ -96,13 +89,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"
         tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
-        tools:targetApi="34" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 8. NOTIFICATIONS                                                             -->
@@ -120,10 +109,6 @@
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
-    <uses-permission android:name="android.permission.READ_CALL_LOG"
-        tools:ignore="ProtectedPermissions" />
-    <uses-permission android:name="android.permission.WRITE_CALL_LOG"
-        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
@@ -147,16 +132,11 @@
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
         tools:targetApi="s" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"
-        tools:targetApi="s" />
     <uses-permission android:name="android.permission.NFC" />
-    <uses-permission android:name="android.permission.USB_PERMISSION" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 12. POWER & SYSTEM CONTROL                                                   -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <uses-permission android:name="android.permission.REBOOT"
-        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.SET_ALARM" />
 
@@ -172,12 +152,10 @@
     <uses-feature android:name="android.hardware.sensor.proximity" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.light" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
-    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
-    <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <!-- ============================================================================ -->
@@ -195,14 +173,13 @@
         <package android:name="com.linkedin.android" />
         <package android:name="com.reddit.frontpage" />
         <package android:name="com.pinterest" />
-        <package android:name="com.telegram.messenger" />
         <package android:name="org.telegram.messenger" />
         <package android:name="org.telegram.plus" />
         <package android:name="org.thunderdog.challegram" />
         <package android:name="com.discord" />
         <package android:name="com.zhiliaoapp.musically" />
         <package android:name="com.ss.android.ugc.trill" />
-        
+
         <!-- ═══ GOOGLE APPS ═══ -->
         <package android:name="com.google.android.youtube" />
         <package android:name="com.google.android.apps.youtube.music" />
@@ -214,7 +191,7 @@
         <package android:name="com.google.android.apps.docs" />
         <package android:name="com.google.android.keep" />
         <package android:name="com.google.android.apps.translate" />
-        
+
         <!-- ═══ MUSIC & VIDEO ═══ -->
         <package android:name="com.spotify.music" />
         <package android:name="com.netflix.mediaclient" />
@@ -224,16 +201,15 @@
         <package android:name="com.jio.media.jiobeats" />
         <package android:name="com.gaana" />
         <package android:name="com.saavn.android" />
-        
+
         <!-- ═══ SHOPPING & PAYMENTS ═══ -->
         <package android:name="com.amazon.mShop.android.shopping" />
         <package android:name="com.flipkart.android" />
         <package android:name="com.myntra.android" />
-        <package android:name="com.paytm" />
         <package android:name="net.one97.paytm" />
         <package android:name="com.phonepe.app" />
         <package android:name="com.google.android.apps.nbu.paisa.user" />
-        
+
         <!-- ═══ PRODUCTIVITY ═══ -->
         <package android:name="com.microsoft.office.word" />
         <package android:name="com.microsoft.office.excel" />
@@ -241,7 +217,7 @@
         <package android:name="com.microsoft.teams" />
         <package android:name="com.slack" />
         <package android:name="com.notion.id" />
-        
+
         <!-- ═══ SYSTEM UTILITIES ═══ -->
         <package android:name="com.android.settings" />
         <package android:name="com.android.camera" />
@@ -252,7 +228,7 @@
         <package android:name="com.android.calculator2" />
         <package android:name="com.android.calendar" />
         <package android:name="com.android.vending" />
-        
+
         <!-- ═══ BROWSER INTENTS ═══ -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -285,28 +261,28 @@
         <intent>
             <action android:name="android.provider.MediaStore.RECORD_SOUND" />
         </intent>
-        
+
         <!-- ═══ TTS ENGINE QUERY ═══ -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
-        
+
         <!-- ═══ SPEECH RECOGNITION QUERY ═══ -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
-        
+
         <!-- ═══ ACCESSIBILITY SERVICE QUERY ═══ -->
         <intent>
             <action android:name="android.accessibilityservice.AccessibilityService" />
         </intent>
-        
+
         <!-- ═══ LAUNCHER APPS (for app list) ═══ -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        
+
         <!-- ═══ ALARM CLOCK INTENT ═══ -->
         <intent>
             <action android:name="android.intent.action.SET_ALARM" />
@@ -320,10 +296,7 @@
     <!-- APPLICATION CONFIGURATION                                                    -->
     <!-- ============================================================================ -->
     <application
-        android:name=".JarvisApplication"
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
@@ -331,13 +304,8 @@
         android:theme="@style/Theme.Jarvis"
         android:largeHeap="true"
         android:hardwareAccelerated="true"
-        android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="false"
-        android:networkSecurityConfig="@xml/network_security_config"
-        android:enableOnBackInvokedCallback="true"
-        android:allowNativeHeapPointerTagging="false"
-        tools:targetApi="34"
-        tools:ignore="UnusedAttribute">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="34">
 
         <!-- ═══════════════════════════════════════════════════════════════════════ -->
         <!-- 1. MAIN NEURAL INTERFACE ACTIVITY (FULLSCREEN HUD)                      -->
@@ -347,44 +315,12 @@
             android:exported="true"
             android:launchMode="singleInstance"
             android:screenOrientation="portrait"
-            android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|screenLayout|uiMode"
-            android:windowSoftInputMode="adjustResize"
-            android:supportsPictureInPicture="true"
-            android:resizeableActivity="true"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true"
-            android:excludeFromRecents="false"
-            android:stateNotNeeded="true">
-            
+            android:configChanges="orientation|keyboardHidden|screenSize|uiMode"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
-            <!-- Voice Assistant Intent (Google Assistant se trigger) -->
-            <intent-filter>
-                <action android:name="android.intent.action.ASSIST" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            
-            <!-- Voice Command Intent -->
-            <intent-filter>
-                <action android:name="android.intent.action.VOICE_COMMAND" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            
-            <!-- Custom Deep Link -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="jarvis" android:host="command" />
-            </intent-filter>
-            
-            <!-- App Shortcuts -->
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -395,14 +331,10 @@
             android:enabled="true"
             android:exported="true"
             android:label="@string/accessibility_service_label"
-            android:description="@string/accessibility_service_description"
-            android:icon="@mipmap/ic_launcher"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
-            
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
@@ -420,103 +352,19 @@
             android:stopWithTask="false" />
 
         <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 4. WAKE WORD DETECTION SERVICE (OPTIONAL - FUTURE)                      -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <service
-            android:name=".voice.WakeWordService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="microphone"
-            android:stopWithTask="false" />
-
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 5. SCREEN CAPTURE SERVICE (MEDIA PROJECTION)                            -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <service
-            android:name=".service.ScreenCaptureService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
-
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 6. SYSTEM BOOT AUTO-LAUNCH RECEIVER                                     -->
+        <!-- 4. SYSTEM BOOT AUTO-LAUNCH RECEIVER                                     -->
         <!-- ═══════════════════════════════════════════════════════════════════════ -->
         <receiver
             android:name=".receivers.BootReceiver"
             android:enabled="true"
-            android:exported="true"
-            android:directBootAware="true">
-            
+            android:exported="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 7. NETWORK STATE CHANGE RECEIVER                                        -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <receiver
-            android:name=".receivers.NetworkReceiver"
-            android:enabled="true"
-            android:exported="true">
-            
-            <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
-                <action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 8. FILE PROVIDER (SECURE FILE SHARING)                                  -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 9. WORK MANAGER INITIALIZATION                                          -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-            
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
-        </provider>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        <!-- 10. GLOBAL APPLICATION METADATA                                         -->
-        <!-- ═══════════════════════════════════════════════════════════════════════ -->
-        
-        <!-- Default Notification Channel -->
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="@string/default_notification_channel_id" />
-
-        <!-- API Key Placeholder (BuildConfig se aayega) -->
-        <meta-data
-            android:name="com.example.jarvis.API_KEY"
-            android:value="${JARVIS_API_KEY}" />
-
-        <!-- Enable Auto Backup for specific files -->
-        <meta-data
-            android:name="android.max_aspect"
-            android:value="2.4" />
 
     </application>
 
