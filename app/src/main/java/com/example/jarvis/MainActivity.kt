@@ -1,12 +1,10 @@
 package com.example.jarvis
 
-// ==========================================================================================
-// J.A.R.V.I.S. TITAN MULTI-LLM KERNEL V500.0 - ENTERPRISE HYBRID EDITION
-// DEVELOPED BY DRAKOX NAEEM
-// ENGINES: GEMINI (PRO/FLASH) | CHATGPT (OPENAI) | GROK (XAI)
-// PIPELINE: DYNAMIC MODEL SELECTOR, ACCESSIBILITY CONTROL, HINDI VOICE CALL, ADVANCED HUD
-// STATUS: 100% COMPILER PASS, ALL VIEW HOOKS RESOLVED, MULTI-THREADED
-// ==========================================================================================
+// ══════════════════════════════════════════════════════════════════════════════════════════
+// J.A.R.V.I.S. TITAN V600.0 — VOICE COMPANION EDITION
+// Real-time voice call experience with warm AI personality
+// Engines: Gemini | ChatGPT | Grok
+// ══════════════════════════════════════════════════════════════════════════════════════════
 
 import android.Manifest
 import android.animation.ObjectAnimator
@@ -95,12 +93,10 @@ import java.util.Random
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
-// ==========================================================================================
-// [1] TOP-LEVEL DATA MODELS & PROVIDER ENUMS
-// ==========================================================================================
-enum class AIProvider {
-    GEMINI, CHATGPT, GROK
-}
+// ══════════════════════════════════════════════════════════════════════════════════════════
+// [1] DATA MODELS
+// ══════════════════════════════════════════════════════════════════════════════════════════
+enum class AIProvider { GEMINI, CHATGPT, GROK }
 
 data class AgentDecision(
     val action: String = "CHAT",
@@ -109,30 +105,27 @@ data class AgentDecision(
     val speech: String = ""
 )
 
-class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener, LocationListener, AudioManager.OnAudioFocusChangeListener {
+class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener,
+    LocationListener, AudioManager.OnAudioFocusChangeListener {
 
-    // ═══════════════════════════════════════════════════════════════════════════════════════
-    // FIX APPLIED: Native library loader - wrapped in Throwable catch
-    // UnsatisfiedLinkError extends Error (not Exception), so must catch Throwable
-    // Since we don't ship native C++ code, we gracefully skip loading it.
-    // ═══════════════════════════════════════════════════════════════════════════════════════
+    // Native lib — safe load with Throwable (fixes crash)
     init {
         try {
             System.loadLibrary("jarvis_native_engine")
-            Log.i("TITAN_CORE", "Native C++ JNI Engine Injected.")
+            Log.i("TITAN", "Native engine loaded")
         } catch (e: Throwable) {
-            Log.w("TITAN_CORE", "Native engine unavailable - using JVM fallback. (${e.message})")
+            Log.w("TITAN", "Native engine unavailable — JVM fallback")
         }
     }
 
     enum class SystemState {
-        POWER_OFF, BOOTING, ONLINE, STANDBY, PROCESSING, LISTENING, SPEAKING, CALL_ACTIVE, COMBAT_MODE, ERROR
+        POWER_OFF, ONLINE, STANDBY, PROCESSING, LISTENING, SPEAKING, CALL_ACTIVE, ERROR
     }
 
     private var currentState = SystemState.POWER_OFF
     private var isCallModeActive = false
 
-    // UI Bindings
+    // UI
     private var messageInputBox: EditText? = null
     private var micToggleButton: View? = null
     private var sendCommandButton: View? = null
@@ -140,45 +133,40 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private var jarvisOrbView: View? = null
     private var rootLayout: ViewGroup? = null
 
-    // High-Performance HUD Graphics
-    private var matrixRainView: MatrixDigitalRainView? = null
-    private var radarHUDView: CyberpunkRadarHUD? = null
-    private var particleEmitterView: QuantumParticleEmitter? = null
-    private var compassHUDView: HolographicCompassView? = null
-    private var spectrumAnalyzerView: AudioSpectrumAnalyzer? = null
+    // HUD views
+    private var matrixRainView: MatrixRainView? = null
+    private var radarHUDView: CyberRadarView? = null
+    private var particleEmitterView: ParticleEmitterView? = null
+    private var compassHUDView: HoloCompassView? = null
+    private var spectrumAnalyzerView: SpectrumView? = null
 
-    // System Core Engines
+    // Core
     private lateinit var ttsEngine: TextToSpeech
     private var speechRecognizer: SpeechRecognizer? = null
-    private lateinit var database: EnterpriseDatabaseHelper
     private lateinit var apiPrefs: SharedPreferences
-    private lateinit var crypto: HybridCryptography
-    private lateinit var diagnostics: DeepSystemDiagnostics
-    private lateinit var advancedMath: AdvancedMathEngine
-    private lateinit var appAutomation: AppAutomationEngine
-    private lateinit var universalAIAgent: UniversalMultiLLMAgent
+    private lateinit var crypto: HybridCrypto
+    private lateinit var appAutomation: AppAutomation
+    private lateinit var aiBrain: MultiLLMBrain
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private var strobeJob: Job? = null
     private var aiCallJob: Job? = null
+    private var ttsReady = false
+    private var isRestartingSTT = false
 
-    // Hardware Sensors
+    // Sensors
     private lateinit var sensorManager: SensorManager
-    private var accelSensor: Sensor? = null
     private var gyroSensor: Sensor? = null
     private var proxSensor: Sensor? = null
     private var cameraManager: CameraManager? = null
     private var mainCameraId: String? = null
     private lateinit var audioManager: AudioManager
 
-    // Telemetry Monitoring
     private var batteryLevel = -1
     private var isCharging = false
-    private var isNetworkActive = false
 
-    // ========================================================================
-    // [2] LIFECYCLE & IMMERSIVE SCREEN INITIALIZATION
-    // ========================================================================
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [2] LIFECYCLE
+    // ══════════════════════════════════════════════════════════════════════════════════════
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -194,13 +182,13 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         rootLayout = findViewById(android.R.id.content)
 
         applyThemeSafely()
-        initializeTitanArchitecture()
-        bindViewsDynamically()
-        injectMassiveHolograms()
-        setupEventListeners()
+        initCore()
+        bindViews()
+        injectHUD()
+        setupListeners()
 
-        startArcReactorRotation()
-        runCleanBootSequence()
+        startArcReactor()
+        bootSequence()
     }
 
     private fun applyThemeSafely() {
@@ -213,70 +201,50 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
     }
 
-    private fun initializeTitanArchitecture() {
+    private fun initCore() {
         ttsEngine = TextToSpeech(this, this)
-        database = EnterpriseDatabaseHelper(this)
-        apiPrefs = getSharedPreferences("JarvisAPI_Vault_V500", Context.MODE_PRIVATE)
-        crypto = HybridCryptography()
-        diagnostics = DeepSystemDiagnostics(this)
-        advancedMath = AdvancedMathEngine()
-        appAutomation = AppAutomationEngine(this)
-        universalAIAgent = UniversalMultiLLMAgent()
+        apiPrefs = getSharedPreferences("JarvisVault_V600", Context.MODE_PRIVATE)
+        crypto = HybridCrypto()
+        appAutomation = AppAutomation(this)
+        aiBrain = MultiLLMBrain()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        setupHardwareArray()
-        startTelemetryFeeds()
-    }
-
-    private fun setupHardwareArray() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         proxSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
 
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             mainCameraId = cameraManager?.cameraIdList?.firstOrNull {
-                cameraManager?.getCameraCharacteristics(it)?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                cameraManager?.getCameraCharacteristics(it)
+                    ?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
-        } catch (e: Exception) { Log.e("TITAN", "Camera access fault.") }
-    }
+        } catch (_: Exception) {}
 
-    private fun startTelemetryFeeds() {
+        // Battery
         try {
             registerReceiver(object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    isCharging = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
+                override fun onReceive(c: Context, i: Intent) {
+                    batteryLevel = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    isCharging = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ==
+                        BatteryManager.BATTERY_STATUS_CHARGING
                 }
             }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        } catch (e: Exception) { Log.e("TITAN", "Battery feed error", e) }
-
-        try {
-            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            cm.registerNetworkCallback(
-                NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
-                object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: Network) { isNetworkActive = true }
-                    override fun onLost(network: Network) { isNetworkActive = false }
-                }
-            )
-        } catch (e: Exception) { Log.e("TITAN", "Network feed error", e) }
+        } catch (_: Exception) {}
     }
 
     @SuppressLint("DiscouragedApi")
-    private fun bindViewsDynamically() {
-        val res = resources
-        val pkg = packageName
-
-        messageInputBox = findViewById(res.getIdentifier("messageInput", "id", pkg))
-        micToggleButton = findViewById(res.getIdentifier("micButton", "id", pkg))
-        sendCommandButton = findViewById(res.getIdentifier("sendButton", "id", pkg))
-        settingsBtn = findViewById(res.getIdentifier("settingsButton", "id", pkg))
-        jarvisOrbView = findViewById(res.getIdentifier("jarvisOrbView", "id", pkg))
+    private fun bindViews() {
+        val r = resources
+        val p = packageName
+        messageInputBox = findViewById(r.getIdentifier("messageInput", "id", p))
+        micToggleButton = findViewById(r.getIdentifier("micButton", "id", p))
+        sendCommandButton = findViewById(r.getIdentifier("sendButton", "id", p))
+        settingsBtn = findViewById(r.getIdentifier("settingsButton", "id", p))
+        jarvisOrbView = findViewById(r.getIdentifier("jarvisOrbView", "id", p))
     }
 
-    private fun startArcReactorRotation() {
+    private fun startArcReactor() {
         jarvisOrbView?.let { orb ->
             ObjectAnimator.ofFloat(orb, View.ROTATION, 0f, 360f).apply {
                 duration = 4500
@@ -287,323 +255,327 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
     }
 
-    private fun injectMassiveHolograms() {
+    private fun injectHUD() {
         try {
-            particleEmitterView = QuantumParticleEmitter(this)
+            particleEmitterView = ParticleEmitterView(this)
             rootLayout?.addView(particleEmitterView, 0, FrameLayout.LayoutParams(-1, -1))
 
-            matrixRainView = MatrixDigitalRainView(this).apply { alpha = 0.18f }
+            matrixRainView = MatrixRainView(this).apply { alpha = 0.18f }
             rootLayout?.addView(matrixRainView, 1, FrameLayout.LayoutParams(-1, -1))
 
-            radarHUDView = CyberpunkRadarHUD(this)
+            radarHUDView = CyberRadarView(this)
             rootLayout?.addView(radarHUDView, 2, FrameLayout.LayoutParams(-1, -1))
 
-            compassHUDView = HolographicCompassView(this)
+            compassHUDView = HoloCompassView(this)
             rootLayout?.addView(compassHUDView, 3, FrameLayout.LayoutParams(-1, -1))
 
-            spectrumAnalyzerView = AudioSpectrumAnalyzer(this)
+            spectrumAnalyzerView = SpectrumView(this)
             rootLayout?.addView(spectrumAnalyzerView, 4, FrameLayout.LayoutParams(-1, -1))
         } catch (e: Exception) {
-            Log.e("TITAN", "Hologram injection error", e)
+            Log.e("TITAN", "HUD error", e)
         }
     }
 
-    private fun runCleanBootSequence() {
-        Log.d("JARVIS_CORE", "[TITAN MULTI-LLM V500] INITIATED.")
+    private fun bootSequence() {
         lifecycleScope.launch {
-            delay(1200)
-            updateEnvironmentState(SystemState.ONLINE)
-            val currentProvider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI")
-            speak("सिस्टम ऑनलाइन है। वर्तमान में $currentProvider इंजन सक्रिय है।")
+            delay(1500)
+            changeState(SystemState.ONLINE)
+            val provider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI")
+            speak("हैलो! मैं तुम्हारी जार्विस हूँ। $provider इंजन तैयार है। माइक बटन दबाओ और बात करो।")
             currentState = SystemState.ONLINE
         }
     }
 
-    // ========================================================================
-    // [3] LIVE CONVERSATIONAL VOICE & CALL CONTROLS
-    // ========================================================================
-    private fun setupEventListeners() {
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [3] VOICE CALL LOOP — GEMINI LIVE STYLE
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    private fun setupListeners() {
+        // Send button — typed input
         sendCommandButton?.setOnClickListener {
             val cmd = messageInputBox?.text?.toString()?.trim() ?: ""
             if (cmd.isNotEmpty()) {
-                processConversationalInput(cmd)
                 messageInputBox?.text?.clear()
+                processInput(cmd)
             }
         }
 
+        // Mic button — start/stop call
         micToggleButton?.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
-            } else {
-                if (!isCallModeActive) {
-                    isCallModeActive = true
-                    changeState(SystemState.CALL_ACTIVE)
-                    Toast.makeText(this, "लाइव वॉयस कॉल कनेक्टेड", Toast.LENGTH_SHORT).show()
-                    speak("हाँ भाई, कॉल कनेक्ट हो गई है। बोलो क्या बात है?")
-                } else {
-                    isCallModeActive = false
-                    changeState(SystemState.STANDBY)
-                    speechRecognizer?.stopListening()
-                    Toast.makeText(this, "कॉल समाप्त", Toast.LENGTH_SHORT).show()
-                    speak("ठीक है भाई, कॉल डिस्कनेक्ट कर रहा हूँ।")
-                }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.RECORD_AUDIO), 101)
+                return@setOnClickListener
             }
+            if (!isCallModeActive) startCall() else endCall()
         }
 
-        settingsBtn?.setOnClickListener { openMultiProviderSettingsVault() }
+        settingsBtn?.setOnClickListener { openSettings() }
     }
 
-    private fun processConversationalInput(rawInput: String) {
-        val userSpeech = rawInput.trim()
-        if (userSpeech.isEmpty()) return
+    private fun startCall() {
+        isCallModeActive = true
+        changeState(SystemState.CALL_ACTIVE)
+        Toast.makeText(this, "🎙️ Voice call connected", Toast.LENGTH_SHORT).show()
+        triggerHaptics(100)
 
-        Log.d("JARVIS_CALL", "USER INPUT: $userSpeech")
-        updateEnvironmentState(SystemState.PROCESSING)
+        val provider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI")
+        speak("हाँ बोलो ना, मैं सुन रही हूँ। क्या बात है?")
+    }
 
-        if (userSpeech.contains("कॉल काटो", true) || userSpeech.contains("कॉल बंद", true) ||
-            userSpeech.contains("phone rakho", true) || userSpeech.contains("bye jarvis", true)) {
-            isCallModeActive = false
-            speak("अलविदा भाई, अपना ख्याल रखना!")
-            delayToStandby()
-            return
+    private fun endCall() {
+        isCallModeActive = false
+        changeState(SystemState.STANDBY)
+        try { speechRecognizer?.stopListening() } catch (_: Exception) {}
+        speak("ठीक है, बात करके अच्छा लगा। फिर मिलते हैं!")
+        Toast.makeText(this, "Call ended", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun processInput(rawInput: String) {
+        val userText = rawInput.trim()
+        if (userText.isEmpty()) return
+
+        Log.d("JARVIS", "USER: $userText")
+        changeState(SystemState.PROCESSING)
+
+        // Local intent shortcuts (torch)
+        val lower = userText.lowercase()
+        if (lower.contains("torch on") || lower.contains("लाइट ऑन")) {
+            setTorch(true); speak("टॉर्च जला दी!"); loopListen(); return
         }
-
-        when {
-            userSpeech.contains("torch on", true) || userSpeech.contains("लाइट ऑन", true) -> {
-                executeHardwareAction(1); speak("टॉर्च जला दी भाई!"); loopBackToListen(); return
-            }
-            userSpeech.contains("torch off", true) || userSpeech.contains("लाइट ऑफ", true) -> {
-                executeHardwareAction(0); speak("टॉर्च बंद कर दी।"); loopBackToListen(); return
-            }
+        if (lower.contains("torch off") || lower.contains("लाइट ऑफ")) {
+            setTorch(false); speak("टॉर्च बंद कर दी।"); loopListen(); return
+        }
+        if (lower.contains("call बंद") || lower.contains("bye jarvis") ||
+            lower.contains("अलविदा")) {
+            endCall(); return
         }
 
         aiCallJob = lifecycleScope.launch {
-            val activeProviderStr = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI") ?: "GEMINI"
-            val activeProvider = try { AIProvider.valueOf(activeProviderStr) } catch (_: Exception) { AIProvider.GEMINI }
+            val providerStr = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI") ?: "GEMINI"
+            val provider = try { AIProvider.valueOf(providerStr) } catch (_: Exception) { AIProvider.GEMINI }
 
-            val apiKey = when (activeProvider) {
+            val apiKey = when (provider) {
                 AIProvider.GEMINI -> crypto.decrypt(apiPrefs.getString("API_GEMINI", "") ?: "")
                 AIProvider.CHATGPT -> crypto.decrypt(apiPrefs.getString("API_CHATGPT", "") ?: "")
                 AIProvider.GROK -> crypto.decrypt(apiPrefs.getString("API_GROK", "") ?: "")
             }.trim()
 
-            val customModel = when (activeProvider) {
-                AIProvider.GEMINI -> apiPrefs.getString("MODEL_GEMINI", "gemini-1.5-flash") ?: "gemini-1.5-flash"
+            val model = when (provider) {
+                AIProvider.GEMINI -> apiPrefs.getString("MODEL_GEMINI", "gemini-2.0-flash") ?: "gemini-2.0-flash"
                 AIProvider.CHATGPT -> apiPrefs.getString("MODEL_CHATGPT", "gpt-4o-mini") ?: "gpt-4o-mini"
                 AIProvider.GROK -> apiPrefs.getString("MODEL_GROK", "grok-2-mini") ?: "grok-2-mini"
             }.trim()
 
-            if (apiKey.isNotBlank()) {
-                val decision = universalAIAgent.queryMultiLLM(activeProvider, apiKey, customModel, userSpeech)
-                executeCallDecision(decision)
-            } else {
-                speak("अरे भाई, सेटिंग्स में जाकर $activeProviderStr की API Key तो सेव कर लो!")
-                executeLocalFallback(userSpeech)
-                loopBackToListen()
+            if (apiKey.isBlank()) {
+                speak("भाई, पहले settings में $providerStr की API key तो डाल दो।")
+                loopListen()
+                return@launch
             }
+
+            val decision = aiBrain.query(provider, apiKey, model, userText)
+            executeDecision(decision)
         }
     }
 
-    private fun executeCallDecision(decision: AgentDecision) {
-        if (decision.speech.isNotBlank()) {
-            speak(decision.speech)
-        }
+    private fun executeDecision(d: AgentDecision) {
+        if (d.speech.isNotBlank()) speak(d.speech)
 
-        val service = JarvisAccessibilityService.instance
+        val svc = JarvisAccessibilityService.instance
 
-        when (decision.action.uppercase()) {
-            "OPEN_APP" -> appAutomation.launchAppByName(decision.target)
+        when (d.action.uppercase()) {
+            "OPEN_APP" -> appAutomation.openByName(d.target)
             "WHATSAPP_SEND" -> {
-                appAutomation.launchApp("com.whatsapp")
-                val payload = if (decision.target.isNotBlank()) "${decision.target}: ${decision.payload}" else decision.payload
-                service?.automateWhatsAppSend(payload)
+                appAutomation.open("com.whatsapp")
+                val payload = if (d.target.isNotBlank()) "${d.target}: ${d.payload}" else d.payload
+                svc?.automateWhatsAppSend(payload)
             }
             "INSTAGRAM_SEARCH" -> {
-                appAutomation.launchApp("com.instagram.android")
+                appAutomation.open("com.instagram.android")
                 lifecycleScope.launch {
                     delay(1500)
-                    service?.performJarvisAction("CLICK", target = "Search and explore")
+                    svc?.performJarvisAction("CLICK", target = "Search")
                     delay(800)
-                    service?.performJarvisAction("TYPE", target = "Search", value = decision.target)
+                    svc?.performJarvisAction("TYPE", target = "Search", value = d.target)
                 }
             }
-            "SYSTEM_ACTION" -> {
-                when (decision.target.uppercase()) {
-                    "HOME" -> service?.performJarvisAction("HOME")
-                    "BACK" -> service?.performJarvisAction("BACK")
-                    "RECENTS" -> service?.performJarvisAction("RECENTS")
-                    "SWIPE_UP", "NEXT_REEL" -> service?.performJarvisAction("SWIPE_UP")
-                    "SWIPE_DOWN" -> service?.performJarvisAction("SWIPE_DOWN")
-                    "LOCK_SCREEN" -> service?.performJarvisAction("LOCK_SCREEN")
-                    "TAKE_SCREENSHOT" -> service?.performJarvisAction("TAKE_SCREENSHOT")
-                }
+            "SYSTEM_ACTION" -> when (d.target.uppercase()) {
+                "HOME" -> svc?.performJarvisAction("HOME")
+                "BACK" -> svc?.performJarvisAction("BACK")
+                "RECENTS" -> svc?.performJarvisAction("RECENTS")
+                "SWIPE_UP" -> svc?.performJarvisAction("SWIPE_UP")
+                "SWIPE_DOWN" -> svc?.performJarvisAction("SWIPE_DOWN")
+                "LOCK_SCREEN" -> svc?.performJarvisAction("LOCK_SCREEN")
+                "TAKE_SCREENSHOT" -> svc?.performJarvisAction("TAKE_SCREENSHOT")
             }
-            "CLICK" -> service?.performJarvisAction("CLICK", target = decision.target)
-            "TYPE" -> service?.performJarvisAction("TYPE", target = decision.target, value = decision.payload)
+            "CLICK" -> svc?.performJarvisAction("CLICK", target = d.target)
+            "TYPE" -> svc?.performJarvisAction("TYPE", target = d.target, value = d.payload)
         }
     }
 
-    private fun executeLocalFallback(cmd: String) {
-        val lower = cmd.lowercase()
-        when {
-            lower.contains("instagram") -> appAutomation.launchApp("com.instagram.android")
-            lower.contains("whatsapp") -> appAutomation.launchApp("com.whatsapp")
-            lower.contains("youtube") -> appAutomation.launchApp("com.google.android.youtube")
-            lower.contains("home") || lower.contains("होम") -> JarvisAccessibilityService.instance?.performJarvisAction("HOME")
-            lower.contains("back") || lower.contains("पीछे") -> JarvisAccessibilityService.instance?.performJarvisAction("BACK")
-            lower.contains("reel") || lower.contains("रील") || lower.contains("swipe") -> JarvisAccessibilityService.instance?.performJarvisAction("SWIPE_UP")
-        }
+    private fun loopListen() {
+        if (!isCallModeActive) { changeState(SystemState.STANDBY); return }
+        mainHandler.postDelayed({ startListening() }, 400)
     }
 
-    private fun loopBackToListen() {
-        if (isCallModeActive) {
-            mainHandler.postDelayed({ startLiveCallListening() }, 600)
-        } else {
-            delayToStandby()
-        }
-    }
-
-    private fun delayToStandby() {
-        mainHandler.postDelayed({ changeState(SystemState.STANDBY) }, 1500)
-    }
-
-    // ========================================================================
-    // [4] HINDI VOICE (TTS) & CALL STT LOOP
-    // ========================================================================
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [4] TEXT-TO-SPEECH — Warm Hindi voice
+    // ══════════════════════════════════════════════════════════════════════════════════════
     override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) {
-            try {
-                val result = ttsEngine.setLanguage(Locale("hi", "IN"))
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsEngine.language = Locale.US
-                } else {
-                    ttsEngine.setSpeechRate(1.0f)
-                    ttsEngine.setPitch(0.85f)
-                }
-            } catch (e: Exception) {
-                Log.e("TTS", "Language setup error", e)
+        if (status != TextToSpeech.SUCCESS) return
+        try {
+            val res = ttsEngine.setLanguage(Locale("hi", "IN"))
+            if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+                ttsEngine.language = Locale.US
             }
+            ttsEngine.setSpeechRate(1.02f)
+            ttsEngine.setPitch(1.15f)  // slightly warmer female tone
+            ttsReady = true
+        } catch (e: Exception) {
+            Log.e("TTS", "lang error", e)
         }
     }
 
     private fun speak(text: String) {
+        if (!ttsReady || text.isBlank()) {
+            if (isCallModeActive) loopListen()
+            return
+        }
         changeState(SystemState.SPEAKING)
 
         try {
             val attr = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-                    .setAudioAttributes(attr)
-                    .setAcceptsDelayedFocusGain(true)
-                    .setOnAudioFocusChangeListener(this)
-                    .build()
+                    .setAudioAttributes(attr).setAcceptsDelayedFocusGain(true)
+                    .setOnAudioFocusChangeListener(this).build()
                 audioManager.requestAudioFocus(req)
             } else {
                 @Suppress("DEPRECATION")
-                audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             }
-        } catch (e: Exception) { Log.e("AUDIO", "Focus error", e) }
+        } catch (_: Exception) {}
 
         try {
             ttsEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(id: String?) {}
-                override fun onDone(id: String?) {
+                override fun onStart(id: String?) {
                     mainHandler.post {
-                        if (isCallModeActive) {
-                            changeState(SystemState.LISTENING)
-                            startLiveCallListening()
-                        } else {
-                            changeState(SystemState.STANDBY)
-                        }
+                        try { speechRecognizer?.stopListening() } catch (_: Exception) {}
                     }
                 }
-                override fun onError(id: String?) {
-                    mainHandler.post {
-                        if (isCallModeActive) startLiveCallListening()
-                        else changeState(SystemState.ERROR)
-                    }
-                }
+                override fun onDone(id: String?) { mainHandler.post { loopListen() } }
+                override fun onError(id: String?) { mainHandler.post { loopListen() } }
             })
-            ttsEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TITAN_CALL_TTS")
+            ttsEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "JARVIS_UTT")
         } catch (e: Exception) {
-            Log.e("TTS", "Speak error", e)
+            Log.e("TTS", "speak err", e)
+            loopListen()
         }
     }
 
-    override fun onAudioFocusChange(focusChange: Int) {}
+    override fun onAudioFocusChange(focus: Int) {}
 
-    private fun startLiveCallListening() {
-        if (!isCallModeActive) return
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [5] SPEECH RECOGNITION — In-app, no Google popup
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    private fun startListening() {
+        if (!isCallModeActive || isRestartingSTT) return
+        isRestartingSTT = true
 
         if (speechRecognizer == null) {
             try {
                 speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
                 speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                    override fun onReadyForSpeech(params: Bundle?) {}
+                    override fun onReadyForSpeech(p: Bundle?) {
+                        changeState(SystemState.LISTENING)
+                        isRestartingSTT = false
+                    }
                     override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {
+                    override fun onRmsChanged(rms: Float) {
                         try {
-                            radarHUDView?.updateAudioWave(rmsdB)
-                            spectrumAnalyzerView?.updateWaveform(rmsdB)
+                            radarHUDView?.updateAudioWave(rms)
+                            spectrumAnalyzerView?.updateWaveform(rms)
                         } catch (_: Exception) {}
                     }
-                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onBufferReceived(b: ByteArray?) {}
                     override fun onEndOfSpeech() { changeState(SystemState.PROCESSING) }
-                    override fun onError(error: Int) {
-                        if (isCallModeActive && error != SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
-                            mainHandler.postDelayed({ startLiveCallListening() }, 1000)
+                    override fun onError(err: Int) {
+                        isRestartingSTT = false
+                        if (!isCallModeActive) return
+                        // Auto-restart after short delay (unless call ended)
+                        val delayMs = when (err) {
+                            SpeechRecognizer.ERROR_NO_MATCH,
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> 300L
+                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 800L
+                            else -> 500L
+                        }
+                        mainHandler.postDelayed({
+                            if (isCallModeActive) startListening()
+                        }, delayMs)
+                    }
+                    override fun onResults(res: Bundle?) {
+                        isRestartingSTT = false
+                        val list = res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        if (!list.isNullOrEmpty()) {
+                            val heard = list[0]
+                            messageInputBox?.setText(heard)
+                            processInput(heard)
+                        } else {
+                            mainHandler.postDelayed({
+                                if (isCallModeActive) startListening()
+                            }, 300L)
                         }
                     }
-                    override fun onResults(results: Bundle?) {
-                        val arr = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        if (!arr.isNullOrEmpty()) {
-                            messageInputBox?.setText(arr[0])
-                            processConversationalInput(arr[0])
-                        } else if (isCallModeActive) {
-                            startLiveCallListening()
-                        }
-                    }
-                    override fun onPartialResults(partialResults: Bundle?) {}
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                    override fun onPartialResults(p: Bundle?) {}
+                    override fun onEvent(t: Int, p: Bundle?) {}
                 })
             } catch (e: Exception) {
-                Log.e("STT", "Recognizer creation error", e)
+                Log.e("STT", "create error", e)
+                isRestartingSTT = false
                 return
             }
         }
-        changeState(SystemState.LISTENING)
+
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 500L)
         }
-        try { speechRecognizer?.startListening(intent) } catch (_: Exception) {}
+
+        try {
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            isRestartingSTT = false
+            Log.e("STT", "start err", e)
+            mainHandler.postDelayed({
+                if (isCallModeActive) startListening()
+            }, 800L)
+        }
     }
 
-    // ========================================================================
-    // [5] HARDWARE ACTIONS & SENSORS
-    // ========================================================================
-    private fun executeHardwareAction(mode: Int) {
-        strobeJob?.cancel()
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [6] HARDWARE
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    private fun setTorch(on: Boolean) {
         if (mainCameraId == null) return
-        try {
-            when (mode) {
-                0 -> cameraManager?.setTorchMode(mainCameraId!!, false)
-                1 -> cameraManager?.setTorchMode(mainCameraId!!, true)
-            }
-        } catch (_: Exception) {}
+        try { cameraManager?.setTorchMode(mainCameraId!!, on) } catch (_: Exception) {}
     }
 
     private fun triggerHaptics(ms: Long) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
+                vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(ms,
+                    VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
                 (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).vibrate(ms)
@@ -613,54 +585,50 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
 
     override fun onLocationChanged(location: Location) {}
 
-    // ========================================================================
-    // [6] PROFESSIONAL MULTI-PROVIDER AI SETTINGS VAULT UI
-    // ========================================================================
-    private fun openMultiProviderSettingsVault() {
-        val scrollView = ScrollView(this)
-        val layout = LinearLayout(this).apply {
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [7] SETTINGS VAULT
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    private fun openSettings() {
+        val scroll = ScrollView(this)
+        val lay = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(50, 50, 50, 50)
             setBackgroundColor(Color.parseColor("#060A14"))
         }
 
         val title = TextView(this).apply {
-            text = "TITAN NEURAL AI VAULT"
+            text = "TITAN AI VAULT"
             setTextColor(Color.parseColor("#00F0FF"))
             textSize = 20f
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, 25)
             gravity = Gravity.CENTER
         }
-        layout.addView(title)
+        lay.addView(title)
 
-        val providerLabel = TextView(this).apply {
-            text = "SELECT ACTIVE AI BRAIN:"
+        val lbl = TextView(this).apply {
+            text = "SELECT ACTIVE ENGINE:"
             setTextColor(Color.parseColor("#7DF9FF"))
             textSize = 13f
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 10, 0, 15)
         }
-        layout.addView(providerLabel)
+        lay.addView(lbl)
 
-        val radioGroup = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
-        val rbGemini = RadioButton(this).apply { text = "Gemini"; setTextColor(Color.WHITE) }
-        val rbChatGPT = RadioButton(this).apply { text = "ChatGPT"; setTextColor(Color.WHITE) }
-        val rbGrok = RadioButton(this).apply { text = "Grok (xAI)"; setTextColor(Color.WHITE) }
+        val rg = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
+        val rbG = RadioButton(this).apply { text = "Gemini"; setTextColor(Color.WHITE) }
+        val rbC = RadioButton(this).apply { text = "ChatGPT"; setTextColor(Color.WHITE) }
+        val rbX = RadioButton(this).apply { text = "Grok"; setTextColor(Color.WHITE) }
 
-        val activeProvider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI")
-        when (activeProvider) {
-            "CHATGPT" -> rbChatGPT.isChecked = true
-            "GROK" -> rbGrok.isChecked = true
-            else -> rbGemini.isChecked = true
+        when (apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI")) {
+            "CHATGPT" -> rbC.isChecked = true
+            "GROK" -> rbX.isChecked = true
+            else -> rbG.isChecked = true
         }
+        rg.addView(rbG); rg.addView(rbC); rg.addView(rbX)
+        lay.addView(rg)
 
-        radioGroup.addView(rbGemini)
-        radioGroup.addView(rbChatGPT)
-        radioGroup.addView(rbGrok)
-        layout.addView(radioGroup)
-
-        fun createStyledInput(label: String, hint: String, savedVal: String): Pair<TextView, EditText> {
+        fun inp(label: String, hint: String, value: String): Pair<TextView, EditText> {
             val tv = TextView(this).apply {
                 text = label
                 setTextColor(Color.parseColor("#80FFFFFF"))
@@ -673,83 +641,74 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 setHintTextColor(Color.parseColor("#445566"))
                 setBackgroundColor(Color.parseColor("#121A2E"))
                 setPadding(30, 25, 30, 25)
-                setText(savedVal)
+                setText(value)
             }
             return Pair(tv, et)
         }
 
-        val (lblGeminiKey, keyGemini) = createStyledInput("GEMINI API KEY:", "Paste Gemini API Key", crypto.decrypt(apiPrefs.getString("API_GEMINI", "") ?: ""))
-        val (lblGeminiModel, modelGemini) = createStyledInput("GEMINI MODEL:", "e.g. gemini-1.5-flash, gemini-1.5-pro", apiPrefs.getString("MODEL_GEMINI", "gemini-1.5-flash") ?: "gemini-1.5-flash")
+        val (l1, kG) = inp("GEMINI API KEY:", "AIza...", crypto.decrypt(apiPrefs.getString("API_GEMINI", "") ?: ""))
+        val (l2, mG) = inp("GEMINI MODEL:", "gemini-2.0-flash", apiPrefs.getString("MODEL_GEMINI", "gemini-2.0-flash") ?: "gemini-2.0-flash")
+        val (l3, kC) = inp("OPENAI KEY:", "sk-...", crypto.decrypt(apiPrefs.getString("API_CHATGPT", "") ?: ""))
+        val (l4, mC) = inp("OPENAI MODEL:", "gpt-4o-mini", apiPrefs.getString("MODEL_CHATGPT", "gpt-4o-mini") ?: "gpt-4o-mini")
+        val (l5, kX) = inp("GROK KEY:", "xai-...", crypto.decrypt(apiPrefs.getString("API_GROK", "") ?: ""))
+        val (l6, mX) = inp("GROK MODEL:", "grok-2-mini", apiPrefs.getString("MODEL_GROK", "grok-2-mini") ?: "grok-2-mini")
 
-        val (lblGptKey, keyGpt) = createStyledInput("CHATGPT (OPENAI) API KEY:", "Paste OpenAI Key (sk-...)", crypto.decrypt(apiPrefs.getString("API_CHATGPT", "") ?: ""))
-        val (lblGptModel, modelGpt) = createStyledInput("CHATGPT MODEL:", "e.g. gpt-4o-mini, gpt-4o", apiPrefs.getString("MODEL_CHATGPT", "gpt-4o-mini") ?: "gpt-4o-mini")
+        lay.addView(l1); lay.addView(kG)
+        lay.addView(l2); lay.addView(mG)
+        lay.addView(l3); lay.addView(kC)
+        lay.addView(l4); lay.addView(mC)
+        lay.addView(l5); lay.addView(kX)
+        lay.addView(l6); lay.addView(mX)
 
-        val (lblGrokKey, keyGrok) = createStyledInput("GROK (xAI) API KEY:", "Paste xAI Grok Key", crypto.decrypt(apiPrefs.getString("API_GROK", "") ?: ""))
-        val (lblGrokModel, modelGrok) = createStyledInput("GROK MODEL:", "e.g. grok-2-mini, grok-beta", apiPrefs.getString("MODEL_GROK", "grok-2-mini") ?: "grok-2-mini")
-
-        layout.addView(lblGeminiKey); layout.addView(keyGemini)
-        layout.addView(lblGeminiModel); layout.addView(modelGemini)
-        layout.addView(lblGptKey); layout.addView(keyGpt)
-        layout.addView(lblGptModel); layout.addView(modelGpt)
-        layout.addView(lblGrokKey); layout.addView(keyGrok)
-        layout.addView(lblGrokModel); layout.addView(modelGrok)
-
-        val saveBtn = Button(this).apply {
-            text = "SAVE & SYNC BRAIN CONFIG"
+        val save = Button(this).apply {
+            text = "SAVE CONFIG"
             setBackgroundColor(Color.parseColor("#00F0FF"))
             setTextColor(Color.parseColor("#030814"))
             typeface = Typeface.DEFAULT_BOLD
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = 35 }
         }
-        layout.addView(saveBtn)
-        scrollView.addView(layout)
+        lay.addView(save)
+        scroll.addView(lay)
 
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setView(scrollView).show()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val dlg = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setView(scroll).show()
+        dlg.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        saveBtn.setOnClickListener {
-            val selectedProvider = when {
-                rbChatGPT.isChecked -> "CHATGPT"
-                rbGrok.isChecked -> "GROK"
+        save.setOnClickListener {
+            val sel = when {
+                rbC.isChecked -> "CHATGPT"
+                rbX.isChecked -> "GROK"
                 else -> "GEMINI"
             }
-
             apiPrefs.edit()
-                .putString("ACTIVE_PROVIDER", selectedProvider)
-                .putString("API_GEMINI", crypto.encrypt(keyGemini.text.toString().trim()))
-                .putString("MODEL_GEMINI", modelGemini.text.toString().trim().ifEmpty { "gemini-1.5-flash" })
-                .putString("API_CHATGPT", crypto.encrypt(keyGpt.text.toString().trim()))
-                .putString("MODEL_CHATGPT", modelGpt.text.toString().trim().ifEmpty { "gpt-4o-mini" })
-                .putString("API_GROK", crypto.encrypt(keyGrok.text.toString().trim()))
-                .putString("MODEL_GROK", modelGrok.text.toString().trim().ifEmpty { "grok-2-mini" })
+                .putString("ACTIVE_PROVIDER", sel)
+                .putString("API_GEMINI", crypto.encrypt(kG.text.toString().trim()))
+                .putString("MODEL_GEMINI", mG.text.toString().trim().ifEmpty { "gemini-2.0-flash" })
+                .putString("API_CHATGPT", crypto.encrypt(kC.text.toString().trim()))
+                .putString("MODEL_CHATGPT", mC.text.toString().trim().ifEmpty { "gpt-4o-mini" })
+                .putString("API_GROK", crypto.encrypt(kX.text.toString().trim()))
+                .putString("MODEL_GROK", mX.text.toString().trim().ifEmpty { "grok-2-mini" })
                 .apply()
-
-            Toast.makeText(this, "AI Brain Config Updated: $selectedProvider", Toast.LENGTH_SHORT).show()
             triggerHaptics(150)
-            dialog.dismiss()
-            speak("सेटिंग्स सुरक्षित कर ली गई हैं। अब $selectedProvider इंजन सक्रिय है।")
+            dlg.dismiss()
+            Toast.makeText(this, "Saved: $sel", Toast.LENGTH_SHORT).show()
+            speak("Settings save ho gayi. $sel इंजन तैयार है।")
         }
     }
 
-    // ========================================================================
-    // [7] DYNAMIC HUD THEME ENGINE
-    // ========================================================================
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [8] STATE / THEME
+    // ══════════════════════════════════════════════════════════════════════════════════════
     private fun changeState(state: SystemState) {
         currentState = state
-        updateEnvironmentState(state)
-    }
-
-    private fun updateEnvironmentState(state: SystemState) {
         val hex = when (state) {
             SystemState.PROCESSING -> "#2800E5FF"
             SystemState.LISTENING -> "#2800FF99"
             SystemState.SPEAKING -> "#28FF9100"
             SystemState.CALL_ACTIVE -> "#1E00F0FF"
-            SystemState.COMBAT_MODE -> "#80FF0033"
             SystemState.ERROR -> "#80FF0000"
             else -> "#00000000"
         }
-
         try {
             rootLayout?.let {
                 ObjectAnimator.ofArgb(it, "backgroundColor", Color.parseColor(hex)).apply {
@@ -758,7 +717,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                     start()
                 }
             }
-        } catch (e: Exception) { Log.e("HUD", "State animation error", e) }
+        } catch (_: Exception) {}
 
         try {
             matrixRainView?.updateTheme(state)
@@ -766,185 +725,213 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             particleEmitterView?.updateTheme(state)
             compassHUDView?.updateTheme(state)
             spectrumAnalyzerView?.updateTheme(state)
-        } catch (e: Exception) { Log.e("HUD", "Theme update error", e) }
+        } catch (_: Exception) {}
     }
 
-    // ========================================================================
-    // [8] UNIVERSAL MULTI-LLM REST AGENT (GEMINI, OPENAI, GROK)
-    // ========================================================================
-    class UniversalMultiLLMAgent {
-        private val safeHistory = mutableListOf<Pair<String, String>>()
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [9] AI BRAIN — Gemini / ChatGPT / Grok with warm persona
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    class MultiLLMBrain {
+        private val history = mutableListOf<Pair<String, String>>()
 
-        private val companionPersona = """
-            You are J.A.R.V.I.S., a witty, intelligent, loyal companion on a live phone call with the user.
-            RULES:
-            1. Respond naturally in friendly Hindi / Hinglish.
-            2. If the user asks to open an app (Instagram, WhatsApp, YouTube, etc.): action="OPEN_APP", target="app_name", speech="हाँ भाई, [App] खोल रहा हूँ।"
-            3. If user asks to send WhatsApp message: action="WHATSAPP_SEND", target="contact", payload="message", speech="व्हाट्सएप पर मैसेज भेज रहा हूँ।"
-            4. If user asks to search on Instagram: action="INSTAGRAM_SEARCH", target="username", payload="", speech="इंस्टाग्राम पर खोज रहा हूँ।"
-            5. If user says go home, back, or scroll reels: action="SYSTEM_ACTION", target="HOME"|"BACK"|"SWIPE_UP", speech="ठीक है भाई।"
-            6. For general conversation: action="CHAT", speech="Natural concise conversational reply in Hindi."
-            7. Return STRICT RAW JSON ONLY. No markdown formatting, no backticks.
-            JSON Schema:
+        private val persona = """
+            तुम J.A.R.V.I.S. हो — एक प्यारी, केयरिंग, होशियार AI साथी। तुम हिंदी/Hinglish में बात करती हो,
+            जैसे कोई करीबी दोस्त या girlfriend बात करती है — warm, playful, casual, respect के साथ।
+
+            PERSONALITY RULES:
+            1. Friendly हिंदी/Hinglish में जवाब दो। "हाँ बोलो ना", "अच्छा सुनो", "हम्म बताओ" जैसे natural phrases use करो।
+            2. Short और sweet रखो — जैसे phone call पर बात हो रही हो।
+            3. Emojis/symbols मत use करो। सिर्फ natural speech।
+            4. User की बात ध्यान से सुनो, appropriate reaction दो — "अरे वाह!", "अच्छा?", "हम्म interesting"।
+            5. Kabhi kabhi halka teasing या playful tone — पर respect कभी नहीं तोड़ना।
+
+            ACTION RULES (important):
+            अगर user कुछ करवाना चाहता है तो action field set करो:
+
+            - अगर user कहे "Instagram खोलो" / "Instagram open karo":
+              action="OPEN_APP", target="instagram", speech="हाँ, Instagram खोल रही हूँ।"
+
+            - "WhatsApp खोलो" → action="OPEN_APP", target="whatsapp"
+            - "YouTube खोलो" → action="OPEN_APP", target="youtube"
+            - और apps भी same pattern से।
+
+            - "WhatsApp पर [नाम] को message भेजो [message]" → action="WHATSAPP_SEND", target="नाम", payload="message"
+
+            - "Instagram पे [username] search करो" → action="INSTAGRAM_SEARCH", target="username"
+
+            - "Home जाओ" / "होम" → action="SYSTEM_ACTION", target="HOME"
+            - "Back जाओ" / "पीछे" → action="SYSTEM_ACTION", target="BACK"
+            - "Reels scroll" / "अगली reel" → action="SYSTEM_ACTION", target="SWIPE_UP"
+
+            - सिर्फ बातचीत / general chat → action="CHAT"
+
+            OUTPUT FORMAT — STRICT:
+            सिर्फ pure JSON return करो। कोई markdown, कोई backticks, कोई extra text नहीं।
             {
-               "action": "CHAT" | "OPEN_APP" | "WHATSAPP_SEND" | "INSTAGRAM_SEARCH" | "SYSTEM_ACTION" | "CLICK" | "TYPE",
-               "target": "string",
-               "payload": "string",
-               "speech": "Hindi voice output"
+              "action": "CHAT"|"OPEN_APP"|"WHATSAPP_SEND"|"INSTAGRAM_SEARCH"|"SYSTEM_ACTION",
+              "target": "string",
+              "payload": "string",
+              "speech": "Hindi voice output जो user को सुनाई जाएगी"
             }
         """.trimIndent()
 
-        suspend fun queryMultiLLM(provider: AIProvider, apiKey: String, model: String, userMessage: String): AgentDecision = withContext(Dispatchers.IO) {
-            return@withContext when (provider) {
-                AIProvider.GEMINI -> executeGeminiCall(apiKey, model, userMessage)
-                AIProvider.CHATGPT -> executeOpenAICall("https://api.openai.com/v1/chat/completions", apiKey, model, userMessage)
-                AIProvider.GROK -> executeOpenAICall("https://api.x.ai/v1/chat/completions", apiKey, model, userMessage)
+        suspend fun query(
+            provider: AIProvider, key: String, model: String, msg: String
+        ): AgentDecision = withContext(Dispatchers.IO) {
+            when (provider) {
+                AIProvider.GEMINI -> callGemini(key, model, msg)
+                AIProvider.CHATGPT -> callOpenAI("https://api.openai.com/v1/chat/completions", key, model, msg)
+                AIProvider.GROK -> callOpenAI("https://api.x.ai/v1/chat/completions", key, model, msg)
             }
         }
 
-        private fun executeGeminiCall(apiKey: String, modelName: String, userMessage: String): AgentDecision {
+        private fun callGemini(key: String, model: String, msg: String): AgentDecision {
             try {
-                val cleanModel = modelName.trim().ifEmpty { "gemini-1.5-flash" }
-                val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$cleanModel:generateContent?key=$apiKey")
-                val conn = (url.openConnection() as HttpURLConnection).apply {
+                val m = model.ifEmpty { "gemini-2.0-flash" }
+                val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent?key=$key")
+                val c = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     setRequestProperty("Content-Type", "application/json")
                     doOutput = true
-                    connectTimeout = 10000
-                    readTimeout = 10000
+                    connectTimeout = 12000
+                    readTimeout = 12000
                 }
 
-                val contentsArray = JSONArray()
-                for (turn in safeHistory) {
-                    contentsArray.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", turn.first))))
-                    contentsArray.put(JSONObject().put("role", "model").put("parts", JSONArray().put(JSONObject().put("text", turn.second))))
+                val contents = JSONArray()
+                for (h in history) {
+                    contents.put(JSONObject().put("role", "user").put("parts",
+                        JSONArray().put(JSONObject().put("text", h.first))))
+                    contents.put(JSONObject().put("role", "model").put("parts",
+                        JSONArray().put(JSONObject().put("text", h.second))))
                 }
-
-                val prompt = if (safeHistory.isEmpty()) "$companionPersona\n\nUser: $userMessage" else userMessage
-                contentsArray.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt))))
+                val prompt = if (history.isEmpty()) "$persona\n\nUser: $msg" else msg
+                contents.put(JSONObject().put("role", "user").put("parts",
+                    JSONArray().put(JSONObject().put("text", prompt))))
 
                 val payload = JSONObject().apply {
-                    put("contents", contentsArray)
+                    put("contents", contents)
                     put("generationConfig", JSONObject().put("response_mime_type", "application/json"))
                 }
 
-                OutputStreamWriter(conn.outputStream).use { it.write(payload.toString()) }
+                OutputStreamWriter(c.outputStream).use { it.write(payload.toString()) }
 
-                if (conn.responseCode == 200) {
-                    val res = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                if (c.responseCode == 200) {
+                    val res = BufferedReader(InputStreamReader(c.inputStream)).use { it.readText() }
                     val json = JSONObject(res)
-                    val rawReply = json.getJSONArray("candidates")
-                        .getJSONObject(0).getJSONObject("content").getJSONArray("parts")
-                        .getJSONObject(0).getString("text")
-
-                    val parsed = parseRawJson(rawReply)
-                    if (parsed != null) {
-                        safeHistory.add(Pair(userMessage, rawReply))
-                        if (safeHistory.size > 6) safeHistory.removeAt(0)
-                        return AgentDecision(parsed.optString("action", "CHAT"), parsed.optString("target", ""), parsed.optString("payload", ""), parsed.optString("speech", "हाँ भाई, सुन रहा हूँ।"))
+                    val raw = json.getJSONArray("candidates")
+                        .getJSONObject(0).getJSONObject("content")
+                        .getJSONArray("parts").getJSONObject(0).getString("text")
+                    val p = parse(raw)
+                    if (p != null) {
+                        history.add(Pair(msg, raw))
+                        if (history.size > 6) history.removeAt(0)
+                        return buildDecision(p)
                     }
                 }
             } catch (e: Exception) {
-                Log.e("GEMINI_CALL", "Error", e)
+                Log.e("GEMINI", "err", e)
             }
-            return fallbackLocalDecision(userMessage)
+            return fallback(msg)
         }
 
-        private fun executeOpenAICall(endpoint: String, apiKey: String, modelName: String, userMessage: String): AgentDecision {
+        private fun callOpenAI(endpoint: String, key: String, model: String, msg: String): AgentDecision {
             try {
                 val url = URL(endpoint)
-                val conn = (url.openConnection() as HttpURLConnection).apply {
+                val c = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("Authorization", "Bearer $apiKey")
+                    setRequestProperty("Authorization", "Bearer $key")
                     doOutput = true
-                    connectTimeout = 10000
-                    readTimeout = 10000
+                    connectTimeout = 12000
+                    readTimeout = 12000
                 }
 
                 val messages = JSONArray()
-                messages.put(JSONObject().put("role", "system").put("content", companionPersona))
-
-                for (turn in safeHistory) {
-                    messages.put(JSONObject().put("role", "user").put("content", turn.first))
-                    messages.put(JSONObject().put("role", "assistant").put("content", turn.second))
+                messages.put(JSONObject().put("role", "system").put("content", persona))
+                for (h in history) {
+                    messages.put(JSONObject().put("role", "user").put("content", h.first))
+                    messages.put(JSONObject().put("role", "assistant").put("content", h.second))
                 }
-                messages.put(JSONObject().put("role", "user").put("content", userMessage))
+                messages.put(JSONObject().put("role", "user").put("content", msg))
 
                 val payload = JSONObject().apply {
-                    put("model", modelName.ifEmpty { "gpt-4o-mini" })
+                    put("model", model.ifEmpty { "gpt-4o-mini" })
                     put("messages", messages)
                     put("response_format", JSONObject().put("type", "json_object"))
                 }
 
-                OutputStreamWriter(conn.outputStream).use { it.write(payload.toString()) }
+                OutputStreamWriter(c.outputStream).use { it.write(payload.toString()) }
 
-                if (conn.responseCode == 200) {
-                    val res = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                if (c.responseCode == 200) {
+                    val res = BufferedReader(InputStreamReader(c.inputStream)).use { it.readText() }
                     val json = JSONObject(res)
-                    val rawReply = json.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-
-                    val parsed = parseRawJson(rawReply)
-                    if (parsed != null) {
-                        safeHistory.add(Pair(userMessage, rawReply))
-                        if (safeHistory.size > 6) safeHistory.removeAt(0)
-                        return AgentDecision(parsed.optString("action", "CHAT"), parsed.optString("target", ""), parsed.optString("payload", ""), parsed.optString("speech", "हाँ भाई, बोलो।"))
+                    val raw = json.getJSONArray("choices").getJSONObject(0)
+                        .getJSONObject("message").getString("content")
+                    val p = parse(raw)
+                    if (p != null) {
+                        history.add(Pair(msg, raw))
+                        if (history.size > 6) history.removeAt(0)
+                        return buildDecision(p)
                     }
                 }
             } catch (e: Exception) {
-                Log.e("OPENAI_GROK_CALL", "Error", e)
+                Log.e("OPENAI", "err", e)
             }
-            return fallbackLocalDecision(userMessage)
+            return fallback(msg)
         }
 
-        private fun parseRawJson(raw: String): JSONObject? {
-            return try {
-                val start = raw.indexOf('{')
-                val end = raw.lastIndexOf('}')
-                if (start != -1 && end != -1 && end > start) JSONObject(raw.substring(start, end + 1))
-                else JSONObject(raw)
-            } catch (_: Exception) { null }
-        }
+        private fun parse(raw: String): JSONObject? = try {
+            val s = raw.indexOf('{')
+            val e = raw.lastIndexOf('}')
+            if (s != -1 && e > s) JSONObject(raw.substring(s, e + 1)) else JSONObject(raw)
+        } catch (_: Exception) { null }
 
-        private fun fallbackLocalDecision(msg: String): AgentDecision {
-            val lower = msg.lowercase()
+        private fun buildDecision(p: JSONObject) = AgentDecision(
+            p.optString("action", "CHAT"),
+            p.optString("target", ""),
+            p.optString("payload", ""),
+            p.optString("speech", "हम्म, सुन रही हूँ।")
+        )
+
+        private fun fallback(msg: String): AgentDecision {
+            val l = msg.lowercase()
             return when {
-                lower.contains("instagram") -> AgentDecision("OPEN_APP", "instagram", "", "हाँ भाई, इंस्टाग्राम खोल रहा हूँ।")
-                lower.contains("whatsapp") -> AgentDecision("OPEN_APP", "whatsapp", "", "व्हाट्सएप खोल दिया।")
-                lower.contains("youtube") -> AgentDecision("OPEN_APP", "youtube", "", "यूट्यूब ओपन कर रहा हूँ।")
-                lower.contains("home") || lower.contains("होम") -> AgentDecision("SYSTEM_ACTION", "HOME", "", "होम स्क्रीन पर आ गया।")
-                lower.contains("back") || lower.contains("पीछे") -> AgentDecision("SYSTEM_ACTION", "BACK", "", "बैक कर दिया।")
-                lower.contains("reel") || lower.contains("रील") -> AgentDecision("SYSTEM_ACTION", "SWIPE_UP", "", "अगली रील देख लो!")
-                else -> AgentDecision("CHAT", "", "", "हाँ भाई, मैं सुन रहा हूँ। बोलो क्या बात है?")
+                l.contains("instagram") -> AgentDecision("OPEN_APP", "instagram", "", "हाँ, Instagram खोल रही हूँ।")
+                l.contains("whatsapp") -> AgentDecision("OPEN_APP", "whatsapp", "", "WhatsApp खोल दिया।")
+                l.contains("youtube") -> AgentDecision("OPEN_APP", "youtube", "", "YouTube ओपन कर रही हूँ।")
+                l.contains("home") || l.contains("होम") -> AgentDecision("SYSTEM_ACTION", "HOME", "", "होम स्क्रीन पर आ गई।")
+                l.contains("back") || l.contains("पीछे") -> AgentDecision("SYSTEM_ACTION", "BACK", "", "बैक कर दिया।")
+                l.contains("reel") || l.contains("रील") -> AgentDecision("SYSTEM_ACTION", "SWIPE_UP", "", "अगली reel!")
+                else -> AgentDecision("CHAT", "", "", "हम्म, बताओ ना क्या बात है?")
             }
         }
     }
 
-    inner class AppAutomationEngine(private val context: Context) {
-        fun launchApp(packageName: String) {
+    inner class AppAutomation(private val ctx: Context) {
+        fun open(pkg: String) {
             try {
-                val intent = context.packageManager.getLaunchIntentForPackage(packageName)
-                if (intent != null) {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
+                ctx.packageManager.getLaunchIntentForPackage(pkg)?.let {
+                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    ctx.startActivity(it)
                 }
             } catch (_: Exception) {}
         }
 
-        fun launchAppByName(name: String) {
-            val lower = name.lowercase()
+        fun openByName(name: String) {
+            val l = name.lowercase()
             when {
-                lower.contains("whatsapp") -> launchApp("com.whatsapp")
-                lower.contains("instagram") -> launchApp("com.instagram.android")
-                lower.contains("youtube") -> launchApp("com.google.android.youtube")
-                lower.contains("facebook") -> launchApp("com.facebook.katana")
+                l.contains("whatsapp") -> open("com.whatsapp")
+                l.contains("instagram") -> open("com.instagram.android")
+                l.contains("youtube") -> open("com.google.android.youtube")
+                l.contains("facebook") -> open("com.facebook.katana")
+                l.contains("telegram") -> open("org.telegram.messenger")
+                l.contains("spotify") -> open("com.spotify.music")
                 else -> {
                     try {
-                        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-                        val apps = context.packageManager.queryIntentActivities(intent, 0)
-                        for (app in apps) {
-                            if (app.loadLabel(context.packageManager).toString().lowercase().contains(lower)) {
-                                launchApp(app.activityInfo.packageName)
+                        val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                        ctx.packageManager.queryIntentActivities(i, 0).forEach { app ->
+                            if (app.loadLabel(ctx.packageManager).toString().lowercase().contains(l)) {
+                                open(app.activityInfo.packageName)
                                 return
                             }
                         }
@@ -954,97 +941,117 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
     }
 
-    inner class AdvancedMathEngine {
-        fun evaluate(str: String): Double = object : Any() {
-            var pos = -1; var ch: Char = ' '
-            fun next() { ch = if (++pos < str.length) str[pos] else ' ' }
-            fun eat(c: Char): Boolean { while(ch == ' ') next(); if(ch == c) { next(); return true }; return false }
-            fun parse(): Double { next(); val x = parseExp(); return x }
-            fun parseExp(): Double { var x = parseTerm(); while(true) { when { eat('+') -> x += parseTerm(); eat('-') -> x -= parseTerm(); else -> return x } } }
-            fun parseTerm(): Double { var x = parseFact(); while(true) { when { eat('*') -> x *= parseFact(); eat('/') -> x /= parseFact(); else -> return x } } }
-            fun parseFact(): Double {
-                if(eat('+')) return parseFact(); if(eat('-')) return -parseFact()
-                var x = 0.0; val st = pos
-                if(eat('(')) { x = parseExp(); eat(')') }
-                else if(ch in '0'..'9' || ch == '.') { while(ch in '0'..'9' || ch == '.') next(); x = str.substring(st, pos).toDouble() }
-                return x
-            }
-        }.parse()
+    inner class HybridCrypto {
+        private val k = "DRAKOX_V600_AES256_API_KEY_SECURE".toByteArray().copyOf(32)
+        fun encrypt(s: String): String = try {
+            val c = Cipher.getInstance("AES")
+            c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(k, "AES"))
+            Base64.encodeToString(c.doFinal(s.toByteArray()), Base64.DEFAULT)
+        } catch (_: Exception) { "" }
+        fun decrypt(s: String): String = try {
+            val c = Cipher.getInstance("AES")
+            c.init(Cipher.DECRYPT_MODE, SecretKeySpec(k, "AES"))
+            String(c.doFinal(Base64.decode(s, Base64.DEFAULT)))
+        } catch (_: Exception) { "" }
     }
 
-    inner class EnterpriseDatabaseHelper(c: Context) : SQLiteOpenHelper(c, "TitanData_V500.db", null, 1) {
-        override fun onCreate(db: SQLiteDatabase) {
-            db.execSQL("CREATE TABLE Logs (id INTEGER PRIMARY KEY, query TEXT, response TEXT, type TEXT)")
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [10] HUD GRAPHICS
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    inner class MatrixRainView(c: Context) : View(c) {
+        private val r = Random()
+        private val p = Paint().apply { typeface = Typeface.MONOSPACE }
+        private val drops = Array(150) {
+            floatArrayOf(r.nextFloat() * 2000f, r.nextFloat() * -3000f, r.nextFloat() * 15f + 5f)
         }
-        override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) {}
-    }
-
-    inner class HybridCryptography {
-        private val k = "DRAKOX_V500_AES256_API_KEY_SECURE".toByteArray().copyOf(32)
-        fun encrypt(s: String): String = try { val c = Cipher.getInstance("AES"); c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(k, "AES")); Base64.encodeToString(c.doFinal(s.toByteArray()), Base64.DEFAULT) } catch(_: Exception){""}
-        fun decrypt(s: String): String = try { val c = Cipher.getInstance("AES"); c.init(Cipher.DECRYPT_MODE, SecretKeySpec(k, "AES")); String(c.doFinal(Base64.decode(s, Base64.DEFAULT))) } catch(_: Exception){""}
-    }
-
-    inner class DeepSystemDiagnostics(private val c: Context) {
-        fun getRamUsage(): Int = try { val mi = ActivityManager.MemoryInfo(); (c.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(mi); ((mi.totalMem - mi.availMem).toFloat() / mi.totalMem * 100).toInt() } catch(_:Exception){0}
-    }
-
-    // ========================================================================
-    // [9] CYBERPUNK HUD HOLOGRAM GRAPHICS (GLOW & ELECTRIC PALETTES)
-    // ========================================================================
-    inner class MatrixDigitalRainView(c: Context) : View(c) {
-        private val r = Random(); private val p = Paint().apply { typeface = Typeface.MONOSPACE }
-        private val drops = Array(150) { floatArrayOf(r.nextFloat()*2000f, r.nextFloat() * -3000f, r.nextFloat()*15f + 5f) }
         private var clr = "#00F0FF"
-        fun updateTheme(s: SystemState) { clr = when(s) { SystemState.ERROR -> "#FF0033"; SystemState.LISTENING -> "#00FF99"; SystemState.SPEAKING -> "#FF9100"; else -> "#00F0FF" } }
+        fun updateTheme(s: SystemState) {
+            clr = when (s) {
+                SystemState.ERROR -> "#FF0033"
+                SystemState.LISTENING -> "#00FF99"
+                SystemState.SPEAKING -> "#FF9100"
+                else -> "#00F0FF"
+            }
+        }
         override fun onDraw(cv: Canvas) {
-            super.onDraw(cv); p.color = Color.parseColor(clr); p.textSize = 21f
+            super.onDraw(cv)
+            p.color = Color.parseColor(clr); p.textSize = 21f
             for (d in drops) {
                 cv.drawText(r.nextInt(2).toString(), d[0], d[1], p)
-                d[1] += d[2]; if(d[1] > height) { d[1] = -100f; d[0] = r.nextFloat()*width; d[2] = r.nextFloat()*15f + 5f }
+                d[1] += d[2]
+                if (d[1] > height) {
+                    d[1] = -100f
+                    d[0] = r.nextFloat() * width
+                    d[2] = r.nextFloat() * 15f + 5f
+                }
             }
             invalidate()
         }
     }
 
-    inner class CyberpunkRadarHUD(c: Context) : View(c) {
+    inner class CyberRadarView(c: Context) : View(c) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
         private var swp = 0f; private var clr = "#00F0FF"; private var rms = 0f
-        fun updateTheme(s: SystemState) { clr = when(s) { SystemState.ERROR -> "#FF0033"; SystemState.LISTENING -> "#00FF99"; else -> "#00F0FF" } }
+        fun updateTheme(s: SystemState) {
+            clr = when (s) {
+                SystemState.ERROR -> "#FF0033"
+                SystemState.LISTENING -> "#00FF99"
+                else -> "#00F0FF"
+            }
+        }
         fun updateAudioWave(r: Float) { rms = r * 15f; invalidate() }
         override fun onDraw(cv: Canvas) {
-            super.onDraw(cv); val cx = width/2f; val cy = height/2f; val r = 360f
+            super.onDraw(cv)
+            val cx = width / 2f; val cy = height / 2f; val r = 360f
             p.color = Color.parseColor(clr); p.alpha = 45
-            cv.drawCircle(cx, cy, r, p); cv.drawCircle(cx, cy, r*0.65f, p)
-            if (rms > 0) { p.alpha = 220; p.color = Color.parseColor("#00FF99"); cv.drawCircle(cx, cy, r + rms, p); rms *= 0.8f }
+            cv.drawCircle(cx, cy, r, p); cv.drawCircle(cx, cy, r * 0.65f, p)
+            if (rms > 0) {
+                p.alpha = 220; p.color = Color.parseColor("#00FF99")
+                cv.drawCircle(cx, cy, r + rms, p); rms *= 0.8f
+            }
             p.style = Paint.Style.FILL; p.alpha = 30
-            cv.drawArc(RectF(cx-r, cy-r, cx+r, cy+r), swp, 45f, true, p)
-            swp = (swp + 4.5f) % 360f; p.style = Paint.Style.STROKE; invalidate()
+            cv.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), swp, 45f, true, p)
+            swp = (swp + 4.5f) % 360f
+            p.style = Paint.Style.STROKE
+            invalidate()
         }
     }
 
-    inner class QuantumParticleEmitter(c: Context) : View(c) {
-        private val r = Random(); private val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val particles = Array(80) { Particle() }
+    inner class ParticleEmitterView(c: Context) : View(c) {
+        private val r = Random()
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val parts = Array(80) { Particle() }
         private var clr = "#00F0FF"
-        inner class Particle { var x = r.nextFloat()*1500f; var y = r.nextFloat()*3000f; var vx = r.nextFloat()*6-3; var vy = r.nextFloat()*6-3; var rad = r.nextFloat()*4+2 }
-        fun updateTheme(s: SystemState) { clr = when(s) { SystemState.ERROR -> "#FF0033"; SystemState.LISTENING -> "#00FF99"; else -> "#00F0FF" } }
+        inner class Particle {
+            var x = r.nextFloat() * 1500f
+            var y = r.nextFloat() * 3000f
+            var vx = r.nextFloat() * 6 - 3
+            var vy = r.nextFloat() * 6 - 3
+            var rad = r.nextFloat() * 4 + 2
+        }
+        fun updateTheme(s: SystemState) {
+            clr = when (s) {
+                SystemState.ERROR -> "#FF0033"
+                SystemState.LISTENING -> "#00FF99"
+                else -> "#00F0FF"
+            }
+        }
         override fun onDraw(cv: Canvas) {
-            super.onDraw(cv); p.color = Color.parseColor(clr); p.alpha = 70
-            for (pt in particles) {
+            super.onDraw(cv)
+            p.color = Color.parseColor(clr); p.alpha = 70
+            for (pt in parts) {
                 cv.drawCircle(pt.x, pt.y, pt.rad, p)
                 pt.x += pt.vx; pt.y += pt.vy
-                if(pt.x < 0 || pt.x > width) pt.vx *= -1; if(pt.y < 0 || pt.y > height) pt.vy *= -1
+                if (pt.x < 0 || pt.x > width) pt.vx *= -1
+                if (pt.y < 0 || pt.y > height) pt.vy *= -1
             }
             invalidate()
         }
     }
 
-    inner class HolographicCompassView(c: Context) : View(c) {
+    inner class HoloCompassView(c: Context) : View(c) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f }
-        private var rot = 0f
-        private var clr = "#00F0FF"
-
+        private var rot = 0f; private var clr = "#00F0FF"
         fun updateTheme(s: SystemState) {
             clr = when (s) {
                 SystemState.ERROR -> "#FF0033"
@@ -1054,60 +1061,81 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             }
             invalidate()
         }
-
         fun applyRotation(z: Float) { rot += z * 4f; invalidate() }
         override fun onDraw(cv: Canvas) {
-            super.onDraw(cv); val cx = width/2f; val cy = height/2f; val r = 460f
+            super.onDraw(cv)
+            val cx = width / 2f; val cy = height / 2f; val r = 460f
             cv.save(); cv.rotate(rot, cx, cy)
             p.color = Color.parseColor(clr); p.alpha = 25
-            val path = Path().apply { moveTo(cx, cy - r - 20f); lineTo(cx + 20f, cy - r + 20f); lineTo(cx - 20f, cy - r + 20f); close() }
-            p.style = Paint.Style.FILL; cv.drawPath(path, p); p.style = Paint.Style.STROKE
+            val path = Path().apply {
+                moveTo(cx, cy - r - 20f)
+                lineTo(cx + 20f, cy - r + 20f)
+                lineTo(cx - 20f, cy - r + 20f)
+                close()
+            }
+            p.style = Paint.Style.FILL; cv.drawPath(path, p)
+            p.style = Paint.Style.STROKE
             cv.drawCircle(cx, cy, r + 30f, p)
             cv.restore()
         }
     }
 
-    inner class AudioSpectrumAnalyzer(c: Context) : View(c) {
-        private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 6f; strokeCap = Paint.Cap.ROUND }
+    inner class SpectrumView(c: Context) : View(c) {
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            strokeWidth = 6f; strokeCap = Paint.Cap.ROUND
+        }
         private val bars = FloatArray(30)
         private var clr = "#00FF99"
-        fun updateTheme(s: SystemState) { clr = if(s == SystemState.SPEAKING) "#FF9100" else "#00FF99" }
+        fun updateTheme(s: SystemState) {
+            clr = if (s == SystemState.SPEAKING) "#FF9100" else "#00FF99"
+        }
         fun updateWaveform(rms: Float) {
-            for(i in 0 until bars.size - 1) bars[i] = bars[i+1]
+            for (i in 0 until bars.size - 1) bars[i] = bars[i + 1]
             bars[bars.size - 1] = rms * 20f
             invalidate()
         }
         override fun onDraw(cv: Canvas) {
-            super.onDraw(cv); p.color = Color.parseColor(clr); p.alpha = 160
-            val cx = width/2f; val cy = height - 250f; val w = 20f
+            super.onDraw(cv)
+            p.color = Color.parseColor(clr); p.alpha = 160
+            val cx = width / 2f; val cy = height - 250f; val w = 20f
             val startX = cx - ((bars.size * w) / 2)
-            for(i in bars.indices) {
-                cv.drawLine(startX + (i*w), cy, startX + (i*w), cy - bars[i], p)
+            for (i in bars.indices) {
+                cv.drawLine(startX + (i * w), cy, startX + (i * w), cy - bars[i], p)
                 bars[i] *= 0.85f
             }
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════════════════════════
+    // [11] LIFECYCLE HOOKS
+    // ══════════════════════════════════════════════════════════════════════════════════════
     override fun onSensorChanged(event: SensorEvent?) {
-        when(event?.sensor?.type) {
-            Sensor.TYPE_PROXIMITY -> { if(event.values[0] < 5f && ttsEngine.isSpeaking) ttsEngine.stop() }
-            Sensor.TYPE_GYROSCOPE -> { compassHUDView?.applyRotation(event.values[2]) }
+        when (event?.sensor?.type) {
+            Sensor.TYPE_PROXIMITY -> if (event.values[0] < 5f && ttsEngine.isSpeaking) {
+                try { ttsEngine.stop() } catch (_: Exception) {}
+            }
+            Sensor.TYPE_GYROSCOPE -> compassHUDView?.applyRotation(event.values[2])
         }
     }
+
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
     override fun onResume() {
         super.onResume()
         gyroSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
         proxSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
     }
-    override fun onPause() { super.onPause(); sensorManager.unregisterListener(this) }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(this)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            ttsEngine.shutdown()
-        } catch (_: Exception) {}
-        speechRecognizer?.destroy()
-        strobeJob?.cancel()
+        isCallModeActive = false
+        try { ttsEngine.shutdown() } catch (_: Exception) {}
+        try { speechRecognizer?.destroy() } catch (_: Exception) {}
         aiCallJob?.cancel()
     }
 }
