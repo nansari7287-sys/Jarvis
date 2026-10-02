@@ -34,7 +34,6 @@ import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
 import android.location.Location
 import android.location.LocationListener
-import android.location.LocationManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -42,7 +41,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -83,7 +81,6 @@ import com.example.jarvis.accessibility.JarvisAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -97,14 +94,6 @@ import java.util.Locale
 import java.util.Random
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.ln
-import kotlin.math.log10
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlin.math.tan
 
 // ==========================================================================================
 // [1] TOP-LEVEL DATA MODELS & PROVIDER ENUMS
@@ -122,12 +111,17 @@ data class AgentDecision(
 
 class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener, LocationListener, AudioManager.OnAudioFocusChangeListener {
 
+    // ═══════════════════════════════════════════════════════════════════════════════════════
+    // FIX APPLIED: Native library loader - wrapped in Throwable catch
+    // UnsatisfiedLinkError extends Error (not Exception), so must catch Throwable
+    // Since we don't ship native C++ code, we gracefully skip loading it.
+    // ═══════════════════════════════════════════════════════════════════════════════════════
     init {
         try {
             System.loadLibrary("jarvis_native_engine")
             Log.i("TITAN_CORE", "Native C++ JNI Engine Injected.")
-        } catch (e: Exception) {
-            Log.w("TITAN_CORE", "Using JVM Engine Fallback.")
+        } catch (e: Throwable) {
+            Log.w("TITAN_CORE", "Native engine unavailable - using JVM fallback. (${e.message})")
         }
     }
 
@@ -249,21 +243,25 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     private fun startTelemetryFeeds() {
-        registerReceiver(object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                isCharging = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
-            }
-        }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        try {
+            registerReceiver(object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    isCharging = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
+                }
+            }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (e: Exception) { Log.e("TITAN", "Battery feed error", e) }
 
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        cm.registerNetworkCallback(
-            NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
-            object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) { isNetworkActive = true }
-                override fun onLost(network: Network) { isNetworkActive = false }
-            }
-        )
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.registerNetworkCallback(
+                NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
+                object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) { isNetworkActive = true }
+                    override fun onLost(network: Network) { isNetworkActive = false }
+                }
+            )
+        } catch (e: Exception) { Log.e("TITAN", "Network feed error", e) }
     }
 
     @SuppressLint("DiscouragedApi")
@@ -290,20 +288,24 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     private fun injectMassiveHolograms() {
-        particleEmitterView = QuantumParticleEmitter(this)
-        rootLayout?.addView(particleEmitterView, 0, FrameLayout.LayoutParams(-1, -1))
+        try {
+            particleEmitterView = QuantumParticleEmitter(this)
+            rootLayout?.addView(particleEmitterView, 0, FrameLayout.LayoutParams(-1, -1))
 
-        matrixRainView = MatrixDigitalRainView(this).apply { alpha = 0.18f }
-        rootLayout?.addView(matrixRainView, 1, FrameLayout.LayoutParams(-1, -1))
+            matrixRainView = MatrixDigitalRainView(this).apply { alpha = 0.18f }
+            rootLayout?.addView(matrixRainView, 1, FrameLayout.LayoutParams(-1, -1))
 
-        radarHUDView = CyberpunkRadarHUD(this)
-        rootLayout?.addView(radarHUDView, 2, FrameLayout.LayoutParams(-1, -1))
+            radarHUDView = CyberpunkRadarHUD(this)
+            rootLayout?.addView(radarHUDView, 2, FrameLayout.LayoutParams(-1, -1))
 
-        compassHUDView = HolographicCompassView(this)
-        rootLayout?.addView(compassHUDView, 3, FrameLayout.LayoutParams(-1, -1))
+            compassHUDView = HolographicCompassView(this)
+            rootLayout?.addView(compassHUDView, 3, FrameLayout.LayoutParams(-1, -1))
 
-        spectrumAnalyzerView = AudioSpectrumAnalyzer(this)
-        rootLayout?.addView(spectrumAnalyzerView, 4, FrameLayout.LayoutParams(-1, -1))
+            spectrumAnalyzerView = AudioSpectrumAnalyzer(this)
+            rootLayout?.addView(spectrumAnalyzerView, 4, FrameLayout.LayoutParams(-1, -1))
+        } catch (e: Exception) {
+            Log.e("TITAN", "Hologram injection error", e)
+        }
     }
 
     private fun runCleanBootSequence() {
@@ -470,12 +472,16 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     // ========================================================================
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = ttsEngine.setLanguage(Locale("hi", "IN"))
-            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                ttsEngine.language = Locale.US
-            } else {
-                ttsEngine.setSpeechRate(1.0f)
-                ttsEngine.setPitch(0.85f)
+            try {
+                val result = ttsEngine.setLanguage(Locale("hi", "IN"))
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    ttsEngine.language = Locale.US
+                } else {
+                    ttsEngine.setSpeechRate(1.0f)
+                    ttsEngine.setPitch(0.85f)
+                }
+            } catch (e: Exception) {
+                Log.e("TTS", "Language setup error", e)
             }
         }
     }
@@ -483,35 +489,48 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private fun speak(text: String) {
         changeState(SystemState.SPEAKING)
 
-        val attr = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attr).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener(this).build()
-            audioManager.requestAudioFocus(req)
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-        }
+        try {
+            val attr = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                    .setAudioAttributes(attr)
+                    .setAcceptsDelayedFocusGain(true)
+                    .setOnAudioFocusChangeListener(this)
+                    .build()
+                audioManager.requestAudioFocus(req)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            }
+        } catch (e: Exception) { Log.e("AUDIO", "Focus error", e) }
 
-        ttsEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String?) {}
-            override fun onDone(id: String?) {
-                mainHandler.post {
-                    if (isCallModeActive) {
-                        changeState(SystemState.LISTENING)
-                        startLiveCallListening()
-                    } else {
-                        changeState(SystemState.STANDBY)
+        try {
+            ttsEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(id: String?) {}
+                override fun onDone(id: String?) {
+                    mainHandler.post {
+                        if (isCallModeActive) {
+                            changeState(SystemState.LISTENING)
+                            startLiveCallListening()
+                        } else {
+                            changeState(SystemState.STANDBY)
+                        }
                     }
                 }
-            }
-            override fun onError(id: String?) {
-                mainHandler.post {
-                    if (isCallModeActive) startLiveCallListening()
-                    else changeState(SystemState.ERROR)
+                override fun onError(id: String?) {
+                    mainHandler.post {
+                        if (isCallModeActive) startLiveCallListening()
+                        else changeState(SystemState.ERROR)
+                    }
                 }
-            }
-        })
-        ttsEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TITAN_CALL_TTS")
+            })
+            ttsEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TITAN_CALL_TTS")
+        } catch (e: Exception) {
+            Log.e("TTS", "Speak error", e)
+        }
     }
 
     override fun onAudioFocusChange(focusChange: Int) {}
@@ -520,33 +539,40 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         if (!isCallModeActive) return
 
         if (speechRecognizer == null) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {}
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {
-                    radarHUDView?.updateAudioWave(rmsdB)
-                    spectrumAnalyzerView?.updateWaveform(rmsdB)
-                }
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() { changeState(SystemState.PROCESSING) }
-                override fun onError(error: Int) {
-                    if (isCallModeActive && error != SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
-                        mainHandler.postDelayed({ startLiveCallListening() }, 1000)
+            try {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+                speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {}
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(rmsdB: Float) {
+                        try {
+                            radarHUDView?.updateAudioWave(rmsdB)
+                            spectrumAnalyzerView?.updateWaveform(rmsdB)
+                        } catch (_: Exception) {}
                     }
-                }
-                override fun onResults(results: Bundle?) {
-                    val arr = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!arr.isNullOrEmpty()) {
-                        messageInputBox?.setText(arr[0])
-                        processConversationalInput(arr[0])
-                    } else if (isCallModeActive) {
-                        startLiveCallListening()
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() { changeState(SystemState.PROCESSING) }
+                    override fun onError(error: Int) {
+                        if (isCallModeActive && error != SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+                            mainHandler.postDelayed({ startLiveCallListening() }, 1000)
+                        }
                     }
-                }
-                override fun onPartialResults(partialResults: Bundle?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
+                    override fun onResults(results: Bundle?) {
+                        val arr = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        if (!arr.isNullOrEmpty()) {
+                            messageInputBox?.setText(arr[0])
+                            processConversationalInput(arr[0])
+                        } else if (isCallModeActive) {
+                            startLiveCallListening()
+                        }
+                    }
+                    override fun onPartialResults(partialResults: Bundle?) {}
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
+            } catch (e: Exception) {
+                Log.e("STT", "Recognizer creation error", e)
+                return
+            }
         }
         changeState(SystemState.LISTENING)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -653,10 +679,10 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
 
         val (lblGeminiKey, keyGemini) = createStyledInput("GEMINI API KEY:", "Paste Gemini API Key", crypto.decrypt(apiPrefs.getString("API_GEMINI", "") ?: ""))
-        val (lblGeminiModel, modelGemini) = createStyledInput("GEMINI MODEL:", "e.g. gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash", apiPrefs.getString("MODEL_GEMINI", "gemini-1.5-flash") ?: "gemini-1.5-flash")
+        val (lblGeminiModel, modelGemini) = createStyledInput("GEMINI MODEL:", "e.g. gemini-1.5-flash, gemini-1.5-pro", apiPrefs.getString("MODEL_GEMINI", "gemini-1.5-flash") ?: "gemini-1.5-flash")
 
         val (lblGptKey, keyGpt) = createStyledInput("CHATGPT (OPENAI) API KEY:", "Paste OpenAI Key (sk-...)", crypto.decrypt(apiPrefs.getString("API_CHATGPT", "") ?: ""))
-        val (lblGptModel, modelGpt) = createStyledInput("CHATGPT MODEL:", "e.g. gpt-4o-mini, gpt-4o, gpt-3.5-turbo", apiPrefs.getString("MODEL_CHATGPT", "gpt-4o-mini") ?: "gpt-4o-mini")
+        val (lblGptModel, modelGpt) = createStyledInput("CHATGPT MODEL:", "e.g. gpt-4o-mini, gpt-4o", apiPrefs.getString("MODEL_CHATGPT", "gpt-4o-mini") ?: "gpt-4o-mini")
 
         val (lblGrokKey, keyGrok) = createStyledInput("GROK (xAI) API KEY:", "Paste xAI Grok Key", crypto.decrypt(apiPrefs.getString("API_GROK", "") ?: ""))
         val (lblGrokModel, modelGrok) = createStyledInput("GROK MODEL:", "e.g. grok-2-mini, grok-beta", apiPrefs.getString("MODEL_GROK", "grok-2-mini") ?: "grok-2-mini")
@@ -724,17 +750,23 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             else -> "#00000000"
         }
 
-        ObjectAnimator.ofArgb(rootLayout!!, "backgroundColor", Color.parseColor(hex)).apply {
-            duration = 450
-            interpolator = AccelerateDecelerateInterpolator()
-            start()
-        }
+        try {
+            rootLayout?.let {
+                ObjectAnimator.ofArgb(it, "backgroundColor", Color.parseColor(hex)).apply {
+                    duration = 450
+                    interpolator = AccelerateDecelerateInterpolator()
+                    start()
+                }
+            }
+        } catch (e: Exception) { Log.e("HUD", "State animation error", e) }
 
-        matrixRainView?.updateTheme(state)
-        radarHUDView?.updateTheme(state)
-        particleEmitterView?.updateTheme(state)
-        compassHUDView?.updateTheme(state)
-        spectrumAnalyzerView?.updateTheme(state)
+        try {
+            matrixRainView?.updateTheme(state)
+            radarHUDView?.updateTheme(state)
+            particleEmitterView?.updateTheme(state)
+            compassHUDView?.updateTheme(state)
+            spectrumAnalyzerView?.updateTheme(state)
+        } catch (e: Exception) { Log.e("HUD", "Theme update error", e) }
     }
 
     // ========================================================================
@@ -892,7 +924,10 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         fun launchApp(packageName: String) {
             try {
                 val intent = context.packageManager.getLaunchIntentForPackage(packageName)
-                if (intent != null) context.startActivity(intent)
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                }
             } catch (_: Exception) {}
         }
 
@@ -1010,7 +1045,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         private var rot = 0f
         private var clr = "#00F0FF"
 
-        // FIX APPLIED: updateTheme explicitly added to resolve build error
         fun updateTheme(s: SystemState) {
             clr = when (s) {
                 SystemState.ERROR -> "#FF0033"
@@ -1069,7 +1103,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     override fun onPause() { super.onPause(); sensorManager.unregisterListener(this) }
     override fun onDestroy() {
         super.onDestroy()
-        ttsEngine.shutdown()
+        try {
+            ttsEngine.shutdown()
+        } catch (_: Exception) {}
         speechRecognizer?.destroy()
         strobeJob?.cancel()
         aiCallJob?.cancel()
