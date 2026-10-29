@@ -1,23 +1,31 @@
 package com.example.jarvis.ui
 
+// ============================================================================
+// J.A.R.V.I.S. TITAN HOLOGRAM ORB ENGINE (V500.0)
+// Architect: DrakoXNaeem
+// Features: Cyberpunk Neon Glow, Hardware Acceleration Safe, Smooth Interpolation
+// ============================================================================
+
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import kotlin.math.min
 
-// AI ke alag-alag states define kar rahe hain
 enum class OrbState(val primaryColor: Int, val glowColor: Int) {
-    IDLE(Color.parseColor("#00E5FF"), Color.parseColor("#008B8B")),       // Cyan
-    LISTENING(Color.parseColor("#00FF00"), Color.parseColor("#32CD32")), // Green
-    THINKING(Color.parseColor("#8A2BE2"), Color.parseColor("#4B0082")),  // Purple
-    SPEAKING(Color.parseColor("#FF00FF"), Color.parseColor("#C71585")),  // Magenta
-    ERROR(Color.parseColor("#FF0000"), Color.parseColor("#8B0000"))      // Red
+    IDLE(Color.parseColor("#00E5FF"), Color.parseColor("#008B8B")),       // Deep Cyan
+    LISTENING(Color.parseColor("#00FF99"), Color.parseColor("#009933")), // Matrix Green
+    THINKING(Color.parseColor("#9900FF"), Color.parseColor("#4B0082")),  // Quantum Purple
+    SPEAKING(Color.parseColor("#FF9100"), Color.parseColor("#B34700")),  // Amber / Orange
+    ERROR(Color.parseColor("#FF0033"), Color.parseColor("#8B0000"))      // Combat Red
 }
 
 class JarvisOrbView @JvmOverloads constructor(
@@ -26,19 +34,18 @@ class JarvisOrbView @JvmOverloads constructor(
 
     private var currentState = OrbState.IDLE
     
-    // Core aur Glow Paints
+    // Core Paints
     private val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
     
     private val outerRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 8f
-        alpha = 150
+        strokeCap = Paint.Cap.ROUND
     }
 
-    // Animation Variables
-    private var pulseRadius = 0f
+    // Animation Tracking Variables
+    private var pulseRadius = 0.85f
     private var rotationAngle = 0f
     private var currentColor = currentState.primaryColor
     private var currentGlow = currentState.glowColor
@@ -48,15 +55,16 @@ class JarvisOrbView @JvmOverloads constructor(
     private var colorAnimator: ValueAnimator? = null
 
     init {
-        // Hardware acceleration zaroori hai shadow/glow effects ke liye
+        // LAYER_TYPE_SOFTWARE is required for setShadowLayer to work properly on all Android versions
         setLayerType(LAYER_TYPE_SOFTWARE, null)
         startAnimations()
     }
 
     private fun startAnimations() {
-        // Orb ka धड़कने (Pulsing) ka effect
-        pulseAnimator = ValueAnimator.ofFloat(0.85f, 1.0f).apply {
-            duration = 1000
+        // Smooth heartbeat pulsing effect
+        pulseAnimator = ValueAnimator.ofFloat(0.85f, 1.05f).apply {
+            duration = 1200
+            interpolator = AccelerateDecelerateInterpolator()
             repeatMode = ValueAnimator.REVERSE
             repeatCount = ValueAnimator.INFINITE
             addUpdateListener { 
@@ -66,9 +74,9 @@ class JarvisOrbView @JvmOverloads constructor(
             start()
         }
 
-        // Outer ring ka ghumne (Rotation) ka effect
+        // Continuous sci-fi mechanical rotation
         rotationAnimator = ValueAnimator.ofFloat(0f, 360f).apply {
-            duration = 4000
+            duration = 5000
             interpolator = LinearInterpolator()
             repeatCount = ValueAnimator.INFINITE
             addUpdateListener {
@@ -79,31 +87,38 @@ class JarvisOrbView @JvmOverloads constructor(
         }
     }
 
-    // State change karne ka function (Jaise hi AI bolna shuru kare ya sune)
     fun setOrbState(newState: OrbState) {
         if (currentState == newState) return
 
-        // Smooth Color Transition (Ek color se dusre color me smoothly change hona)
+        // Smooth Color & Physics Transition Algorithm
         colorAnimator?.cancel()
         colorAnimator = ValueAnimator.ofObject(ArgbEvaluator(), currentColor, newState.primaryColor).apply {
-            duration = 500
+            duration = 600
             addUpdateListener { animator ->
                 currentColor = animator.animatedValue as Int
                 currentGlow = ArgbEvaluator().evaluate(animator.animatedFraction, currentGlow, newState.glowColor) as Int
                 
-                // Animators ki speed state ke hisaab se change karna
+                // Adjust kinetic speeds based on AI cognitive states
                 when (newState) {
                     OrbState.SPEAKING -> {
-                        pulseAnimator?.duration = 400
-                        rotationAnimator?.duration = 1500
+                        pulseAnimator?.duration = 300
+                        rotationAnimator?.duration = 1200
                     }
                     OrbState.THINKING -> {
-                        pulseAnimator?.duration = 800
+                        pulseAnimator?.duration = 600
                         rotationAnimator?.duration = 2000
+                    }
+                    OrbState.LISTENING -> {
+                        pulseAnimator?.duration = 450
+                        rotationAnimator?.duration = 1800
+                    }
+                    OrbState.ERROR -> {
+                        pulseAnimator?.duration = 200
+                        rotationAnimator?.duration = 800
                     }
                     else -> {
                         pulseAnimator?.duration = 1200
-                        rotationAnimator?.duration = 4000
+                        rotationAnimator?.duration = 5000
                     }
                 }
                 invalidate()
@@ -118,41 +133,53 @@ class JarvisOrbView @JvmOverloads constructor(
         
         val cx = width / 2f
         val cy = height / 2f
-        val baseRadius = min(cx, cy) * 0.6f
+        val baseRadius = min(cx, cy) * 0.55f // Kept slightly small to allow glow bleeding
+        val dynamicRadius = baseRadius * pulseRadius
 
-        // 1. Draw Core Glow and Shadow
-        corePaint.color = currentColor
-        corePaint.setShadowLayer(80f * pulseRadius, 0f, 0f, currentGlow)
-        canvas.drawCircle(cx, cy, baseRadius * pulseRadius, corePaint)
+        // 1. Draw 3D Radial Core Glow
+        val gradient = RadialGradient(
+            cx, cy, dynamicRadius * 1.5f,
+            intArrayOf(Color.WHITE, currentColor, Color.TRANSPARENT),
+            floatArrayOf(0.1f, 0.6f, 1.0f),
+            Shader.TileMode.CLAMP
+        )
+        corePaint.shader = gradient
+        corePaint.setShadowLayer(50f * pulseRadius, 0f, 0f, currentGlow)
+        canvas.drawCircle(cx, cy, dynamicRadius, corePaint)
 
-        // 2. Draw Inner Solid Core (Thoda dark feel dene ke liye)
-        corePaint.clearShadowLayer()
-        corePaint.color = Color.WHITE
-        corePaint.alpha = 50
-        canvas.drawCircle(cx, cy, baseRadius * 0.9f * pulseRadius, corePaint)
+        // Reset shader for hardware overlays
+        corePaint.shader = null
 
-        // 3. Draw Rotating Outer Rings (Sci-Fi look ke liye)
+        // 2. Outer Rotating Quantum Rings (Layer 1)
         outerRingPaint.color = currentColor
-        outerRingPaint.setShadowLayer(20f, 0f, 0f, currentGlow)
+        outerRingPaint.strokeWidth = 6f
+        outerRingPaint.alpha = 200
+        outerRingPaint.setShadowLayer(15f, 0f, 0f, currentGlow)
         
         canvas.save()
         canvas.rotate(rotationAngle, cx, cy)
-        // Outer ring 1
         canvas.drawArc(
-            cx - baseRadius * 1.3f, cy - baseRadius * 1.3f,
-            cx + baseRadius * 1.3f, cy + baseRadius * 1.3f,
-            0f, 270f, false, outerRingPaint
+            cx - baseRadius * 1.4f, cy - baseRadius * 1.4f,
+            cx + baseRadius * 1.4f, cy + baseRadius * 1.4f,
+            15f, 240f, false, outerRingPaint
         )
         canvas.restore()
 
+        // 3. Inner Reverse Rotating Rings (Layer 2)
         canvas.save()
-        canvas.rotate(-rotationAngle * 1.5f, cx, cy)
-        // Outer ring 2 (Upti direction me ghumegi)
-        outerRingPaint.strokeWidth = 4f
+        canvas.rotate(-rotationAngle * 1.8f, cx, cy)
+        outerRingPaint.strokeWidth = 3f
+        outerRingPaint.alpha = 150
         canvas.drawArc(
-            cx - baseRadius * 1.15f, cy - baseRadius * 1.15f,
-            cx + baseRadius * 1.15f, cy + baseRadius * 1.15f,
-            90f, 180f, false, outerRingPaint
+            cx - baseRadius * 1.2f, cy - baseRadius * 1.2f,
+            cx + baseRadius * 1.2f, cy + baseRadius * 1.2f,
+            60f, 150f, false, outerRingPaint
+        )
+        // Extra HUD Dash
+        canvas.drawArc(
+            cx - baseRadius * 1.2f, cy - baseRadius * 1.2f,
+            cx + baseRadius * 1.2f, cy + baseRadius * 1.2f,
+            240f, 60f, false, outerRingPaint
         )
         canvas.restore()
     }
