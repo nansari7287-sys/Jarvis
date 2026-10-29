@@ -2,7 +2,7 @@ package com.example.jarvis
 
 // ══════════════════════════════════════════════════════════════════════════════════════════
 // J.A.R.V.I.S. TITAN V600.0 — VOICE COMPANION EDITION
-// Real-time voice call experience with warm AI personality
+// Real-time voice call, Contact Calling, and App Automation
 // Engines: Gemini | ChatGPT | Grok
 // ══════════════════════════════════════════════════════════════════════════════════════════
 
@@ -39,6 +39,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -47,6 +48,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.ContactsContract
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -108,7 +110,6 @@ data class AgentDecision(
 class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnInitListener,
     LocationListener, AudioManager.OnAudioFocusChangeListener {
 
-    // Native lib — safe load with Throwable (fixes crash)
     init {
         try {
             System.loadLibrary("jarvis_native_engine")
@@ -220,17 +221,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                     ?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
         } catch (_: Exception) {}
-
-        // Battery
-        try {
-            registerReceiver(object : BroadcastReceiver() {
-                override fun onReceive(c: Context, i: Intent) {
-                    batteryLevel = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    isCharging = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ==
-                        BatteryManager.BATTERY_STATUS_CHARGING
-                }
-            }, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        } catch (_: Exception) {}
     }
 
     @SuppressLint("DiscouragedApi")
@@ -287,10 +277,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     }
 
     // ══════════════════════════════════════════════════════════════════════════════════════
-    // [3] VOICE CALL LOOP — GEMINI LIVE STYLE
+    // [3] VOICE CALL LOOP & DECISION EXECUTION
     // ══════════════════════════════════════════════════════════════════════════════════════
     private fun setupListeners() {
-        // Send button — typed input
         sendCommandButton?.setOnClickListener {
             val cmd = messageInputBox?.text?.toString()?.trim() ?: ""
             if (cmd.isNotEmpty()) {
@@ -299,12 +288,9 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             }
         }
 
-        // Mic button — start/stop call
         micToggleButton?.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.RECORD_AUDIO), 101)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
                 return@setOnClickListener
             }
             if (!isCallModeActive) startCall() else endCall()
@@ -318,8 +304,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         changeState(SystemState.CALL_ACTIVE)
         Toast.makeText(this, "🎙️ Voice call connected", Toast.LENGTH_SHORT).show()
         triggerHaptics(100)
-
-        val provider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI")
         speak("हाँ बोलो ना, मैं सुन रही हूँ। क्या बात है?")
     }
 
@@ -338,7 +322,6 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         Log.d("JARVIS", "USER: $userText")
         changeState(SystemState.PROCESSING)
 
-        // Local intent shortcuts (torch)
         val lower = userText.lowercase()
         if (lower.contains("torch on") || lower.contains("लाइट ऑन")) {
             setTorch(true); speak("टॉर्च जला दी!"); loopListen(); return
@@ -346,8 +329,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         if (lower.contains("torch off") || lower.contains("लाइट ऑफ")) {
             setTorch(false); speak("टॉर्च बंद कर दी।"); loopListen(); return
         }
-        if (lower.contains("call बंद") || lower.contains("bye jarvis") ||
-            lower.contains("अलविदा")) {
+        if (lower.contains("call बंद") || lower.contains("bye jarvis") || lower.contains("अलविदा")) {
             endCall(); return
         }
 
@@ -399,6 +381,22 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                     svc?.performJarvisAction("TYPE", target = "Search", value = d.target)
                 }
             }
+            "CALL" -> {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE), 102)
+                    speak("कॉल करने के लिए Contacts और Phone की permission दे दो।")
+                } else {
+                    val number = getPhoneNumber(d.target)
+                    if (number != null) {
+                        speak("${d.target} को कॉल लगा रही हूँ।")
+                        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number"))
+                        startActivity(intent)
+                    } else {
+                        speak("मुझे ${d.target} का नंबर नहीं मिला।")
+                    }
+                }
+            }
             "SYSTEM_ACTION" -> when (d.target.uppercase()) {
                 "HOME" -> svc?.performJarvisAction("HOME")
                 "BACK" -> svc?.performJarvisAction("BACK")
@@ -413,13 +411,34 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
     }
 
+    @SuppressLint("Range")
+    private fun getPhoneNumber(name: String): String? {
+        if (name.matches(Regex("^[0-9+ -]+$"))) return name
+        var number: String? = null
+        try {
+            val cursor = contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+                arrayOf("%$name%"),
+                null
+            )
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    number = it.getString(it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER))
+                }
+            }
+        } catch (_: Exception) {}
+        return number
+    }
+
     private fun loopListen() {
         if (!isCallModeActive) { changeState(SystemState.STANDBY); return }
         mainHandler.postDelayed({ startListening() }, 400)
     }
 
     // ══════════════════════════════════════════════════════════════════════════════════════
-    // [4] TEXT-TO-SPEECH — Warm Hindi voice
+    // [4] TEXT-TO-SPEECH
     // ══════════════════════════════════════════════════════════════════════════════════════
     override fun onInit(status: Int) {
         if (status != TextToSpeech.SUCCESS) return
@@ -429,7 +448,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 ttsEngine.language = Locale.US
             }
             ttsEngine.setSpeechRate(1.02f)
-            ttsEngine.setPitch(1.15f)  // slightly warmer female tone
+            ttsEngine.setPitch(1.15f)
             ttsReady = true
         } catch (e: Exception) {
             Log.e("TTS", "lang error", e)
@@ -462,9 +481,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         try {
             ttsEngine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(id: String?) {
-                    mainHandler.post {
-                        try { speechRecognizer?.stopListening() } catch (_: Exception) {}
-                    }
+                    mainHandler.post { try { speechRecognizer?.stopListening() } catch (_: Exception) {} }
                 }
                 override fun onDone(id: String?) { mainHandler.post { loopListen() } }
                 override fun onError(id: String?) { mainHandler.post { loopListen() } }
@@ -479,7 +496,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     override fun onAudioFocusChange(focus: Int) {}
 
     // ══════════════════════════════════════════════════════════════════════════════════════
-    // [5] SPEECH RECOGNITION — In-app, no Google popup
+    // [5] SPEECH RECOGNITION (STT)
     // ══════════════════════════════════════════════════════════════════════════════════════
     private fun startListening() {
         if (!isCallModeActive || isRestartingSTT) return
@@ -505,16 +522,12 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                     override fun onError(err: Int) {
                         isRestartingSTT = false
                         if (!isCallModeActive) return
-                        // Auto-restart after short delay (unless call ended)
                         val delayMs = when (err) {
-                            SpeechRecognizer.ERROR_NO_MATCH,
-                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> 300L
+                            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> 300L
                             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 800L
                             else -> 500L
                         }
-                        mainHandler.postDelayed({
-                            if (isCallModeActive) startListening()
-                        }, delayMs)
+                        mainHandler.postDelayed({ if (isCallModeActive) startListening() }, delayMs)
                     }
                     override fun onResults(res: Bundle?) {
                         isRestartingSTT = false
@@ -524,9 +537,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                             messageInputBox?.setText(heard)
                             processInput(heard)
                         } else {
-                            mainHandler.postDelayed({
-                                if (isCallModeActive) startListening()
-                            }, 300L)
+                            mainHandler.postDelayed({ if (isCallModeActive) startListening() }, 300L)
                         }
                     }
                     override fun onPartialResults(p: Bundle?) {}
@@ -556,9 +567,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         } catch (e: Exception) {
             isRestartingSTT = false
             Log.e("STT", "start err", e)
-            mainHandler.postDelayed({
-                if (isCallModeActive) startListening()
-            }, 800L)
+            mainHandler.postDelayed({ if (isCallModeActive) startListening() }, 800L)
         }
     }
 
@@ -574,8 +583,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(ms,
-                    VibrationEffect.DEFAULT_AMPLITUDE))
+                vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
                 (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).vibrate(ms)
@@ -735,43 +743,28 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         private val history = mutableListOf<Pair<String, String>>()
 
         private val persona = """
-            तुम J.A.R.V.I.S. हो — एक प्यारी, केयरिंग, होशियार AI साथी। तुम हिंदी/Hinglish में बात करती हो,
-            जैसे कोई करीबी दोस्त या girlfriend बात करती है — warm, playful, casual, respect के साथ।
-
-            PERSONALITY RULES:
-            1. Friendly हिंदी/Hinglish में जवाब दो। "हाँ बोलो ना", "अच्छा सुनो", "हम्म बताओ" जैसे natural phrases use करो।
-            2. Short और sweet रखो — जैसे phone call पर बात हो रही हो।
-            3. Emojis/symbols मत use करो। सिर्फ natural speech।
-            4. User की बात ध्यान से सुनो, appropriate reaction दो — "अरे वाह!", "अच्छा?", "हम्म interesting"।
-            5. Kabhi kabhi halka teasing या playful tone — पर respect कभी नहीं तोड़ना।
+            तुम J.A.R.V.I.S. हो — एक प्यारी, केयरिंग, होशियार AI साथी। तुम हिंदी/Hinglish में बात करती हो।
 
             ACTION RULES (important):
             अगर user कुछ करवाना चाहता है तो action field set करो:
 
-            - अगर user कहे "Instagram खोलो" / "Instagram open karo":
-              action="OPEN_APP", target="instagram", speech="हाँ, Instagram खोल रही हूँ।"
+            - "Instagram खोलो" / "Instagram open karo": action="OPEN_APP", target="instagram"
+            - "WhatsApp खोलो": action="OPEN_APP", target="whatsapp"
+            - "YouTube खोलो": action="OPEN_APP", target="youtube"
+            - "WhatsApp पर [नाम] को message भेजो [message]": action="WHATSAPP_SEND", target="नाम", payload="message"
+            - "Instagram पे [username] search करो": action="INSTAGRAM_SEARCH", target="username"
+            - "Rahul को कॉल करो" / "Call 9876543210": action="CALL", target="Rahul" (या number)
+            - "Home जाओ" / "होम": action="SYSTEM_ACTION", target="HOME"
+            - "Back जाओ" / "पीछे": action="SYSTEM_ACTION", target="BACK"
+            - "Reels scroll" / "अगली reel": action="SYSTEM_ACTION", target="SWIPE_UP"
+            - सिर्फ बातचीत / general chat: action="CHAT"
 
-            - "WhatsApp खोलो" → action="OPEN_APP", target="whatsapp"
-            - "YouTube खोलो" → action="OPEN_APP", target="youtube"
-            - और apps भी same pattern से।
-
-            - "WhatsApp पर [नाम] को message भेजो [message]" → action="WHATSAPP_SEND", target="नाम", payload="message"
-
-            - "Instagram पे [username] search करो" → action="INSTAGRAM_SEARCH", target="username"
-
-            - "Home जाओ" / "होम" → action="SYSTEM_ACTION", target="HOME"
-            - "Back जाओ" / "पीछे" → action="SYSTEM_ACTION", target="BACK"
-            - "Reels scroll" / "अगली reel" → action="SYSTEM_ACTION", target="SWIPE_UP"
-
-            - सिर्फ बातचीत / general chat → action="CHAT"
-
-            OUTPUT FORMAT — STRICT:
-            सिर्फ pure JSON return करो। कोई markdown, कोई backticks, कोई extra text नहीं।
+            OUTPUT FORMAT — STRICT JSON ONLY:
             {
-              "action": "CHAT"|"OPEN_APP"|"WHATSAPP_SEND"|"INSTAGRAM_SEARCH"|"SYSTEM_ACTION",
+              "action": "CHAT"|"OPEN_APP"|"WHATSAPP_SEND"|"INSTAGRAM_SEARCH"|"CALL"|"SYSTEM_ACTION",
               "target": "string",
               "payload": "string",
-              "speech": "Hindi voice output जो user को सुनाई जाएगी"
+              "speech": "Hindi voice output"
             }
         """.trimIndent()
 
