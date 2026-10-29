@@ -3,7 +3,7 @@ package com.example.jarvis.accessibility
 // ==========================================================================================
 // J.A.R.V.I.S. TITAN UNIVERSAL OS ACCESSIBILITY ENGINE - ENTERPRISE V500.0
 // DEVELOPED BY DRAKOX NAEEM
-// PROJECT SCOPE: COMPLETE PHONE-WIDE SYSTEM CONTROL, ZERO CRASH, SELF-CONTAINED ENGINE
+// PROJECT SCOPE: COMPLETE PHONE-WIDE SYSTEM CONTROL, ZERO CRASH, MEMORY-LEAK PROOF
 // ==========================================================================================
 
 import android.accessibilityservice.AccessibilityService
@@ -48,7 +48,7 @@ class JarvisAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Real-time window and UI event listener
+        // Keeps the service alive and responsive to window changes
     }
 
     override fun onInterrupt() {
@@ -86,22 +86,10 @@ class JarvisAccessibilityService : AccessibilityService() {
             "SCROLL_DOWN" -> scrollWindow(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
 
             // Dynamic Swipes (Short-form videos, Reels, Feeds)
-            "SWIPE_UP", "NEXT_REEL" -> {
-                universalSwipe(SwipeDirection.UP)
-                true
-            }
-            "SWIPE_DOWN", "PREV_REEL" -> {
-                universalSwipe(SwipeDirection.DOWN)
-                true
-            }
-            "SWIPE_LEFT" -> {
-                universalSwipe(SwipeDirection.LEFT)
-                true
-            }
-            "SWIPE_RIGHT" -> {
-                universalSwipe(SwipeDirection.RIGHT)
-                true
-            }
+            "SWIPE_UP", "NEXT_REEL" -> { universalSwipe(SwipeDirection.UP); true }
+            "SWIPE_DOWN", "PREV_REEL" -> { universalSwipe(SwipeDirection.DOWN); true }
+            "SWIPE_LEFT" -> { universalSwipe(SwipeDirection.LEFT); true }
+            "SWIPE_RIGHT" -> { universalSwipe(SwipeDirection.RIGHT); true }
 
             // Universal Click & Type
             "CLICK" -> clickTarget(target, value)
@@ -124,13 +112,6 @@ class JarvisAccessibilityService : AccessibilityService() {
     // [2] CLICK TARGET ENGINE (TEXT, CONTENT-DESC, ID, AND COORD FALLBACK)
     // ========================================================================
 
-    fun clickText(text: String): Boolean {
-        if (text.isBlank()) return false
-        val root = rootInActiveWindow ?: return false
-        val node = AccessibilityHelper.findText(root, text.trim())
-        return AccessibilityHelper.click(node)
-    }
-
     fun clickTarget(target: String?, value: String?): Boolean {
         val searchText = target?.trim()?.takeIf { it.isNotBlank() }
             ?: value?.trim()?.takeIf { it.isNotBlank() }
@@ -138,9 +119,14 @@ class JarvisAccessibilityService : AccessibilityService() {
 
         val root = rootInActiveWindow ?: return false
 
-        if (clickByText(root, searchText)) return true
-        if (clickByContentDescription(root, searchText)) return true
-        return clickByResourceId(root, searchText)
+        try {
+            if (clickByText(root, searchText)) return true
+            if (clickByContentDescription(root, searchText)) return true
+            if (clickByResourceId(root, searchText)) return true
+        } finally {
+            root.recycle() // Memory Leak Prevention
+        }
+        return false
     }
 
     private fun clickByText(root: AccessibilityNodeInfo, target: String): Boolean {
@@ -148,20 +134,24 @@ class JarvisAccessibilityService : AccessibilityService() {
         if (cleanTarget.isBlank()) return false
 
         val nodes = root.findAccessibilityNodeInfosByText(cleanTarget) ?: return false
+        var clicked = false
 
         for (node in nodes) {
-            if (node.isVisibleToUser && performSafeClick(node)) return true
+            if (!clicked && node.isVisibleToUser && performSafeClick(node)) {
+                clicked = true
+            }
+            node.recycle() // Free memory for each node
         }
-        return false
+        return clicked
     }
 
     private fun clickByContentDescription(root: AccessibilityNodeInfo, target: String): Boolean {
         val targetLower = target.trim().lowercase()
         if (targetLower.isBlank()) return false
-        return findNodeByDescription(root, targetLower)
+        return findNodeByDescriptionAndClick(root, targetLower)
     }
 
-    private fun findNodeByDescription(node: AccessibilityNodeInfo, target: String): Boolean {
+    private fun findNodeByDescriptionAndClick(node: AccessibilityNodeInfo, target: String): Boolean {
         val description = node.contentDescription?.toString()?.trim()?.lowercase()
 
         if (!description.isNullOrBlank() && description.contains(target) && node.isVisibleToUser) {
@@ -170,7 +160,9 @@ class JarvisAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findNodeByDescription(child, target)) return true
+            val found = findNodeByDescriptionAndClick(child, target)
+            child.recycle()
+            if (found) return true
         }
         return false
     }
@@ -185,23 +177,34 @@ class JarvisAccessibilityService : AccessibilityService() {
             emptyList()
         } ?: return false
 
+        var clicked = false
         for (node in nodes) {
-            if (node.isVisibleToUser && performSafeClick(node)) return true
+            if (!clicked && node.isVisibleToUser && performSafeClick(node)) {
+                clicked = true
+            }
+            node.recycle()
         }
-        return false
+        return clicked
     }
 
     private fun performSafeClick(node: AccessibilityNodeInfo): Boolean {
         if (node.isClickable) {
             return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         }
+        
         var parent = node.parent
         while (parent != null) {
             if (parent.isVisibleToUser && parent.isClickable) {
-                return parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                val result = parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                parent.recycle()
+                return result
             }
+            val oldParent = parent
             parent = parent.parent
+            oldParent.recycle()
         }
+        
+        // Gesture Fallback if not clickable in hierarchy
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
         if (bounds.width() > 0 && bounds.height() > 0) {
@@ -219,40 +222,47 @@ class JarvisAccessibilityService : AccessibilityService() {
         if (value.isNullOrBlank()) return false
         val root = rootInActiveWindow ?: return false
 
-        val node = if (!target.isNullOrBlank()) {
-            findEditableNode(root, target.trim()) ?: findFocusedEditableNode(root)
-        } else {
-            findFocusedEditableNode(root)
-        } ?: findAnyEditableNode(root) ?: return false
+        var targetNode: AccessibilityNodeInfo? = null
+        try {
+            targetNode = if (!target.isNullOrBlank()) {
+                findEditableNode(root, target.trim()) ?: findFocusedEditableNode(root)
+            } else {
+                findFocusedEditableNode(root) ?: findAnyEditableNode(root)
+            }
 
-        val arguments = Bundle().apply {
-            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
-        }
+            if (targetNode == null) return false
 
-        return try {
-            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+            val arguments = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
+            }
+            return targetNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
         } catch (_: Exception) {
-            false
+            return false
+        } finally {
+            targetNode?.recycle()
+            root.recycle()
         }
     }
 
     private fun findFocusedEditableNode(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (root.isEditable && root.isFocused && root.isVisibleToUser) return root
+        if (root.isEditable && root.isFocused && root.isVisibleToUser) return AccessibilityNodeInfo.obtain(root)
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
             val result = findFocusedEditableNode(child)
+            child.recycle()
             if (result != null) return result
         }
         return null
     }
 
     private fun findAnyEditableNode(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (root.isEditable && root.isVisibleToUser) return root
+        if (root.isEditable && root.isVisibleToUser) return AccessibilityNodeInfo.obtain(root)
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
             val result = findAnyEditableNode(child)
+            child.recycle()
             if (result != null) return result
         }
         return null
@@ -273,13 +283,14 @@ class JarvisAccessibilityService : AccessibilityService() {
                 description?.contains(targetLower) == true ||
                 hint?.contains(targetLower) == true
             ) {
-                return root
+                return AccessibilityNodeInfo.obtain(root)
             }
         }
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
             val result = findEditableNode(child, target)
+            child.recycle()
             if (result != null) return result
         }
         return null
@@ -291,20 +302,24 @@ class JarvisAccessibilityService : AccessibilityService() {
 
     fun automateWhatsAppSend(messageText: String, onComplete: (Boolean) -> Unit = {}) {
         serviceScope.launch {
-            delay(1200)
-            val typed = typeText("Message", messageText) ||
-                    typeText("संदेश", messageText) ||
-                    typeText(null, messageText)
+            // Increased delay to ensure window transition is fully complete
+            delay(1500) 
+            
+            // Fallback attempts for typing
+            var typed = typeText("Message", messageText) || typeText("संदेश", messageText) || typeText(null, messageText)
+            
+            if (!typed) {
+                delay(1000)
+                typed = typeText(null, messageText) // Last desperate attempt
+            }
 
             if (!typed) {
                 mainHandler.post { onComplete(false) }
                 return@launch
             }
 
-            delay(600)
-            val sent = clickTarget("Send", null) ||
-                    clickTarget("भेजें", null) ||
-                    clickTarget("com.whatsapp:id/send", null)
+            delay(800)
+            val sent = clickTarget("Send", null) || clickTarget("भेजें", null) || clickTarget("com.whatsapp:id/send", null)
 
             mainHandler.post { onComplete(sent) }
         }
@@ -324,8 +339,8 @@ class JarvisAccessibilityService : AccessibilityService() {
         when (direction) {
             SwipeDirection.UP -> dispatchSwipe(w / 2f, h * 0.8f, w / 2f, h * 0.2f, durationMs)
             SwipeDirection.DOWN -> dispatchSwipe(w / 2f, h * 0.2f, w / 2f, h * 0.8f, durationMs)
-            SwipeDirection.LEFT -> dispatchSwipe(w * 0.85f, h / 2f, w * 0.15f, h / 2f, durationMs)
-            SwipeDirection.RIGHT -> dispatchSwipe(w * 0.15f, h / 2f, w * 0.85f, h / 2f, durationMs)
+            SwipeDirection.LEFT -> dispatchSwipe(w * 0.8f, h / 2f, w * 0.2f, h / 2f, durationMs)
+            SwipeDirection.RIGHT -> dispatchSwipe(w * 0.2f, h / 2f, w * 0.8f, h / 2f, durationMs)
         }
     }
 
@@ -348,20 +363,25 @@ class JarvisAccessibilityService : AccessibilityService() {
 
     private fun scrollWindow(action: Int): Boolean {
         val root = rootInActiveWindow ?: return false
-        val scrollable = findScrollableNode(root) ?: return false
-        return try {
-            scrollable.performAction(action)
+        try {
+            val scrollable = findScrollableNode(root) ?: return false
+            val result = scrollable.performAction(action)
+            scrollable.recycle()
+            return result
         } catch (_: Exception) {
-            false
+            return false
+        } finally {
+            root.recycle()
         }
     }
 
     private fun findScrollableNode(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (root.isScrollable && root.isVisibleToUser) return root
+        if (root.isScrollable && root.isVisibleToUser) return AccessibilityNodeInfo.obtain(root)
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
             val result = findScrollableNode(child)
+            child.recycle()
             if (result != null) return result
         }
         return null
@@ -374,12 +394,16 @@ class JarvisAccessibilityService : AccessibilityService() {
     fun dumpScreenHierarchyAsJson(): String {
         val root = rootInActiveWindow ?: return "{ \"error\": \"No active window\" }"
         val jsonArray = JSONArray()
-        collectHierarchyNodes(root, jsonArray)
-
-        return JSONObject().apply {
-            put("package", root.packageName ?: "unknown")
-            put("elements", jsonArray)
-        }.toString()
+        
+        try {
+            collectHierarchyNodes(root, jsonArray)
+            return JSONObject().apply {
+                put("package", root.packageName ?: "unknown")
+                put("elements", jsonArray)
+            }.toString()
+        } finally {
+            root.recycle()
+        }
     }
 
     private fun collectHierarchyNodes(node: AccessibilityNodeInfo, array: JSONArray) {
@@ -405,11 +429,12 @@ class JarvisAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             collectHierarchyNodes(child, array)
+            child.recycle() // Prevent massive memory dumps
         }
     }
 
     // ========================================================================
-    // [7] OS GLOBAL HELPERS & INTERNAL UTILITY
+    // [7] OS GLOBAL HELPERS
     // ========================================================================
 
     private fun globalLockScreen(): Boolean {
@@ -432,34 +457,6 @@ class JarvisAccessibilityService : AccessibilityService() {
             if (parts.size >= 2) Pair(parts[0].toFloat(), parts[1].toFloat()) else null
         } catch (_: Exception) {
             null
-        }
-    }
-
-    // ========================================================================
-    // [8] SELF-CONTAINED ACCESSIBILITY HELPER (NO EXTERNAL FILE REQUIRED)
-    // ========================================================================
-
-    object AccessibilityHelper {
-        fun findText(root: AccessibilityNodeInfo, text: String): AccessibilityNodeInfo? {
-            val nodes = root.findAccessibilityNodeInfosByText(text) ?: return null
-            for (node in nodes) {
-                if (node.isVisibleToUser) return node
-            }
-            return null
-        }
-
-        fun click(node: AccessibilityNodeInfo?): Boolean {
-            if (node == null) return false
-            if (node.isClickable) return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-
-            var parent = node.parent
-            while (parent != null) {
-                if (parent.isVisibleToUser && parent.isClickable) {
-                    return parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }
-                parent = parent.parent
-            }
-            return false
         }
     }
 }
