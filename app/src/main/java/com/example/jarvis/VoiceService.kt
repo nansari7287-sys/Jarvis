@@ -1,37 +1,34 @@
 package com.example.jarvis.voice
 
 // ============================================================================
-// J.A.R.V.I.S. TITAN VOICE ENGINE - SEAMLESS AI CALL MODE (V600.0)
+// J.A.R.V.I.S. TITAN VOICE ENGINE - REAL-TIME FULL-DUPLEX CALL MODE (V700.0)
 // ============================================================================
 // Architect: DrakoXNaeem
-// FEATURES INJECTED:
-// 1. LIVE CALL MODE: No need to say "Hey Jarvis". Everything spoken goes to AI.
-// 2. ZERO BEEP (SAFE MUTE): Kills the Google "Tudum" without touching Alarms/Ringtones.
-// 3. CONTINUOUS LOOP: Instantly restarts listening if you pause.
-// 4. FLOATING UI: Draggable Orb, Double-Tap to Hang Up.
+// Features: 
+// 1. PURE AUDIO STREAMING: Uses AudioRecord (No SpeechRecognizer, ZERO Beeps)
+// 2. WEBSOCKET READY: Ready to stream live PCM audio to Gemini/OpenAI Realtime APIs
+// 3. FULL-DUPLEX: Can listen and speak simultaneously (like a real phone call)
+// 4. FLOATING HOLOGRAM UI: Reactive to raw audio amplitude (RMS)
 // ============================================================================
 
+import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
+import android.media.AudioFormat
 import android.media.AudioManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import android.media.AudioRecord
+import android.media.AudioTrack
+import android.media.MediaRecorder
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -39,10 +36,6 @@ import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.provider.Settings
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -50,97 +43,91 @@ import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.example.jarvis.MainActivity
 import com.example.jarvis.ui.JarvisOrbView
 import com.example.jarvis.ui.OrbState
-import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
 import kotlin.math.abs
+import kotlin.math.sqrt
 
-class VoiceService : Service(), RecognitionListener {
+class VoiceService : Service() {
 
     // =========================================================
-    // SYSTEM MANAGERS & HARDWARE
+    // AUDIO & STREAMING COMPONENTS
     // =========================================================
-    private var speechRecognizer: SpeechRecognizer? = null
+    private var audioRecord: AudioRecord? = null
+    private var audioTrack: AudioTrack? = null
+    private var webSocket: WebSocket? = null
+    private val httpClient = OkHttpClient()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
+    private var recordingJob: Job? = null
+
+    // Standard AI Audio Settings (16kHz, Mono, 16-bit PCM)
+    private val sampleRate = 16000
+    private val channelConfig = AudioFormat.CHANNEL_IN_MONO
+    private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+    private val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+
+    // =========================================================
+    // HARDWARE MANAGERS & UI
+    // =========================================================
     private lateinit var audioManager: AudioManager
-    private lateinit var powerManager: PowerManager
     private lateinit var windowManager: WindowManager
-    private lateinit var connectivityManager: ConnectivityManager
+    private lateinit var powerManager: PowerManager
     private var wakeLock: PowerManager.WakeLock? = null
-    
-    // =========================================================
-    // FLOATING UI ELEMENTS
-    // =========================================================
+
     private var floatingLayout: LinearLayout? = null
     private var floatingOrb: JarvisOrbView? = null
     private var floatingText: TextView? = null
     private lateinit var windowParams: WindowManager.LayoutParams
 
+    // Touch & State Variables
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
     private var isDragging = false
-    private var lastClickTime: Long = 0
-    private val DOUBLE_CLICK_TIME_DELTA: Long = 300 
-
-    // =========================================================
-    // ENGINE STATE
-    // =========================================================
+    private var lastClickTime = 0L
+    private val DOUBLE_CLICK_TIME_DELTA = 300L
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isCallActive = false
-    private var isMuted = false
-    private var audioFocusRequest: AudioFocusRequest? = null
 
     companion object {
         const val ACTION_START_CALL = "com.example.jarvis.action.START_CALL"
         const val ACTION_END_CALL = "com.example.jarvis.action.END_CALL"
-        const val ACTION_VOICE_COMMAND = "com.example.jarvis.action.VOICE_COMMAND"
-        const val ACTION_RESUME_LISTENING = "com.example.jarvis.action.RESUME_LISTENING"
-        
-        const val EXTRA_COMMAND = "extra_command"
-
-        private const val CHANNEL_ID = "JarvisCallEngine"
-        private const val NOTIFICATION_ID = 5050
-        private const val TAG = "JarvisUltimateCall"
-    }
-
-    // Broadcast Receiver to let MainActivity tell the Service to start listening again after AI speaks
-    private val commandReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == ACTION_RESUME_LISTENING && isCallActive) {
-                updateUI(OrbState.IDLE, "Listening...")
-                restartListeningWithDelay(100)
-            }
-        }
+        private const val CHANNEL_ID = "JarvisLiveCallEngine"
+        private const val NOTIFICATION_ID = 6060
+        const val TAG = "JarvisLiveCall"
     }
 
     override fun onCreate() {
         super.onCreate()
-        Log.i(TAG, "Booting J.A.R.V.I.S. Live Call Engine...")
-
+        Log.i(TAG, "Booting J.A.R.V.I.S. Real-Time Full-Duplex Engine...")
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        acquireWakeLock()
+        powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        
         createNotificationChannel()
-        setupSpeechRecognizer()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(commandReceiver, IntentFilter(ACTION_RESUME_LISTENING), RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(commandReceiver, IntentFilter(ACTION_RESUME_LISTENING))
-        }
+        acquireWakeLock()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START_CALL -> establishCallSession()
-            ACTION_END_CALL -> endCallSession()
+            ACTION_START_CALL -> establishLiveCall()
+            ACTION_END_CALL -> endLiveCall()
         }
         return START_STICKY
     }
@@ -148,176 +135,193 @@ class VoiceService : Service(), RecognitionListener {
     override fun onBind(intent: Intent?): IBinder? = null
 
     // =========================================================
-    // 1. LIVE CALL SESSION MANAGEMENT
+    // 1. ESTABLISH FULL-DUPLEX CALL
     // =========================================================
-    private fun establishCallSession() {
+    private fun establishLiveCall() {
         if (isCallActive) return
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            stopSelf()
+            return
+        }
+        
         isCallActive = true
-
-        val notification = buildSystemNotification("Live Call Connected")
+        val notification = buildSystemNotification("Live Link Connected")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        if (Settings.canDrawOverlays(this)) mountFloatingUI()
+        mountFloatingUI()
         
-        requestAudioFocus()
-        startContinuousListening()
+        // 1. Initialize Audio Hardware
+        initAudioTrack()
+        
+        // 2. Open WebSocket to AI Brain (Gemini/OpenAI Realtime endpoint)
+        connectToAIWebSocket()
+        
+        // 3. Start reading mic immediately
+        startAudioStream()
     }
 
-    private fun endCallSession() {
+    private fun endLiveCall() {
         if (!isCallActive) return
         isCallActive = false
         
-        stopContinuousListening()
+        updateUI(OrbState.IDLE, "Disconnecting...")
+        recordingJob?.cancel()
+        
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+            audioRecord = null
+            
+            audioTrack?.stop()
+            audioTrack?.release()
+            audioTrack = null
+            
+            webSocket?.close(1000, "Call Ended by User")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing audio/sockets: ${e.message}")
+        }
+
         removeFloatingUI()
-        abandonAudioFocus()
         stopForeground(true)
         stopSelf()
     }
 
     // =========================================================
-    // 2. SEAMLESS SPEECH RECOGNITION & ZERO BEEP
+    // 2. RAW PCM AUDIO STREAMING (NO MORE SPEECHRECOGNIZER)
     // =========================================================
-    private fun setupSpeechRecognizer() {
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        speechRecognizer?.setRecognitionListener(this)
-    }
+    @SuppressLint("MissingPermission")
+    private fun startAudioStream() {
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION, // Optimized for VOIP/Calling
+            sampleRate,
+            channelConfig,
+            audioFormat,
+            bufferSize
+        )
 
-    private fun startContinuousListening() {
-        if (!isCallActive) return
-
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toString())
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord initialization failed!")
+            endLiveCall()
+            return
         }
-        
-        muteSystemBeeps() // 🔴 SAFE MUTE: Kills the beep
-        
-        try {
-            speechRecognizer?.startListening(intent)
-            updateUI(OrbState.LISTENING, "Listening...")
-        } catch (e: Exception) {
-            restartListeningWithDelay(500)
-        }
-    }
 
-    private fun stopContinuousListening() {
-        unmuteSystemBeeps()
-        try {
-            speechRecognizer?.stopListening()
-            speechRecognizer?.cancel()
-        } catch (_: Exception) {}
-    }
+        audioRecord?.startRecording()
+        updateUI(OrbState.LISTENING, "Live Stream Active")
 
-    private fun restartListeningWithDelay(delayMs: Long = 100) {
-        if (!isCallActive) return
-        mainHandler.postDelayed({
-            try {
-                speechRecognizer?.cancel()
-                startContinuousListening()
-            } catch (_: Exception) {}
-        }, delayMs)
-    }
+        recordingJob = serviceScope.launch {
+            val audioBuffer = ByteArray(bufferSize)
+            while (isActive && isCallActive) {
+                val readResult = audioRecord?.read(audioBuffer, 0, audioBuffer.size) ?: 0
+                if (readResult > 0) {
+                    
+                    // 1. Calculate Volume for UI (RMS)
+                    val rms = calculateRMS(audioBuffer, readResult)
+                    updateOrbVisuals(rms)
 
-    // =========================================================
-    // 3. RECOGNIZER CALLBACKS (FULL DUPLEX FEEL)
-    // =========================================================
-    override fun onReadyForSpeech(params: Bundle?) {
-        // Unmute right after the beep should have played, so AI TTS isn't blocked
-        mainHandler.postDelayed({ unmuteSystemBeeps() }, 400)
-    }
-    
-    override fun onBeginningOfSpeech() {}
-    
-    override fun onRmsChanged(rmsdB: Float) {
-        val scaleFactor = 1.0f + (rmsdB / 15f).coerceIn(0f, 0.4f)
-        floatingOrb?.animate()?.scaleX(scaleFactor)?.scaleY(scaleFactor)?.setDuration(50)?.start()
-    }
-    
-    override fun onBufferReceived(buffer: ByteArray?) {}
-    
-    override fun onEndOfSpeech() { 
-        floatingOrb?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
-        updateUI(OrbState.THINKING, "Processing...")
-    }
-    
-    override fun onError(error: Int) {
-        unmuteSystemBeeps()
-        floatingOrb?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
-        
-        // If silence, restart immediately to keep the call alive
-        if (error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || error == SpeechRecognizer.ERROR_NO_MATCH) {
-            restartListeningWithDelay(100)
-        } else {
-            restartListeningWithDelay(1000)
+                    // 2. Stream raw audio bytes to AI via WebSocket
+                    // For Gemini/OpenAI Realtime APIs, you usually send Base64 JSON or raw binary
+                    if (rms > 10) { // Voice Activity Detection Threshold (VAD)
+                        val base64Audio = android.util.Base64.encodeToString(audioBuffer.copyOf(readResult), android.util.Base64.NO_WRAP)
+                        sendAudioToAI(base64Audio)
+                    }
+                }
+            }
         }
     }
 
-    override fun onResults(results: Bundle?) {
-        unmuteSystemBeeps()
-        floatingOrb?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
+    private fun calculateRMS(buffer: ByteArray, readSize: Int): Float {
+        var sum = 0.0
+        for (i in 0 until readSize step 2) {
+            // Convert 2 bytes to 16-bit short
+            val sample = (buffer[i].toInt() and 0xFF) or (buffer[i + 1].toInt() shl 8)
+            sum += sample * sample
+        }
+        val mean = sum / (readSize / 2)
+        return sqrt(mean).toFloat()
+    }
+
+    private suspend fun updateOrbVisuals(rms: Float) {
+        withContext(Dispatchers.Main) {
+            val scale = 1.0f + (rms / 2000f).coerceIn(0f, 0.4f)
+            floatingOrb?.animate()?.scaleX(scale)?.scaleY(scale)?.setDuration(50)?.start()
+        }
+    }
+
+    // =========================================================
+    // 3. WEBSOCKET REAL-TIME CONNECTION (THE AI BRIDGE)
+    // =========================================================
+    private fun connectToAIWebSocket() {
+        // NOTE: Replace this URL with your actual API endpoint (Gemini Multimodal Live / OpenAI Realtime)
+        // If connecting to your own backend server that handles the LLM, put that IP here.
+        val request = Request.Builder().url("wss://your-realtime-ai-endpoint.com/stream").build()
         
-        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        if (!matches.isNullOrEmpty()) {
-            val spokenText = matches[0].trim()
-            Log.i(TAG, "Transcribed: $spokenText")
-            
-            if (!isNetworkAvailable()) {
-                updateUI(OrbState.ERROR, "Offline")
-                triggerHapticFeedback(500)
-                restartListeningWithDelay(2000)
-                return
+        webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.i(TAG, "AI WebSocket Channel Opened!")
+                updateUI(OrbState.LISTENING, "Call Connected")
             }
 
-            // Route speech to AI Brain
-            val launchIntent = Intent(this, MainActivity::class.java).apply {
-                action = ACTION_VOICE_COMMAND
-                putExtra(EXTRA_COMMAND, spokenText)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                // Handle JSON responses (transcripts, function calls, etc.)
+                Log.d(TAG, "AI JSON Response: $text")
+                updateUI(OrbState.SPEAKING, "AI is speaking...")
             }
-            startActivity(launchIntent)
-            
-            updateUI(OrbState.SPEAKING, "Transmitting...")
-            // The mic pauses here. MainActivity must send ACTION_RESUME_LISTENING when AI is done talking.
-        } else {
-            restartListeningWithDelay(200)
-        }
+
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                // RECEIVE LIVE AI AUDIO IN BYTES AND PLAY IMMEDIATELY (FULL DUPLEX)
+                updateUI(OrbState.SPEAKING, "AI is speaking...")
+                audioTrack?.play()
+                audioTrack?.write(bytes.toByteArray(), 0, bytes.size())
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                Log.i(TAG, "AI WebSocket Closed: $reason")
+                if (isCallActive) endLiveCall()
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                Log.e(TAG, "AI WebSocket Error: ${t.message}")
+                updateUI(OrbState.ERROR, "Connection Lost")
+            }
+        })
     }
 
-    override fun onPartialResults(partialResults: Bundle?) {}
-    override fun onEvent(eventType: Int, params: Bundle?) {}
-
-    // =========================================================
-    // 4. SAFE AUDIO MUTING (NEVER TOUCHES RINGTONE)
-    // =========================================================
-    private fun muteSystemBeeps() {
-        if (isMuted) return
-        try {
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0)
-            isMuted = true
-        } catch (_: Exception) {}
-    }
-
-    private fun unmuteSystemBeeps() {
-        if (!isMuted) return
-        try {
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0)
-            isMuted = false
-        } catch (_: Exception) {}
-    }
-
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        super.onTaskRemoved(rootIntent)
-        unmuteSystemBeeps() // Failsafe
+    private fun sendAudioToAI(base64PCM: String) {
+        // Format depends on specific API. Example for JSON Realtime API:
+        val jsonPayload = """{"type": "input_audio", "audio": "$base64PCM"}"""
+        webSocket?.send(jsonPayload)
     }
 
     // =========================================================
-    // 5. FLOATING UI (DRAGGABLE ORB)
+    // 4. AUDIO TRACK (SPEAKER) SETUP FOR AI VOICE
+    // =========================================================
+    private fun initAudioTrack() {
+        val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, audioFormat)
+        audioTrack = AudioTrack.Builder()
+            .setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setEncoding(audioFormat)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(minBufferSize * 2)
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
+    }
+
+    // =========================================================
+    // 5. FLOATING UI (DRAGGABLE HOLOGRAM)
     // =========================================================
     @SuppressLint("ClickableViewAccessibility")
     private fun mountFloatingUI() {
@@ -330,9 +334,8 @@ class VoiceService : Service(), RecognitionListener {
         }
 
         floatingOrb = JarvisOrbView(this).apply { setOrbState(OrbState.IDLE) }
-
         floatingText = TextView(this).apply {
-            text = "Call Active"
+            text = "Connecting Stream..."
             setTextColor(Color.parseColor("#00E5FF"))
             textSize = 10f
             gravity = Gravity.CENTER
@@ -343,16 +346,14 @@ class VoiceService : Service(), RecognitionListener {
         floatingLayout?.addView(floatingOrb, LinearLayout.LayoutParams(160, 160))
         floatingLayout?.addView(floatingText, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
-        }
+        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY 
+        else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
 
         windowParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
             layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -382,13 +383,13 @@ class VoiceService : Service(), RecognitionListener {
                 MotionEvent.ACTION_UP -> {
                     view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).setInterpolator(OvershootInterpolator()).start()
                     if (!isDragging) {
-                        val clickTime = System.currentTimeMillis()
-                        // DOUBLE TAP TO HANG UP
-                        if (clickTime - lastClickTime < DOUBLE_CLICK_TIME_DELTA) {
+                        val currentTime = System.currentTimeMillis()
+                        // Double Tap to End Call
+                        if (currentTime - lastClickTime < DOUBLE_CLICK_TIME_DELTA) {
                             triggerHapticFeedback(200)
-                            endCallSession()
+                            endLiveCall()
                         }
-                        lastClickTime = clickTime
+                        lastClickTime = currentTime
                     }
                     true
                 }
@@ -413,7 +414,7 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     // =========================================================
-    // 6. UTILITIES (POWER, NETWORK, NOTIFICATIONS)
+    // 6. UTILITIES (POWER, NOTIFICATIONS)
     // =========================================================
     private fun triggerHapticFeedback(durationMs: Long) {
         try {
@@ -427,33 +428,9 @@ class VoiceService : Service(), RecognitionListener {
         } catch (_: Exception) {}
     }
 
-    private fun isNetworkAvailable(): Boolean {
-        val network = connectivityManager.activeNetwork ?: return false
-        val caps = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
-    private fun requestAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val attributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-            
-            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
-                .setAudioAttributes(attributes).setAcceptsDelayedFocusGain(true).build()
-            audioFocusRequest?.let { audioManager.requestAudioFocus(it) }
-        }
-    }
-
-    private fun abandonAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
-        }
-    }
-
     private fun acquireWakeLock() {
         if (wakeLock == null) {
-            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JarvisCore::CallLock")
+            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JarvisCore::StreamLock")
             wakeLock?.acquire(12 * 60 * 60 * 1000L) 
         }
     }
@@ -465,9 +442,7 @@ class VoiceService : Service(), RecognitionListener {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "JARVIS Call Engine", NotificationManager.IMPORTANCE_LOW)
-            channel.description = "Persistent Voice Call"
-            channel.setShowBadge(false)
+            val channel = NotificationChannel(CHANNEL_ID, "JARVIS Live Stream", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
@@ -476,7 +451,7 @@ class VoiceService : Service(), RecognitionListener {
         val intent = Intent(this, MainActivity::class.java)
         val pIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("J.A.R.V.I.S. Core Online")
+            .setContentTitle("J.A.R.V.I.S. Direct Link")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_sys_headset)
             .setContentIntent(pIntent)
@@ -487,17 +462,8 @@ class VoiceService : Service(), RecognitionListener {
     }
 
     override fun onDestroy() {
-        endCallSession()
-        unmuteSystemBeeps() // Absolute Failsafe
+        endLiveCall()
         releaseWakeLock()
-        
-        try {
-            unregisterReceiver(commandReceiver)
-        } catch (_: Exception) {}
-
-        speechRecognizer?.destroy()
-        speechRecognizer = null
-        mainHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 }
