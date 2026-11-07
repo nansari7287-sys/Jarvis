@@ -238,15 +238,44 @@ private fun CreatorPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpe
 
 @Composable
 private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenVault: () -> Unit) {
+    var selectedVoice by remember { mutableStateOf("Female") }
+    var selectedLanguage by remember { mutableStateOf("Hindi") }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("CONFIGURATION", "System Settings", "Manage the existing assistant configuration", onBack)
         Spacer(Modifier.height(6.dp))
         FeaturePanel("AI provider & API vault", "Open the existing provider configuration for Gemini, ChatGPT and Grok. Existing credential handling is preserved.", "⌘", onOpenVault)
-        FeaturePanel("Voice & microphone", "Voice controls remain connected to the current VoiceService and microphone action.", "♫")
+        FeaturePanel("Voice & microphone", "Choose a preferred voice style. Actual voice availability depends on installed Android Text-to-Speech engines.", "♫")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            listOf("Female", "Male").forEach { voice ->
+                Box(
+                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (selectedVoice == voice) Crimson.copy(alpha = 0.20f) else Panel)
+                        .border(1.dp, if (selectedVoice == voice) Crimson else PanelLine, RoundedCornerShape(12.dp))
+                        .clickable { selectedVoice = voice }.padding(13.dp),
+                    contentAlignment = Alignment.Center
+                ) { Text("$voice voice", color = Ice, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            listOf("Hindi", "English").forEach { language ->
+                Box(
+                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (selectedLanguage == language) Violet.copy(alpha = 0.18f) else Panel)
+                        .border(1.dp, if (selectedLanguage == language) Violet else PanelLine, RoundedCornerShape(12.dp))
+                        .clickable { selectedLanguage = language }.padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) { Text(language, color = Ice, fontSize = 10.sp) }
+            }
+        }
+        FeaturePanel("AI providers", "Gemini, ChatGPT and Grok are available in the existing API vault. Custom providers and Sarvam require compatible API configuration and are not yet wired into the runtime.", "⌘", onOpenVault)
+        FeaturePanel("Companion personality", "Friendly conversational style is a planned assistant mode. Responses still depend on the selected AI provider and its configured prompt.", "♡")
+        FeaturePanel("YouTube & Music", "Voice commands can request YouTube searches. Playback behavior depends on the installed YouTube app and Android permissions.", "♫")
+        FeaturePanel("Cooking Assistant", "Recipe guidance, ingredient-based suggestions and meal planning module.", "♨")
+        FeaturePanel("Coding & Study Assistant", "Code explanation, debugging support and study guidance for supported topics.", "</>")
         FeaturePanel("Accessibility & automation", "Existing Android accessibility and automation services are retained.", "⌁")
         FeaturePanel("Interface", "JARVIS dark-space theme with crimson and electric-violet accents.", "◈")
         Spacer(Modifier.height(10.dp))
-        Text("ADVANCED OPTIONS OPEN THE EXISTING CONFIGURATION", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp)
+        Text("VOICE CHOICES ARE A UI PREFERENCE PREVIEW; SYSTEM TTS WIRING IS STILL REQUIRED", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp)
     }
 }
 
