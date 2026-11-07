@@ -71,6 +71,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -212,9 +213,55 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         bindInterfaceViews()
         injectHologramOverlays()
         setupInteractionListeners()
+        installDrakoXComposeUi()
         registerBackgroundReceivers()
 
         executeStartupSequence()
+    }
+
+    /**
+     * Adds the new Compose presentation above the legacy layout.
+     * Legacy views remain attached and their existing actions are reused.
+     */
+    private fun installDrakoXComposeUi() {
+        val host = rootLayout ?: return
+        val composeLayer = ComposeView(this).apply {
+            setViewCompositionStrategy(
+                androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+            )
+            setContent {
+                com.example.jarvis.ui.DrakoXHomeScreen(
+                    onSendMessage = { command ->
+                        messageInputBox?.setText(command)
+                        sendCommandButton?.performClick()
+                    },
+                    onMicClick = {
+                        micToggleButton?.performClick()
+                    },
+                    onHistoryClick = {
+                        findViewById<View?>(resources.getIdentifier("historyButton", "id", packageName))
+                            ?.performClick()
+                    },
+                    onSettingsClick = {
+                        settingsBtn?.performClick()
+                    },
+                    onDeveloperClick = {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Developer profile will be connected in the next UI stage.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+            }
+        }
+        host.addView(
+            composeLayer,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
     }
 
     private fun initializeCoreSystems() {
