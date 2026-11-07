@@ -146,6 +146,7 @@ fun DrakoXHomeScreen(
                     DrakoXPage.HISTORY -> HistoryPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.HOME })
                     DrakoXPage.CREATOR -> CreatorPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.HOME }, onOpenProfile = onDeveloperClick)
                     DrakoXPage.SETTINGS -> SettingsPage(
+                        modifier = Modifier.weight(1f),
                         onBack = { page = DrakoXPage.HOME },
                         onOpenVault = onSettingsClick
                     )
@@ -196,8 +197,8 @@ private fun FeaturePanel(title: String, detail: String, marker: String = "✦", 
 }
 
 @Composable
-private fun HistoryPage(onBack: () -> Unit) {
-    Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun HistoryPage(modifier: Modifier = Modifier, onBack: () -> Unit) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("SESSION ARCHIVE", "Command History", "Recent conversation storage", onBack)
         Spacer(Modifier.height(6.dp))
         FeaturePanel("History storage status", "The current AI conversation manager keeps up to 20 recent messages in memory. A persistent searchable archive is not yet connected to this screen.", "◷")
@@ -208,8 +209,8 @@ private fun HistoryPage(onBack: () -> Unit) {
 }
 
 @Composable
-private fun CreatorPage(onBack: () -> Unit, onOpenProfile: () -> Unit) {
-    Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+private fun CreatorPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenProfile: () -> Unit) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         ScreenHeading("SYSTEM ARCHITECT", "Developer Profile", "The mind behind this interface", onBack)
         Spacer(Modifier.height(8.dp))
         Box(
@@ -231,20 +232,20 @@ private fun CreatorPage(onBack: () -> Unit, onOpenProfile: () -> Unit) {
         }
         FeaturePanel("Project", "DRΛKOX JΛRVIS — personal AI assistant interface", "⌘")
         FeaturePanel("Core focus", "AI interaction • Voice control • Android automation", "✧")
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(10.dp))
     }
 }
 
 @Composable
-private fun SettingsPage(onBack: () -> Unit, onOpenVault: () -> Unit) {
-    Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenVault: () -> Unit) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("CONFIGURATION", "System Settings", "Manage the existing assistant configuration", onBack)
         Spacer(Modifier.height(6.dp))
         FeaturePanel("AI provider & API vault", "Open the existing provider configuration for Gemini, ChatGPT and Grok. Existing credential handling is preserved.", "⌘", onOpenVault)
         FeaturePanel("Voice & microphone", "Voice controls remain connected to the current VoiceService and microphone action.", "♫")
         FeaturePanel("Accessibility & automation", "Existing Android accessibility and automation services are retained.", "⌁")
         FeaturePanel("Interface", "DRΛKOX dark-space theme with crimson and electric-violet accents.", "◈")
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(10.dp))
         Text("ADVANCED OPTIONS OPEN THE EXISTING CONFIGURATION", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp)
     }
 }
@@ -292,7 +293,7 @@ private fun SystemStrip() {
         Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFF62F5B0)))
         Spacer(Modifier.width(8.dp))
         Text("SYSTEM ONLINE", color = Color(0xFF62F5B0), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(10.dp))
         Text("SECURE SESSION", color = Muted, fontSize = 8.sp, letterSpacing = 1.sp)
         Spacer(Modifier.width(7.dp))
         Text("◆", color = Violet, fontSize = 9.sp)
