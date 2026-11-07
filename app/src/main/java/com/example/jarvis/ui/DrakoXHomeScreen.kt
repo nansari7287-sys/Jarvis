@@ -79,6 +79,8 @@ fun DrakoXTheme(content: @Composable () -> Unit) {
  * Kept isolated from MainActivity so existing voice, accessibility,
  * automation and service lifecycles remain untouched until explicitly wired.
  */
+private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS }
+
 @Composable
 fun DrakoXHomeScreen(
     modifier: Modifier = Modifier,
@@ -89,94 +91,161 @@ fun DrakoXHomeScreen(
     onDeveloperClick: () -> Unit = {}
 ) {
     var message by remember { mutableStateOf("") }
+    var page by remember { mutableStateOf(DrakoXPage.HOME) }
 
     DrakoXTheme {
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF160914), Color(0xFF080811), Void, Color(0xFF10091A))
-                    )
-                )
+                .background(Brush.verticalGradient(listOf(Color(0xFF160914), Color(0xFF080811), Void, Color(0xFF10091A))))
         ) {
             CosmicBackdrop()
-
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Header(onHistoryClick = onHistoryClick, onSettingsClick = onSettingsClick)
-
+                Header(
+                    onHistoryClick = { page = DrakoXPage.HISTORY; onHistoryClick() },
+                    onSettingsClick = { page = DrakoXPage.SETTINGS }
+                )
                 Spacer(Modifier.height(18.dp))
                 SystemStrip()
                 Spacer(Modifier.height(10.dp))
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "YOUR PERSONAL INTELLIGENCE",
-                        color = Muted,
-                        fontSize = 9.sp,
-                        letterSpacing = 2.5.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "I AM  DRΛKOX",
-                        color = Ice,
-                        fontSize = 25.sp,
-                        letterSpacing = 2.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "Ready when you are.",
-                        color = Muted,
-                        fontSize = 12.sp
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    AnimatedNeonOrb()
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        "CORE  •  ONLINE",
-                        color = Color(0xFFFF718B),
-                        fontSize = 10.sp,
-                        letterSpacing = 2.4.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(18.dp))
-                    QuickStatusRow()
-                }
-
-                ActionDock(
-                    message = message,
-                    onMessageChange = { message = it },
-                    onMicClick = onMicClick,
-                    onSend = {
-                        val value = message.trim()
-                        if (value.isNotEmpty()) {
-                            onSendMessage(value)
-                            message = ""
+                when (page) {
+                    DrakoXPage.HOME -> {
+                        Column(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("YOUR PERSONAL INTELLIGENCE", color = Muted, fontSize = 9.sp, letterSpacing = 2.5.sp, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(12.dp))
+                            Text("I AM  DRΛKOX", color = Ice, fontSize = 25.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Black)
+                            Spacer(Modifier.height(2.dp))
+                            Text("Ready when you are.", color = Muted, fontSize = 12.sp)
+                            Spacer(Modifier.height(12.dp))
+                            AnimatedNeonOrb()
+                            Spacer(Modifier.height(10.dp))
+                            Text("CORE  •  ONLINE", color = Color(0xFFFF718B), fontSize = 10.sp, letterSpacing = 2.4.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(18.dp))
+                            QuickStatusRow()
                         }
+                        ActionDock(
+                            message = message,
+                            onMessageChange = { message = it },
+                            onMicClick = onMicClick,
+                            onSend = {
+                                val value = message.trim()
+                                if (value.isNotEmpty()) {
+                                    onSendMessage(value)
+                                    message = ""
+                                }
+                            }
+                        )
                     }
-                )
+                    DrakoXPage.HISTORY -> HistoryPage(onBack = { page = DrakoXPage.HOME })
+                    DrakoXPage.CREATOR -> CreatorPage(onBack = { page = DrakoXPage.HOME }, onOpenProfile = onDeveloperClick)
+                    DrakoXPage.SETTINGS -> SettingsPage(
+                        onBack = { page = DrakoXPage.HOME },
+                        onOpenVault = onSettingsClick
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
                 BottomNavigation(
-                    onHome = {},
-                    onHistory = onHistoryClick,
-                    onDeveloper = onDeveloperClick,
-                    onSettings = onSettingsClick
+                    selected = page,
+                    onHome = { page = DrakoXPage.HOME },
+                    onHistory = { page = DrakoXPage.HISTORY; onHistoryClick() },
+                    onDeveloper = { page = DrakoXPage.CREATOR; onDeveloperClick() },
+                    onSettings = { page = DrakoXPage.SETTINGS }
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ScreenHeading(kicker: String, title: String, subtitle: String, onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text("‹", color = Crimson, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack).padding(end = 12.dp))
+        Column {
+            Text(kicker, color = Crimson, fontSize = 8.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = Ice, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(subtitle, color = Muted, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun FeaturePanel(title: String, detail: String, marker: String = "✦", onClick: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            .background(Panel).border(1.dp, PanelLine, RoundedCornerShape(16.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(15.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(marker, color = Crimson, fontSize = 22.sp, modifier = Modifier.padding(end = 13.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = Ice, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(detail, color = Muted, fontSize = 9.sp, lineHeight = 14.sp)
+        }
+        if (onClick != null) Text("›", color = Violet, fontSize = 24.sp)
+    }
+}
+
+@Composable
+private fun HistoryPage(onBack: () -> Unit) {
+    Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ScreenHeading("SESSION ARCHIVE", "Command History", "Recent conversation storage", onBack)
+        Spacer(Modifier.height(6.dp))
+        FeaturePanel("History storage status", "The current AI conversation manager keeps up to 20 recent messages in memory. A persistent searchable archive is not yet connected to this screen.", "◷")
+        FeaturePanel("Privacy", "This screen does not fabricate past commands or display sample records as real activity.", "◇")
+        Spacer(Modifier.weight(1f))
+        Text("LIVE SESSION HISTORY CONNECTION — PENDING", color = Muted, fontSize = 8.sp, letterSpacing = 1.1.sp)
+    }
+}
+
+@Composable
+private fun CreatorPage(onBack: () -> Unit, onOpenProfile: () -> Unit) {
+    Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        ScreenHeading("SYSTEM ARCHITECT", "Developer Profile", "The mind behind this interface", onBack)
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF351326), Color(0xFF171126), Color(0xFF10101B))))
+                .border(1.dp, Crimson.copy(alpha = 0.35f), RoundedCornerShape(22.dp)).padding(22.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(76.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Crimson, Violet))), contentAlignment = Alignment.Center) {
+                    Text("N", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.height(14.dp))
+                Text("𝑵𝒂𝒆𝒆𝒎", color = Ice, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text("DEVELOPER • DRΛKOX JΛRVIS", color = Color(0xFFFF8299), fontSize = 9.sp, letterSpacing = 1.5.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("Building intelligent experiences with a focus on voice, automation and useful AI.", color = Muted, fontSize = 10.sp)
+            }
+        }
+        FeaturePanel("Project", "DRΛKOX JΛRVIS — personal AI assistant interface", "⌘")
+        FeaturePanel("Core focus", "AI interaction • Voice control • Android automation", "✧")
+        Spacer(Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun SettingsPage(onBack: () -> Unit, onOpenVault: () -> Unit) {
+    Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ScreenHeading("CONFIGURATION", "System Settings", "Manage the existing assistant configuration", onBack)
+        Spacer(Modifier.height(6.dp))
+        FeaturePanel("AI provider & API vault", "Open the existing provider configuration for Gemini, ChatGPT and Grok. Existing credential handling is preserved.", "⌘", onOpenVault)
+        FeaturePanel("Voice & microphone", "Voice controls remain connected to the current VoiceService and microphone action.", "♫")
+        FeaturePanel("Accessibility & automation", "Existing Android accessibility and automation services are retained.", "⌁")
+        FeaturePanel("Interface", "DRΛKOX dark-space theme with crimson and electric-violet accents.", "◈")
+        Spacer(Modifier.weight(1f))
+        Text("ADVANCED OPTIONS OPEN THE EXISTING CONFIGURATION", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp)
     }
 }
 
