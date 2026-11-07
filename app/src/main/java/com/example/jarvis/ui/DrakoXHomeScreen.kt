@@ -204,21 +204,22 @@ private fun ProviderPage(
     onConfigure: () -> Unit
 ) {
     val providers = listOf("GEMINI" to "Google Gemini", "CHATGPT" to "ChatGPT", "GROK" to "Grok")
+    var selectedProvider by remember(activeProvider) { mutableStateOf(activeProvider) }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("AI CONNECTIVITY", "AI Provider", "Only one provider can be active at a time", onBack)
         providers.forEach { (id, label) ->
             Row(
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                    .background(if (activeProvider == id) Crimson.copy(alpha = 0.13f) else Panel)
-                    .border(1.dp, if (activeProvider == id) Crimson else PanelLine, RoundedCornerShape(16.dp))
-                    .clickable { onSelect(id) }.padding(16.dp),
+                    .background(if (selectedProvider == id) Crimson.copy(alpha = 0.13f) else Panel)
+                    .border(1.dp, if (selectedProvider == id) Crimson else PanelLine, RoundedCornerShape(16.dp))
+                    .clickable { selectedProvider = id; onSelect(id) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(label, color = Ice, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(if (activeProvider == id) "ACTIVE PROVIDER" else "Tap to activate", color = if (activeProvider == id) Color(0xFF62F5B0) else Muted, fontSize = 9.sp)
+                    Text(if (selectedProvider == id) "ACTIVE PROVIDER" else "Tap to activate", color = if (selectedProvider == id) Color(0xFF62F5B0) else Muted, fontSize = 9.sp)
                 }
-                Text(if (activeProvider == id) "●" else "○", color = if (activeProvider == id) Crimson else Muted, fontSize = 22.sp)
+                Text(if (selectedProvider == id) "●" else "○", color = if (activeProvider == id) Crimson else Muted, fontSize = 22.sp)
             }
         }
         FeaturePanel("API credentials", "Each provider keeps its own saved API key and model. Switching providers does not erase the others.", "◇", onConfigure)
