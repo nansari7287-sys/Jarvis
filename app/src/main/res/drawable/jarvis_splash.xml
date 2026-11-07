@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:startColor="#210B17"
+                android:centerColor="#090812"
+                android:endColor="#05050A"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item
+        android:width="196dp"
+        android:height="196dp"
+        android:gravity="center"
+        android:drawable="@drawable/jarvis_icon_foreground" />
+</layer-list>
