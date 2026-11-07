@@ -20,10 +20,10 @@
 
     <!-- ═══ VOICE SERVICE (REQUIRED - Manifest me use hota hai) ═══ -->
     <string name="voice_service_label">JARVIS Voice Engine</string>
-    <string name="voice_service_description">Background voice listening service for DRAKOX JARVIS AI assistant.</string>
+    <string name="voice_service_description">Background voice listening service for JARVIS AI assistant.</string>
 
     <!-- ═══ NOTIFICATIONS ═══ -->
     <string name="notification_channel_id">jarvis_default_channel</string>
-    <string name="notification_channel_name">DRAKOX JARVIS Service</string>
+    <string name="notification_channel_name">JARVIS Service</string>
     <string name="notification_channel_description">Persistent notification for JARVIS background service</string>
 </resources>
