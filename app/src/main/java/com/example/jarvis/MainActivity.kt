@@ -251,6 +251,15 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                             "Developer profile will be connected in the next UI stage.",
                             Toast.LENGTH_SHORT
                         ).show()
+                    },
+                    activeProvider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI") ?: "GEMINI",
+                    onProviderSelected = { provider ->
+                        apiPrefs.edit().putString("ACTIVE_PROVIDER", provider).apply()
+                        Toast.makeText(this@MainActivity, "$provider is now active", Toast.LENGTH_SHORT).show()
+                        speak("Active AI provider changed to $provider.")
+                    },
+                    onConfigureProviders = {
+                        settingsBtn?.performClick()
                     }
                 )
             }
