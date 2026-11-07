@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/drakox-compose-foundation"]
   pull_request:
 
 jobs:
