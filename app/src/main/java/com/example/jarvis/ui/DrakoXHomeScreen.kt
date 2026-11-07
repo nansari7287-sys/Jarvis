@@ -79,7 +79,7 @@ fun DrakoXTheme(content: @Composable () -> Unit) {
  * Kept isolated from MainActivity so existing voice, accessibility,
  * automation and service lifecycles remain untouched until explicitly wired.
  */
-private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS }
+private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS, PROVIDERS, EXTENSIONS, COOKIES, VOICE }
 
 @Composable
 fun DrakoXHomeScreen(
@@ -88,7 +88,10 @@ fun DrakoXHomeScreen(
     onMicClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onDeveloperClick: () -> Unit = {}
+    onDeveloperClick: () -> Unit = {},
+    activeProvider: String = "GEMINI",
+    onProviderSelected: (String) -> Unit = {},
+    onConfigureProviders: () -> Unit = {}
 ) {
     var message by remember { mutableStateOf("") }
     var page by remember { mutableStateOf(DrakoXPage.HOME) }
@@ -148,7 +151,33 @@ fun DrakoXHomeScreen(
                     DrakoXPage.SETTINGS -> SettingsPage(
                         modifier = Modifier.weight(1f),
                         onBack = { page = DrakoXPage.HOME },
-                        onOpenVault = onSettingsClick
+                        onOpenVault = { page = DrakoXPage.PROVIDERS },
+                        onOpenExtensions = { page = DrakoXPage.EXTENSIONS },
+                        onOpenCookies = { page = DrakoXPage.COOKIES },
+                        onOpenVoice = { page = DrakoXPage.VOICE }
+                    )
+                    DrakoXPage.PROVIDERS -> ProviderPage(
+                        modifier = Modifier.weight(1f), activeProvider = activeProvider,
+                        onBack = { page = DrakoXPage.SETTINGS },
+                        onSelect = onProviderSelected, onConfigure = onConfigureProviders
+                    )
+                    DrakoXPage.EXTENSIONS -> InfoModulePage(
+                        modifier = Modifier.weight(1f), title = "Extensions",
+                        subtitle = "Manage trusted add-ons for JARVIS",
+                        detail = "Extension import and permission controls are being prepared. Only install extensions from sources you trust. APK and ZIP files are not executed inside this screen.",
+                        onBack = { page = DrakoXPage.SETTINGS }
+                    )
+                    DrakoXPage.COOKIES -> InfoModulePage(
+                        modifier = Modifier.weight(1f), title = "Cookie Vault",
+                        subtitle = "Authorized website sessions",
+                        detail = "Chrome's private app storage cannot be read directly by another Android app. Import your own exported Netscape .txt or JSON cookie file using Android's file picker in the secure vault. Never share cookie files: they can grant account access.",
+                        onBack = { page = DrakoXPage.SETTINGS }
+                    )
+                    DrakoXPage.VOICE -> InfoModulePage(
+                        modifier = Modifier.weight(1f), title = "Voice & Personality",
+                        subtitle = "Assistant voice preferences",
+                        detail = "Voice selection and language controls will be connected to Android Text-to-Speech. Available voices depend on the speech engines installed on this device.",
+                        onBack = { page = DrakoXPage.SETTINGS }
                     )
                 }
 
@@ -162,6 +191,46 @@ fun DrakoXHomeScreen(
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun ProviderPage(
+    modifier: Modifier = Modifier,
+    activeProvider: String,
+    onBack: () -> Unit,
+    onSelect: (String) -> Unit,
+    onConfigure: () -> Unit
+) {
+    val providers = listOf("GEMINI" to "Google Gemini", "CHATGPT" to "ChatGPT", "GROK" to "Grok")
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ScreenHeading("AI CONNECTIVITY", "AI Provider", "Only one provider can be active at a time", onBack)
+        providers.forEach { (id, label) ->
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(if (activeProvider == id) Crimson.copy(alpha = 0.13f) else Panel)
+                    .border(1.dp, if (activeProvider == id) Crimson else PanelLine, RoundedCornerShape(16.dp))
+                    .clickable { onSelect(id) }.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(label, color = Ice, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(if (activeProvider == id) "ACTIVE PROVIDER" else "Tap to activate", color = if (activeProvider == id) Color(0xFF62F5B0) else Muted, fontSize = 9.sp)
+                }
+                Text(if (activeProvider == id) "●" else "○", color = if (activeProvider == id) Crimson else Muted, fontSize = 22.sp)
+            }
+        }
+        FeaturePanel("API credentials", "Each provider keeps its own saved API key and model. Switching providers does not erase the others.", "◇", onConfigure)
+        Text("Select one provider above. Your selection is saved immediately.", color = Muted, fontSize = 9.sp)
+    }
+}
+
+@Composable
+private fun InfoModulePage(modifier: Modifier = Modifier, title: String, subtitle: String, detail: String, onBack: () -> Unit) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        ScreenHeading("JARVIS CONNECTIVITY", title, subtitle, onBack)
+        FeaturePanel(title, detail, "◇")
     }
 }
 
@@ -237,14 +306,16 @@ private fun CreatorPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpe
 }
 
 @Composable
-private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenVault: () -> Unit) {
+private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenVault: () -> Unit, onOpenExtensions: () -> Unit, onOpenCookies: () -> Unit, onOpenVoice: () -> Unit) {
     var selectedVoice by remember { mutableStateOf("Female") }
     var selectedLanguage by remember { mutableStateOf("Hindi") }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("CONFIGURATION", "System Settings", "Manage the existing assistant configuration", onBack)
         Spacer(Modifier.height(6.dp))
-        FeaturePanel("AI provider & API vault", "Open the existing provider configuration for Gemini, ChatGPT and Grok. Existing credential handling is preserved.", "⌘", onOpenVault)
-        FeaturePanel("Voice & microphone", "Choose a preferred voice style. Actual voice availability depends on installed Android Text-to-Speech engines.", "♫")
+        FeaturePanel("AI provider & API vault", "Choose exactly one active provider: Gemini, ChatGPT or Grok. API credentials remain separately saved.", "⌘", onOpenVault)
+        FeaturePanel("Voice & microphone", "Choose voice and language preferences.", "♫", onOpenVoice)
+        FeaturePanel("Extensions Manager", "Explore and manage trusted JARVIS extensions.", "✣", onOpenExtensions)
+        FeaturePanel("Cookie Vault", "Import your own exported website session files securely.", "▣", onOpenCookies)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             listOf("Female", "Male").forEach { voice ->
                 Box(
@@ -267,7 +338,7 @@ private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOp
                 ) { Text(language, color = Ice, fontSize = 10.sp) }
             }
         }
-        FeaturePanel("AI providers", "Gemini, ChatGPT and Grok are available in the existing API vault. Custom providers and Sarvam require compatible API configuration and are not yet wired into the runtime.", "⌘", onOpenVault)
+        FeaturePanel("AI providers", "Gemini, ChatGPT and Grok — one active provider at a time.", "⌘", onOpenVault)
         FeaturePanel("Companion personality", "Friendly conversational style is a planned assistant mode. Responses still depend on the selected AI provider and its configured prompt.", "♡")
         FeaturePanel("YouTube & Music", "Voice commands can request YouTube searches. Playback behavior depends on the installed YouTube app and Android permissions.", "♫")
         FeaturePanel("Coding & Study Assistant", "Code explanation, debugging support and study guidance for supported topics.", "</>")
