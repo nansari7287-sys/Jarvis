@@ -292,7 +292,7 @@ private fun Header(onHistoryClick: () -> Unit, onSettingsClick: () -> Unit) {
                 .background(Brush.linearGradient(listOf(Crimson, Violet))),
             contentAlignment = Alignment.Center
         ) {
-            Text("D", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text("J", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
