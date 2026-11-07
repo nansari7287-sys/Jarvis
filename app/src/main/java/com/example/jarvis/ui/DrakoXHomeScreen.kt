@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,31 +50,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val Void = Color(0xFF070A10)
-private val Panel = Color(0xFF101722)
-private val Neon = Color(0xFF55DDF5)
-private val Muted = Color(0xFF91A3B5)
+private val Void = Color(0xFF05050A)
+private val Panel = Color(0xE611111D)
+private val PanelLine = Color(0xFF292238)
+private val Crimson = Color(0xFFFF3158)
+private val Violet = Color(0xFF9B65FF)
+private val Ice = Color(0xFFECEBFA)
+private val Muted = Color(0xFF8E8BA5)
 
 @Composable
 fun DrakoXTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme.copy(
-            primary = Neon,
-            secondary = Color(0xFF9B8CFF),
+            primary = Crimson,
+            secondary = Violet,
             background = Void,
             surface = Panel,
-            onPrimary = Void,
-            onBackground = Color(0xFFEAF5FF),
-            onSurface = Color(0xFFEAF5FF)
+            onPrimary = Color.White,
+            onBackground = Ice,
+            onSurface = Ice
         ),
         content = content
     )
 }
 
 /**
- * Compose-first DRΛKOX JΛRVIS home surface.
- * This screen is intentionally isolated until MainActivity's existing
- * voice, accessibility and automation lifecycle is wired into callbacks.
+ * Premium visual foundation for DRΛKOX JΛRVIS.
+ * Kept isolated from MainActivity so existing voice, accessibility,
+ * automation and service lifecycles remain untouched until explicitly wired.
  */
 @Composable
 fun DrakoXHomeScreen(
@@ -81,129 +85,301 @@ fun DrakoXHomeScreen(
     onSendMessage: (String) -> Unit = {},
     onMicClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onDeveloperClick: () -> Unit = {}
 ) {
     var message by remember { mutableStateOf("") }
 
     DrakoXTheme {
-        Column(
+        Box(
             modifier = modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF0B111B), Void, Color(0xFF080D15))
+                        listOf(Color(0xFF160914), Color(0xFF080811), Void, Color(0xFF10091A))
                     )
                 )
-                .padding(horizontal = 22.dp, vertical = 18.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "DRΛKOX",
-                        color = Color(0xFFEAF7FF),
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.2.sp
-                    )
-                    Text(
-                        text = "J A R V I S   /   PERSONAL AI",
-                        color = Muted,
-                        fontSize = 9.sp,
-                        letterSpacing = 1.6.sp
-                    )
-                }
-                IconButton(onClick = onHistoryClick) {
-                    Icon(Icons.Outlined.History, contentDescription = "Chat history", tint = Muted)
-                }
-                IconButton(onClick = onSettingsClick) {
-                    Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Muted)
-                }
-            }
-
-            Spacer(Modifier.height(30.dp))
+            CosmicBackdrop()
 
             Column(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Text(
-                    text = "SYSTEM ONLINE",
-                    color = Neon,
-                    fontSize = 10.sp,
-                    letterSpacing = 2.4.sp,
-                    fontWeight = FontWeight.SemiBold
+                Header(onHistoryClick = onHistoryClick, onSettingsClick = onSettingsClick)
+
+                Spacer(Modifier.height(18.dp))
+                SystemStrip()
+                Spacer(Modifier.height(10.dp))
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "YOUR PERSONAL INTELLIGENCE",
+                        color = Muted,
+                        fontSize = 9.sp,
+                        letterSpacing = 2.5.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "I AM  DRΛKOX",
+                        color = Ice,
+                        fontSize = 25.sp,
+                        letterSpacing = 2.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "Ready when you are.",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    AnimatedNeonOrb()
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "CORE  •  ONLINE",
+                        color = Color(0xFFFF718B),
+                        fontSize = 10.sp,
+                        letterSpacing = 2.4.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    QuickStatusRow()
+                }
+
+                ActionDock(
+                    message = message,
+                    onMessageChange = { message = it },
+                    onMicClick = onMicClick,
+                    onSend = {
+                        val value = message.trim()
+                        if (value.isNotEmpty()) {
+                            onSendMessage(value)
+                            message = ""
+                        }
+                    }
                 )
-                Spacer(Modifier.height(24.dp))
-                AnimatedNeonOrb()
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    text = "At your service.",
-                    color = Color(0xFFEAF5FF),
-                    fontSize = 23.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.height(7.dp))
-                Text(
-                    text = "Your conversations. Your commands. Your JARVIS.",
-                    color = Muted,
-                    fontSize = 11.sp
+
+                Spacer(Modifier.height(12.dp))
+                BottomNavigation(
+                    onHome = {},
+                    onHistory = onHistoryClick,
+                    onDeveloper = onDeveloperClick,
+                    onSettings = onSettingsClick
                 )
             }
+        }
+    }
+}
 
-            Surface(
-                color = Panel,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, Color(0x3355DDF5), RoundedCornerShape(24.dp))
+@Composable
+private fun Header(onHistoryClick: () -> Unit, onSettingsClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Brush diagonalGradient()),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("D", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("DRΛKOX JΛRVIS", color = Ice, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+            Text("PERSONAL AI  /  VIRTUAL CORE", color = Muted, fontSize = 8.sp, letterSpacing = 1.2.sp)
+        }
+        IconButton(onClick = onHistoryClick) {
+            Icon(Icons.Outlined.History, contentDescription = "History", tint = Ice)
+        }
+        IconButton(onClick = onSettingsClick) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Ice)
+        }
+    }
+}
+
+@Composable
+private fun SystemStrip() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xAA171321))
+            .border(1.dp, PanelLine, RoundedCornerShape(12.dp))
+            .padding(horizontal = 13.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFF62F5B0)))
+        Spacer(Modifier.width(8.dp))
+        Text("SYSTEM ONLINE", color = Color(0xFF62F5B0), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+        Spacer(Modifier.weight(1f))
+        Text("SECURE SESSION", color = Muted, fontSize = 8.sp, letterSpacing = 1.sp)
+        Spacer(Modifier.width(7.dp))
+        Text("◆", color = Violet, fontSize = 9.sp)
+    }
+}
+
+@Composable
+private fun QuickStatusRow() {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        StatusPill("AI CORE", "READY", Crimson)
+        StatusPill("VOICE", "STANDBY", Violet)
+        StatusPill("MODE", "PERSONAL", Color(0xFF62DCCB))
+    }
+}
+
+@Composable
+private fun StatusPill(label: String, value: String, accent: Color) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xB312111C))
+            .border(1.dp, accent.copy(alpha = 0.30f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, color = Muted, fontSize = 7.sp, letterSpacing = 1.sp)
+        Spacer(Modifier.height(3.dp))
+        Text(value, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+    }
+}
+
+@Composable
+private fun ActionDock(
+    message: String,
+    onMessageChange: (String) -> Unit,
+    onMicClick: () -> Unit,
+    onSend: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Text("COMMAND INTERFACE", color = Muted, fontSize = 8.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+        Surface(
+            color = Panel,
+            shape = RoundedCornerShape(22.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Brush.linearGradient(listOf(Crimson.copy(alpha = 0.7f), Violet.copy(alpha = 0.45f), PanelLine)), RoundedCornerShape(22.dp))
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 17.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                BasicTextField(
+                    value = message,
+                    onValueChange = onMessageChange,
+                    modifier = Modifier.weight(1f).padding(vertical = 12.dp),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Ice),
+                    decorationBox = { inner ->
+                        Box {
+                            if (message.isEmpty()) Text("Ask anything, command anything...", color = Muted, fontSize = 12.sp)
+                            inner()
+                        }
+                    }
+                )
+                IconButton(onClick = onMicClick) {
+                    Icon(Icons.Outlined.Mic, contentDescription = "Voice input", tint = Crimson)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(Crimson, Violet)))
+                        .clickable(onClick = onSend),
+                    contentAlignment = Alignment.Center
                 ) {
-                    BasicTextField(
-                        value = message,
-                        onValueChange = { message = it },
-                        modifier = Modifier.weight(1f).padding(vertical = 12.dp),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                        decorationBox = { inner ->
-                            Box {
-                                if (message.isEmpty()) {
-                                    Text("Message JARVIS...", color = Muted, fontSize = 13.sp)
-                                }
-                                inner()
-                            }
-                        }
-                    )
-                    IconButton(onClick = onMicClick) {
-                        Icon(Icons.Outlined.Mic, contentDescription = "Voice input", tint = Neon)
-                    }
-                    IconButton(
-                        onClick = {
-                            val value = message.trim()
-                            if (value.isNotEmpty()) {
-                                onSendMessage(value)
-                                message = ""
-                            }
-                        }
-                    ) {
-                        Icon(Icons.Outlined.Send, contentDescription = "Send message", tint = Neon)
-                    }
+                    Icon(Icons.Outlined.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(19.dp))
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "PRIVATE SESSION  •  ENCRYPTED LOCAL SETTINGS",
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFF637487),
-                fontSize = 8.sp,
-                letterSpacing = 1.1.sp
-            )
+        }
+        Text(
+            "Developed By  𝑵𝒂𝒆𝒆𝒎",
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFF69647C),
+            fontSize = 8.sp,
+            letterSpacing = 1.1.sp
+        )
+    }
+}
+
+@Composable
+private fun BottomNavigation(
+    onHome: () -> Unit,
+    onHistory: () -> Unit,
+    onDeveloper: () -> Unit,
+    onSettings: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xE9100F19))
+            .border(1.dp, PanelLine, RoundedCornerShape(18.dp))
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        NavItem("⌂", "HOME", true, onHome)
+        NavItem("◷", "HISTORY", false, onHistory)
+        NavItem("✧", "CREATOR", false, onDeveloper)
+        NavItem("⚙", "SETTINGS", false, onSettings)
+    }
+}
+
+@Composable
+private fun NavItem(symbol: String, label: String, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(symbol, color = if (selected) Crimson else Muted, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(3.dp))
+        Text(label, color = if (selected) Ice else Muted, fontSize = 7.sp, letterSpacing = 0.8.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun CosmicBackdrop() {
+    val transition = rememberInfiniteTransition(label = "backdrop")
+    val drift by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(12000), RepeatMode.Reverse),
+        label = "backdrop-drift"
+    )
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        drawCircle(
+            brush = Brush.radialGradient(listOf(Color(0x443D102C), Color.Transparent), center = Offset(w * (0.18f + drift * 0.08f), h * 0.22f), radius = w * 0.72f),
+            radius = w * 0.72f,
+            center = Offset(w * (0.18f + drift * 0.08f), h * 0.22f)
+        )
+        drawCircle(
+            brush = Brush.radialGradient(listOf(Color(0x332B1755), Color.Transparent), center = Offset(w * 0.9f, h * 0.72f), radius = w * 0.65f),
+            radius = w * 0.65f,
+            center = Offset(w * 0.9f, h * 0.72f)
+        )
+        for (i in 0..74) {
+            val x = ((i * 73) % 997) / 997f * w
+            val y = ((i * 137) % 991) / 991f * h
+            val alpha = 0.16f + ((i % 4) * 0.08f)
+            drawCircle(Color.White.copy(alpha = alpha), radius = if (i % 9 == 0) 1.7.dp.toPx() else 0.8.dp.toPx(), center = Offset(x, y))
+        }
+        for (i in 0..8) {
+            val y = h * (0.12f + i * 0.095f)
+            drawLine(Color(0x0DFF5477), Offset(0f, y), Offset(w, y), strokeWidth = 0.7.dp.toPx())
         }
     }
 }
@@ -212,62 +388,69 @@ fun DrakoXHomeScreen(
 private fun AnimatedNeonOrb() {
     val transition = rememberInfiniteTransition(label = "jarvis-orb")
     val pulse by transition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        initialValue = 0.94f,
+        targetValue = 1.07f,
+        animationSpec = infiniteRepeatable(tween(1700), RepeatMode.Reverse),
         label = "orb-pulse"
     )
     val rotation by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(9000)),
+        animationSpec = infiniteRepeatable(tween(8500)),
         label = "orb-rotation"
     )
 
-    Canvas(modifier = Modifier.size(214.dp)) {
+    Canvas(Modifier.size(232.dp)) {
         val center = Offset(size.width / 2f, size.height / 2f)
-        val base = size.minDimension * 0.27f * pulse
+        val base = size.minDimension * 0.245f * pulse
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0x6655DDF5), Color(0x2255DDF5), Color.Transparent),
+                colors = listOf(Color(0x66FF3158), Color(0x229B65FF), Color.Transparent),
                 center = center,
-                radius = base * 2.2f
+                radius = base * 2.55f
             ),
-            radius = base * 2.2f,
+            radius = base * 2.55f,
             center = center
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFFB9F7FF), Color(0xFF2AAFCB), Color(0xFF102A40)),
+                colors = listOf(Color(0xFFFFD5DE), Color(0xFFFF3158), Color(0xFF5D153D), Color(0xFF160F2C)),
                 center = Offset(center.x - base * 0.25f, center.y - base * 0.3f),
                 radius = base * 1.2f
             ),
             radius = base,
             center = center
         )
-        drawCircle(
-            color = Color(0xAA8CEEFF),
-            radius = base * 1.43f,
-            center = center,
-            style = Stroke(width = 1.3.dp.toPx())
-        )
+        drawCircle(Color(0xAAFF9AAC), radius = base * 1.42f, center = center, style = Stroke(width = 1.2.dp.toPx()))
+        drawCircle(Color(0x668F65FF), radius = base * 1.67f, center = center, style = Stroke(width = 0.8.dp.toPx()))
         drawArc(
-            color = Neon,
+            color = Crimson,
             startAngle = rotation,
-            sweepAngle = 92f,
+            sweepAngle = 105f,
             useCenter = false,
-            topLeft = Offset(center.x - base * 1.72f, center.y - base * 1.72f),
-            size = androidx.compose.ui.geometry.Size(base * 3.44f, base * 3.44f),
-            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+            topLeft = Offset(center.x - base * 1.78f, center.y - base * 1.78f),
+            size = androidx.compose.ui.geometry.Size(base * 3.56f, base * 3.56f),
+            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
         )
         drawArc(
-            color = Color(0x669B8CFF),
-            startAngle = rotation + 180f,
-            sweepAngle = 58f,
+            color = Violet,
+            startAngle = rotation + 155f,
+            sweepAngle = 68f,
             useCenter = false,
-            topLeft = Offset(center.x - base * 1.9f, center.y - base * 1.9f),
-            size = androidx.compose.ui.geometry.Size(base * 3.8f, base * 3.8f),
-            style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
+            topLeft = Offset(center.x - base * 1.98f, center.y - base * 1.98f),
+            size = androidx.compose.ui.geometry.Size(base * 3.96f, base * 3.96f),
+            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round)
+        )
+        drawArc(
+            color = Color(0x77FF8AA0),
+            startAngle = rotation + 270f,
+            sweepAngle = 35f,
+            useCenter = false,
+            topLeft = Offset(center.x - base * 2.12f, center.y - base * 2.12f),
+            size = androidx.compose.ui.geometry.Size(base * 4.24f, base * 4.24f),
+            style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
         )
     }
 }
+
+private fun Brush.Companion.diagonalGradient(): List<Color> = listOf(Crimson, Violet)
