@@ -143,8 +143,8 @@ fun DrakoXHomeScreen(
                             }
                         )
                     }
-                    DrakoXPage.HISTORY -> HistoryPage(onBack = { page = DrakoXPage.HOME })
-                    DrakoXPage.CREATOR -> CreatorPage(onBack = { page = DrakoXPage.HOME }, onOpenProfile = onDeveloperClick)
+                    DrakoXPage.HISTORY -> HistoryPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.HOME })
+                    DrakoXPage.CREATOR -> CreatorPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.HOME }, onOpenProfile = onDeveloperClick)
                     DrakoXPage.SETTINGS -> SettingsPage(
                         onBack = { page = DrakoXPage.HOME },
                         onOpenVault = onSettingsClick
@@ -202,7 +202,7 @@ private fun HistoryPage(onBack: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         FeaturePanel("History storage status", "The current AI conversation manager keeps up to 20 recent messages in memory. A persistent searchable archive is not yet connected to this screen.", "◷")
         FeaturePanel("Privacy", "This screen does not fabricate past commands or display sample records as real activity.", "◇")
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(10.dp))
         Text("LIVE SESSION HISTORY CONNECTION — PENDING", color = Muted, fontSize = 8.sp, letterSpacing = 1.1.sp)
     }
 }
