@@ -486,69 +486,114 @@ private fun CosmicBackdrop() {
 
 @Composable
 private fun AnimatedNeonOrb() {
-    val transition = rememberInfiniteTransition(label = "jarvis-orb")
+    val transition = rememberInfiniteTransition(label = "jarvis-energy-core")
     val pulse by transition.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.07f,
-        animationSpec = infiniteRepeatable(tween(1700), RepeatMode.Reverse),
-        label = "orb-pulse"
+        initialValue = 0.96f,
+        targetValue = 1.045f,
+        animationSpec = infiniteRepeatable(tween(1900), RepeatMode.Reverse),
+        label = "core-pulse"
     )
     val rotation by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(8500)),
-        label = "orb-rotation"
+        animationSpec = infiniteRepeatable(tween(12000, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "outer-orbit"
+    )
+    val counterRotation by transition.animateFloat(
+        initialValue = 360f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(9000, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "inner-orbit"
     )
 
-    Canvas(Modifier.size(232.dp)) {
+    Canvas(Modifier.size(252.dp)) {
         val center = Offset(size.width / 2f, size.height / 2f)
-        val base = size.minDimension * 0.245f * pulse
+        val unit = size.minDimension * 0.205f * pulse
+
+        // Atmospheric glow and dark energy shell.
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0x66FF3158), Color(0x229B65FF), Color.Transparent),
+                colors = listOf(Color(0x66FF3158), Color(0x339B65FF), Color(0x005050FF)),
                 center = center,
-                radius = base * 2.55f
+                radius = unit * 3.35f
             ),
-            radius = base * 2.55f,
+            radius = unit * 3.35f,
             center = center
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFFFFD5DE), Color(0xFFFF3158), Color(0xFF5D153D), Color(0xFF160F2C)),
-                center = Offset(center.x - base * 0.25f, center.y - base * 0.3f),
-                radius = base * 1.2f
+                colors = listOf(Color(0xFFFFDCE5), Color(0xFFFF3158), Color(0xFF8B174C), Color(0xFF21102E)),
+                center = Offset(center.x - unit * 0.22f, center.y - unit * 0.28f),
+                radius = unit * 1.22f
             ),
-            radius = base,
+            radius = unit * 1.02f,
             center = center
         )
-        drawCircle(Color(0xAAFF9AAC), radius = base * 1.42f, center = center, style = Stroke(width = 1.2.dp.toPx()))
-        drawCircle(Color(0x668F65FF), radius = base * 1.67f, center = center, style = Stroke(width = 0.8.dp.toPx()))
+
+        // Layered orbital tracks — deliberately asymmetric, not an arc-reactor motif.
+        drawOval(
+            color = Color(0x99FF7894),
+            topLeft = Offset(center.x - unit * 2.02f, center.y - unit * 0.72f),
+            size = androidx.compose.ui.geometry.Size(unit * 4.04f, unit * 1.44f),
+            style = Stroke(width = 1.4.dp.toPx())
+        )
         drawArc(
             color = Crimson,
             startAngle = rotation,
-            sweepAngle = 105f,
+            sweepAngle = 118f,
             useCenter = false,
-            topLeft = Offset(center.x - base * 1.78f, center.y - base * 1.78f),
-            size = androidx.compose.ui.geometry.Size(base * 3.56f, base * 3.56f),
+            topLeft = Offset(center.x - unit * 2.35f, center.y - unit * 2.35f),
+            size = androidx.compose.ui.geometry.Size(unit * 4.7f, unit * 4.7f),
             style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
         )
         drawArc(
             color = Violet,
-            startAngle = rotation + 155f,
-            sweepAngle = 68f,
+            startAngle = counterRotation + 38f,
+            sweepAngle = 82f,
             useCenter = false,
-            topLeft = Offset(center.x - base * 1.98f, center.y - base * 1.98f),
-            size = androidx.compose.ui.geometry.Size(base * 3.96f, base * 3.96f),
+            topLeft = Offset(center.x - unit * 2.68f, center.y - unit * 2.68f),
+            size = androidx.compose.ui.geometry.Size(unit * 5.36f, unit * 5.36f),
             style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round)
         )
         drawArc(
-            color = Color(0x77FF8AA0),
-            startAngle = rotation + 270f,
-            sweepAngle = 35f,
+            color = Color(0x88FFB3C2),
+            startAngle = rotation + 210f,
+            sweepAngle = 36f,
             useCenter = false,
-            topLeft = Offset(center.x - base * 2.12f, center.y - base * 2.12f),
-            size = androidx.compose.ui.geometry.Size(base * 4.24f, base * 4.24f),
-            style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
+            topLeft = Offset(center.x - unit * 1.72f, center.y - unit * 1.72f),
+            size = androidx.compose.ui.geometry.Size(unit * 3.44f, unit * 3.44f),
+            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+        )
+
+        // Floating energy nodes.
+        val orbitRadius = unit * 2.38f
+        for (index in 0 until 6) {
+            val angle = Math.toRadians((rotation + index * 60f).toDouble())
+            val point = Offset(
+                center.x + kotlin.math.cos(angle).toFloat() * orbitRadius,
+                center.y + kotlin.math.sin(angle).toFloat() * orbitRadius
+            )
+            drawCircle(
+                color = if (index % 2 == 0) Color(0xFFFFB5C5) else Color(0xFFB99AFF),
+                radius = if (index % 2 == 0) 3.2.dp.toPx() else 2.4.dp.toPx(),
+                center = point
+            )
+        }
+
+        // Bright central nucleus.
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White, Color(0xFFFFA9BC), Color(0xFFFF3158), Color(0xFF5A174F)),
+                center = Offset(center.x - unit * 0.12f, center.y - unit * 0.16f),
+                radius = unit * 0.68f
+            ),
+            radius = unit * 0.58f,
+            center = center
+        )
+        drawCircle(
+            color = Color(0xCCFFE8EF),
+            radius = unit * 0.13f,
+            center = Offset(center.x - unit * 0.12f, center.y - unit * 0.16f)
         )
     }
 }
