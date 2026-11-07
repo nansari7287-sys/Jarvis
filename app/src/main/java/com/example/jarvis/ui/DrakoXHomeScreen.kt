@@ -79,7 +79,7 @@ fun DrakoXTheme(content: @Composable () -> Unit) {
  * Kept isolated from MainActivity so existing voice, accessibility,
  * automation and service lifecycles remain untouched until explicitly wired.
  */
-private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS, PROVIDERS, EXTENSIONS, COOKIES, VOICE }
+private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS, PROVIDERS, EXTENSIONS, COOKIES, VOICE, TOOLS, AUTOMATION }
 
 @Composable
 fun DrakoXHomeScreen(
@@ -132,6 +132,18 @@ fun DrakoXHomeScreen(
                             Text("CORE  •  ONLINE", color = Color(0xFFFF718B), fontSize = 10.sp, letterSpacing = 2.4.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(18.dp))
                             QuickStatusRow()
+                            Spacer(Modifier.height(16.dp))
+                            DashboardGrid(
+                                onChat = { page = DrakoXPage.HOME },
+                                onVoice = onMicClick,
+                                onAutomation = { page = DrakoXPage.AUTOMATION },
+                                onExtensions = { page = DrakoXPage.EXTENSIONS },
+                                onCookies = { page = DrakoXPage.COOKIES },
+                                onProvider = { page = DrakoXPage.PROVIDERS },
+                                onTools = { page = DrakoXPage.TOOLS },
+                                onCode = { page = DrakoXPage.TOOLS },
+                                onSettings = { page = DrakoXPage.SETTINGS }
+                            )
                         }
                         ActionDock(
                             message = message,
@@ -178,6 +190,18 @@ fun DrakoXHomeScreen(
                         subtitle = "Assistant voice preferences",
                         detail = "Voice selection and language controls will be connected to Android Text-to-Speech. Available voices depend on the speech engines installed on this device.",
                         onBack = { page = DrakoXPage.SETTINGS }
+                    )
+                    DrakoXPage.TOOLS -> InfoModulePage(
+                        modifier = Modifier.weight(1f), title = "Tools Hub",
+                        subtitle = "Your connected utilities in one place",
+                        detail = "Code assistant, study tools, web search, API tester and device utilities will appear here as each module is connected.",
+                        onBack = { page = DrakoXPage.HOME }
+                    )
+                    DrakoXPage.AUTOMATION -> InfoModulePage(
+                        modifier = Modifier.weight(1f), title = "Automation",
+                        subtitle = "Android actions and routines",
+                        detail = "Existing accessibility and automation services remain in place. New routines will require clear permissions and confirmation for sensitive actions.",
+                        onBack = { page = DrakoXPage.HOME }
                     )
                 }
 
@@ -232,6 +256,39 @@ private fun InfoModulePage(modifier: Modifier = Modifier, title: String, subtitl
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ScreenHeading("JARVIS CONNECTIVITY", title, subtitle, onBack)
         FeaturePanel(title, detail, "◇")
+    }
+}
+
+
+@Composable
+private fun DashboardGrid(
+    onChat: () -> Unit, onVoice: () -> Unit, onAutomation: () -> Unit,
+    onExtensions: () -> Unit, onCookies: () -> Unit, onProvider: () -> Unit,
+    onTools: () -> Unit, onCode: () -> Unit, onSettings: () -> Unit
+) {
+    val rows = listOf(
+        listOf(Triple("AI CHAT", "▤", onChat), Triple("VOICE", "♫", onVoice), Triple("AUTOMATION", "⌘", onAutomation)),
+        listOf(Triple("EXTENSIONS", "✣", onExtensions), Triple("COOKIE VAULT", "▣", onCookies), Triple("AI PROVIDER", "✧", onProvider)),
+        listOf(Triple("TOOLS HUB", "⌁", onTools), Triple("CODE ASSIST", "</>", onCode), Triple("SETTINGS", "⚙", onSettings))
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        rows.forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                row.forEach { item ->
+                    Column(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                            .background(Brush.verticalGradient(listOf(Color(0xFF1B1022), Color(0xFF0D0B15))))
+                            .border(1.dp, Brush.linearGradient(listOf(Crimson.copy(alpha = 0.8f), Violet.copy(alpha = 0.65f))), RoundedCornerShape(14.dp))
+                            .clickable(onClick = item.third).padding(vertical = 11.dp, horizontal = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(item.second, color = if (item.first == "AI PROVIDER") Violet else Crimson, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text(item.first, color = Ice, fontSize = 7.sp, letterSpacing = 0.7.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -473,13 +530,15 @@ private fun ActionDock(
                 }
             }
         }
-        Text(
-            "Developed By  𝑵𝒂𝒆𝒆𝒎",
-            modifier = Modifier.fillMaxWidth(),
-            color = Color(0xFF69647C),
-            fontSize = 8.sp,
-            letterSpacing = 1.1.sp
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                .background(Brush.horizontalGradient(listOf(Color(0x331A0A20), Color(0x443A102B), Color(0x331A0A20))))
+                .border(1.dp, Brush.horizontalGradient(listOf(Crimson, Violet, Crimson)), RoundedCornerShape(12.dp))
+                .padding(vertical = 9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("✦  DEVELOPED BY  NAEEM  ✦", color = Color(0xFFFFA5C0), fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.ExtraBold)
+        }
     }
 }
 
@@ -577,7 +636,7 @@ private fun AnimatedNeonOrb() {
         label = "inner-orbit"
     )
 
-    Canvas(Modifier.size(252.dp)) {
+    Canvas(Modifier.size(176.dp)) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val unit = size.minDimension * 0.205f * pulse
 
