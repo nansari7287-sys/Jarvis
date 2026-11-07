@@ -270,7 +270,6 @@ private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOp
         FeaturePanel("AI providers", "Gemini, ChatGPT and Grok are available in the existing API vault. Custom providers and Sarvam require compatible API configuration and are not yet wired into the runtime.", "⌘", onOpenVault)
         FeaturePanel("Companion personality", "Friendly conversational style is a planned assistant mode. Responses still depend on the selected AI provider and its configured prompt.", "♡")
         FeaturePanel("YouTube & Music", "Voice commands can request YouTube searches. Playback behavior depends on the installed YouTube app and Android permissions.", "♫")
-        FeaturePanel("Cooking Assistant", "Recipe guidance, ingredient-based suggestions and meal planning module.", "♨")
         FeaturePanel("Coding & Study Assistant", "Code explanation, debugging support and study guidance for supported topics.", "</>")
         FeaturePanel("Accessibility & automation", "Existing Android accessibility and automation services are retained.", "⌁")
         FeaturePanel("Interface", "JARVIS dark-space theme with crimson and electric-violet accents.", "◈")
