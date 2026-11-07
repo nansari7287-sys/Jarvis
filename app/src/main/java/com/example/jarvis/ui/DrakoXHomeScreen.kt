@@ -190,7 +190,7 @@ private fun Header(onHistoryClick: () -> Unit, onSettingsClick: () -> Unit) {
             modifier = Modifier
                 .size(42.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Brush diagonalGradient()),
+                .background(Brush.linearGradient(listOf(Crimson, Violet))),
             contentAlignment = Alignment.Center
         ) {
             Text("D", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
@@ -453,4 +453,3 @@ private fun AnimatedNeonOrb() {
     }
 }
 
-private fun Brush.Companion.diagonalGradient(): List<Color> = listOf(Crimson, Violet)
