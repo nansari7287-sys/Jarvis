@@ -104,7 +104,7 @@ fun DrakoXHomeScreen(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Header(
-                    onHistoryClick = { page = DrakoXPage.HISTORY; onHistoryClick() },
+                    onHistoryClick = { page = DrakoXPage.HISTORY },
                     onSettingsClick = { page = DrakoXPage.SETTINGS }
                 )
                 Spacer(Modifier.height(18.dp))
@@ -156,8 +156,8 @@ fun DrakoXHomeScreen(
                 BottomNavigation(
                     selected = page,
                     onHome = { page = DrakoXPage.HOME },
-                    onHistory = { page = DrakoXPage.HISTORY; onHistoryClick() },
-                    onDeveloper = { page = DrakoXPage.CREATOR; onDeveloperClick() },
+                    onHistory = { page = DrakoXPage.HISTORY },
+                    onDeveloper = { page = DrakoXPage.CREATOR },
                     onSettings = { page = DrakoXPage.SETTINGS }
                 )
             }
