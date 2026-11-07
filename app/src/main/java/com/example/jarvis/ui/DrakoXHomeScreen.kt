@@ -75,7 +75,7 @@ fun DrakoXTheme(content: @Composable () -> Unit) {
 }
 
 /**
- * Premium visual foundation for DRΛKOX JΛRVIS.
+ * Premium visual foundation for JARVIS.
  * Kept isolated from MainActivity so existing voice, accessibility,
  * automation and service lifecycles remain untouched until explicitly wired.
  */
@@ -120,7 +120,7 @@ fun DrakoXHomeScreen(
                         ) {
                             Text("YOUR PERSONAL INTELLIGENCE", color = Muted, fontSize = 9.sp, letterSpacing = 2.5.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.height(12.dp))
-                            Text("I AM  DRΛKOX", color = Ice, fontSize = 25.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Black)
+                            Text("I AM JARVIS", color = Ice, fontSize = 25.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Black)
                             Spacer(Modifier.height(2.dp))
                             Text("Ready when you are.", color = Muted, fontSize = 12.sp)
                             Spacer(Modifier.height(12.dp))
@@ -225,12 +225,12 @@ private fun CreatorPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpe
                 }
                 Spacer(Modifier.height(14.dp))
                 Text("𝑵𝒂𝒆𝒆𝒎", color = Ice, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Text("DEVELOPER • DRΛKOX JΛRVIS", color = Color(0xFFFF8299), fontSize = 9.sp, letterSpacing = 1.5.sp)
+                Text("DEVELOPER • JARVIS", color = Color(0xFFFF8299), fontSize = 9.sp, letterSpacing = 1.5.sp)
                 Spacer(Modifier.height(8.dp))
                 Text("Building intelligent experiences with a focus on voice, automation and useful AI.", color = Muted, fontSize = 10.sp)
             }
         }
-        FeaturePanel("Project", "DRΛKOX JΛRVIS — personal AI assistant interface", "⌘")
+        FeaturePanel("Project", "JARVIS — personal AI assistant interface", "⌘")
         FeaturePanel("Core focus", "AI interaction • Voice control • Android automation", "✧")
         Spacer(Modifier.height(10.dp))
     }
@@ -244,7 +244,7 @@ private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOp
         FeaturePanel("AI provider & API vault", "Open the existing provider configuration for Gemini, ChatGPT and Grok. Existing credential handling is preserved.", "⌘", onOpenVault)
         FeaturePanel("Voice & microphone", "Voice controls remain connected to the current VoiceService and microphone action.", "♫")
         FeaturePanel("Accessibility & automation", "Existing Android accessibility and automation services are retained.", "⌁")
-        FeaturePanel("Interface", "DRΛKOX dark-space theme with crimson and electric-violet accents.", "◈")
+        FeaturePanel("Interface", "JARVIS dark-space theme with crimson and electric-violet accents.", "◈")
         Spacer(Modifier.height(10.dp))
         Text("ADVANCED OPTIONS OPEN THE EXISTING CONFIGURATION", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp)
     }
@@ -267,7 +267,7 @@ private fun Header(onHistoryClick: () -> Unit, onSettingsClick: () -> Unit) {
         }
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("DRΛKOX JΛRVIS", color = Ice, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+            Text("JARVIS", color = Ice, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
             Text("PERSONAL AI  /  VIRTUAL CORE", color = Muted, fontSize = 8.sp, letterSpacing = 1.2.sp)
         }
         IconButton(onClick = onHistoryClick) {
