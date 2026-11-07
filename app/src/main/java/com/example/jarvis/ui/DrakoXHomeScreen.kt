@@ -385,6 +385,7 @@ private fun ActionDock(
 
 @Composable
 private fun BottomNavigation(
+    selected: DrakoXPage,
     onHome: () -> Unit,
     onHistory: () -> Unit,
     onDeveloper: () -> Unit,
@@ -400,10 +401,10 @@ private fun BottomNavigation(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NavItem("⌂", "HOME", true, onHome)
-        NavItem("◷", "HISTORY", false, onHistory)
-        NavItem("✧", "CREATOR", false, onDeveloper)
-        NavItem("⚙", "SETTINGS", false, onSettings)
+        NavItem("⌂", "HOME", selected == DrakoXPage.HOME, onHome)
+        NavItem("◷", "HISTORY", selected == DrakoXPage.HISTORY, onHistory)
+        NavItem("✧", "CREATOR", selected == DrakoXPage.CREATOR, onDeveloper)
+        NavItem("⚙", "SETTINGS", selected == DrakoXPage.SETTINGS, onSettings)
     }
 }
 
