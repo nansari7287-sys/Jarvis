@@ -72,6 +72,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -239,8 +240,8 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                         micToggleButton?.performClick()
                     },
                     onHistoryClick = {
-                        findViewById<View?>(resources.getIdentifier("historyButton", "id", packageName))
-                            ?.performClick()
+                        val historyId = resources.getIdentifier("historyButton", "id", packageName)
+                        if (historyId != 0) findViewById<View>(historyId).performClick()
                     },
                     onSettingsClick = {
                         settingsBtn?.performClick()
