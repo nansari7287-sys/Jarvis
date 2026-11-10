@@ -126,6 +126,7 @@ fun DrakoXHomeScreen(
                             message = message,
                             onMessageChange = { message = it },
                             onMicClick = onMicClick,
+                            onDeveloperClick = { page = DrakoXPage.CREATOR },
                             onSend = {
                                 val value = message.trim()
                                 if (value.isNotEmpty()) {
@@ -464,6 +465,7 @@ private fun ActionDock(
     message: String,
     onMessageChange: (String) -> Unit,
     onMicClick: () -> Unit,
+    onDeveloperClick: () -> Unit,
     onSend: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
