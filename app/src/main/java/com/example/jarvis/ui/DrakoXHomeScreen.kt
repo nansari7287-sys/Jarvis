@@ -111,8 +111,7 @@ fun DrakoXHomeScreen(
                     onSettingsClick = { page = DrakoXPage.SETTINGS }
                 )
                 Spacer(Modifier.height(18.dp))
-                SystemStrip()
-                Spacer(Modifier.height(10.dp))
+                if (page != DrakoXPage.HOME) SystemStrip()
 
                 when (page) {
                     DrakoXPage.HOME -> {
@@ -121,29 +120,7 @@ fun DrakoXHomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("YOUR PERSONAL INTELLIGENCE", color = Muted, fontSize = 9.sp, letterSpacing = 2.5.sp, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(12.dp))
-                            Text("I AM JARVIS", color = Ice, fontSize = 25.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Black)
-                            Spacer(Modifier.height(2.dp))
-                            Text("Ready when you are.", color = Muted, fontSize = 12.sp)
-                            Spacer(Modifier.height(12.dp))
                             AnimatedNeonOrb()
-                            Spacer(Modifier.height(10.dp))
-                            Text("CORE  •  ONLINE", color = Color(0xFFFF718B), fontSize = 10.sp, letterSpacing = 2.4.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(18.dp))
-                            QuickStatusRow()
-                            Spacer(Modifier.height(16.dp))
-                            DashboardGrid(
-                                onChat = { page = DrakoXPage.HOME },
-                                onVoice = onMicClick,
-                                onAutomation = { page = DrakoXPage.AUTOMATION },
-                                onExtensions = { page = DrakoXPage.EXTENSIONS },
-                                onCookies = { page = DrakoXPage.COOKIES },
-                                onProvider = { page = DrakoXPage.PROVIDERS },
-                                onTools = { page = DrakoXPage.TOOLS },
-                                onCode = { page = DrakoXPage.TOOLS },
-                                onSettings = { page = DrakoXPage.SETTINGS }
-                            )
                         }
                         ActionDock(
                             message = message,
@@ -537,7 +514,7 @@ private fun ActionDock(
                 .padding(vertical = 9.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text("✦  DEVELOPED BY  NAEEM  ✦", color = Color(0xFFFFA5C0), fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.ExtraBold)
+            Text("✦  DEVELOPED BY  NAEEM  ✦", color = Color(0xFFFFA5C0), fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.clickable(onClick = onDeveloperClick))
         }
     }
 }
