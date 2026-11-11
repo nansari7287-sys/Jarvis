@@ -380,7 +380,7 @@ private fun ThemeGalleryPage(modifier: Modifier = Modifier, onBack: () -> Unit) 
         themes.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 row.forEach { item ->
-                    Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Panel).border(1.dp, if (chosen == item.first) item.second.first else PanelLine, RoundedCornerShape(14.dp)).clickable { chosen = item.first }.padding(10.dp)) {
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Panel).border(1.dp, if (chosen == item.first) item.second[0] else PanelLine, RoundedCornerShape(14.dp)).clickable { chosen = item.first }.padding(10.dp)) {
                         Box(Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(item.second)))
                         Text(item.first, color = Ice, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                         Text(if (chosen == item.first) "✓ SELECTED" else "TAP TO PREVIEW", color = if (chosen == item.first) Color(0xFF62F5B0) else Muted, fontSize = 8.sp)
