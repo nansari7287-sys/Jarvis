@@ -63,11 +63,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val Void = Color(0xFF05050A)
-private val Panel = Color(0xE611111D)
-private val PanelLine = Color(0xFF292238)
-private val Crimson = Color(0xFFFF3158)
-private val Violet = Color(0xFF9B65FF)
+private val Void = Color(0xFF050711)
+private val Panel = Color(0xE6101524)
+private val PanelLine = Color(0xFF263653)
+private val Crimson = Color(0xFF27D9FF)
+private val Violet = Color(0xFF9A63FF)
 private val Ice = Color(0xFFECEBFA)
 private val Muted = Color(0xFF8E8BA5)
 
@@ -113,7 +113,7 @@ fun DrakoXHomeScreen(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF160914), Color(0xFF080811), Void, Color(0xFF10091A))))
+                .background(Brush.verticalGradient(listOf(Color(0xFF101A35), Color(0xFF080D1B), Void, Color(0xFF11102A))))
         ) {
             CosmicBackdrop()
             Column(
@@ -258,7 +258,7 @@ private fun CookieVaultPage(modifier: Modifier = Modifier, onBack: () -> Unit) {
     }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         ScreenHeading("SECURE SESSION STORAGE", "Cookie Vault", "Import and manage your own website sessions", onBack)
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF25112B), Color(0xFF101321)))).border(1.dp, Brush.linearGradient(listOf(Crimson, Violet)), RoundedCornerShape(18.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF142B48), Color(0xFF101321)))).border(1.dp, Brush.linearGradient(listOf(Crimson, Violet)), RoundedCornerShape(18.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("ENCRYPTED VAULT", color = Color(0xFF70F5C1), fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
                 Text("${savedFiles.size} saved file(s)", color = Ice, fontSize = 19.sp, fontWeight = FontWeight.Black)
@@ -336,7 +336,7 @@ private fun ExtensionsHubPage(modifier: Modifier = Modifier, onBack: () -> Unit)
                 Text(if (item.second) "ON" else "OFF", color = if (item.second) Color(0xFF62F5B0) else Muted, fontSize = 10.sp, modifier = Modifier.clickable { entries = entries.toMutableList().also { it[index] = item.first to !item.second } }.padding(8.dp))
             }
         }
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(Color(0xFF28133A), Color(0xFF111222)))).border(1.dp, Brush.linearGradient(listOf(Violet, Crimson)), RoundedCornerShape(16.dp)).clickable { showAdd = !showAdd }.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(Color(0xFF142B48), Color(0xFF111222)))).border(1.dp, Brush.linearGradient(listOf(Violet, Crimson)), RoundedCornerShape(16.dp)).clickable { showAdd = !showAdd }.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("+ ADD EXTENSION", color = Ice, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
             Text("API • Cookie file • Email • Custom", color = Muted, fontSize = 9.sp)
         }
@@ -374,7 +374,7 @@ private fun NeonField(label: String, value: String, onValue: (String) -> Unit) {
 @Composable
 private fun ThemeGalleryPage(modifier: Modifier = Modifier, onBack: () -> Unit) {
     var chosen by remember { mutableStateOf("Quantum Purple") }
-    val themes = listOf("Quantum Purple" to listOf(Color(0xFFB94CFF), Color(0xFF20D9FF)), "Cyber Red" to listOf(Color(0xFFFF3158), Color(0xFFFF8A45)), "Matrix Green" to listOf(Color(0xFF00E68A), Color(0xFF8CFF4D)), "Neon Blue" to listOf(Color(0xFF168BFF), Color(0xFF28E5FF)), "Solar Gold" to listOf(Color(0xFFFFB52E), Color(0xFFFFE18A)), "Stealth" to listOf(Color(0xFF8992A7), Color(0xFFCED5E4)), "Arctic White" to listOf(Color(0xFFB8DFFF), Color(0xFFFFFFFF)), "Deep Space" to listOf(Color(0xFF602CFF), Color(0xFF00D5FF)))
+    val themes = listOf("Quantum Purple" to listOf(Color(0xFF9A63FF), Color(0xFF27D9FF)), "Cyber Red" to listOf(Color(0xFFFF3158), Color(0xFFFF8A45)), "Matrix Green" to listOf(Color(0xFF00E68A), Color(0xFF8CFF4D)), "Neon Blue" to listOf(Color(0xFF168BFF), Color(0xFF28E5FF)), "Solar Gold" to listOf(Color(0xFFFFB52E), Color(0xFFFFE18A)), "Stealth" to listOf(Color(0xFF8992A7), Color(0xFFCED5E4)), "Arctic White" to listOf(Color(0xFFB8DFFF), Color(0xFFFFFFFF)), "Deep Space" to listOf(Color(0xFF602CFF), Color(0xFF00D5FF)))
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("VISUAL EXPERIENCE", "Themes", "Select your JARVIS interface palette", onBack)
         themes.chunked(2).forEach { row ->
@@ -420,7 +420,7 @@ private fun DashboardGrid(
                 row.forEach { item ->
                     Column(
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                            .background(Brush.verticalGradient(listOf(Color(0xFF1B1022), Color(0xFF0D0B15))))
+                            .background(Brush.verticalGradient(listOf(Color(0xFF14243B), Color(0xFF0B1020))))
                             .border(1.dp, Brush.linearGradient(listOf(Crimson.copy(alpha = 0.8f), Violet.copy(alpha = 0.65f))), RoundedCornerShape(14.dp))
                             .clickable(onClick = item.third).padding(vertical = 11.dp, horizontal = 3.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
