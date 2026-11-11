@@ -1,5 +1,18 @@
 package com.example.jarvis.ui
 
+import android.content.Context
+import android.net.Uri
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import java.io.File
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -157,12 +170,7 @@ fun DrakoXHomeScreen(
                         detail = "Extension import and permission controls are being prepared. Only install extensions from sources you trust. APK and ZIP files are not executed inside this screen.",
                         onBack = { page = DrakoXPage.SETTINGS }
                     )
-                    DrakoXPage.COOKIES -> InfoModulePage(
-                        modifier = Modifier.weight(1f), title = "Cookie Vault",
-                        subtitle = "Authorized website sessions",
-                        detail = "Chrome's private app storage cannot be read directly by another Android app. Import your own exported Netscape .txt or JSON cookie file using Android's file picker in the secure vault. Never share cookie files: they can grant account access.",
-                        onBack = { page = DrakoXPage.SETTINGS }
-                    )
+                    DrakoXPage.COOKIES -> CookieVaultPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.SETTINGS })
                     DrakoXPage.VOICE -> InfoModulePage(
                         modifier = Modifier.weight(1f), title = "Voice & Personality",
                         subtitle = "Assistant voice preferences",
@@ -227,6 +235,80 @@ private fun ProviderPage(
         FeaturePanel("API credentials", "Each provider keeps its own saved API key and model. Switching providers does not erase the others.", "◇", onConfigure)
         Text("Select one provider above. Your selection is saved immediately.", color = Muted, fontSize = 9.sp)
     }
+}
+
+
+@Composable
+private fun CookieVaultPage(modifier: Modifier = Modifier, onBack: () -> Unit) {
+    val context = LocalContext.current
+    var savedFiles by remember { mutableStateOf(cookieFiles(context)) }
+    var status by remember { mutableStateOf("Your cookie files stay encrypted on this device.") }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                val name = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (cursor.moveToFirst() && index >= 0) cursor.getString(index) else "cookie-export"
+                } ?: "cookie-export"
+                require(name.endsWith(".txt", true) || name.endsWith(".json", true)) { "Choose a .txt or .json cookie export." }
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: error("Cannot read selected file.")
+                require(bytes.isNotEmpty() && bytes.size <= 5 * 1024 * 1024) { "File is empty or larger than 5 MB." }
+                saveEncryptedCookie(context, bytes, name)
+                savedFiles = cookieFiles(context)
+                status = "Encrypted import saved successfully."
+            }.onFailure { status = it.message ?: "Import failed." }
+        }
+    }
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        ScreenHeading("SECURE SESSION STORAGE", "Cookie Vault", "Import and manage your own website sessions", onBack)
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF25112B), Color(0xFF101321)))).border(1.dp, Brush.linearGradient(listOf(Crimson, Violet)), RoundedCornerShape(18.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("ENCRYPTED VAULT", color = Color(0xFF70F5C1), fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                Text("${savedFiles.size} saved file(s)", color = Ice, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                Text("AES-GCM • Android Keystore", color = Muted, fontSize = 9.sp)
+            }
+            Text("◇", color = Crimson, fontSize = 34.sp)
+        }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Panel).border(1.dp, Brush.linearGradient(listOf(Crimson, Violet)), RoundedCornerShape(16.dp)).clickable { picker.launch(arrayOf("text/plain", "application/json", "application/octet-stream")) }.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("+", color = Crimson, fontSize = 36.sp)
+            Text("ADD COOKIE FILE", color = Ice, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+            Text("Choose your own .TXT or .JSON export", color = Muted, fontSize = 9.sp)
+        }
+        Text(status, color = if (status.contains("success", true)) Color(0xFF70F5C1) else Muted, fontSize = 10.sp)
+        Text("SAVED COOKIE FILES", color = Crimson, fontSize = 9.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+        if (savedFiles.isEmpty()) {
+            FeaturePanel("Vault is empty", "Tap ADD COOKIE FILE above to import an authorised cookie export.", "▣")
+        } else savedFiles.forEach { file ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Panel).border(1.dp, PanelLine, RoundedCornerShape(14.dp)).padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("▣", color = Violet, fontSize = 22.sp, modifier = Modifier.padding(end = 10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(file.name.removeSuffix(".jvc"), color = Ice, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Encrypted locally • ${file.length()} bytes", color = Muted, fontSize = 8.sp)
+                }
+                Text("DELETE", color = Crimson, fontSize = 9.sp, modifier = Modifier.clickable { file.delete(); savedFiles = cookieFiles(context); status = "Selected encrypted file deleted." }.padding(8.dp))
+            }
+        }
+        Text("Cookie files can grant account access. Import only files belonging to accounts you own or are authorised to manage. JARVIS does not read Chrome's private storage.", color = Muted, fontSize = 9.sp, lineHeight = 14.sp)
+    }
+}
+
+private fun cookieFiles(context: Context): List<File> =
+    File(context.filesDir, "cookie_vault").listFiles()?.filter { it.extension == "jvc" }?.sortedByDescending { it.lastModified() } ?: emptyList()
+
+private fun saveEncryptedCookie(context: Context, data: ByteArray, originalName: String) {
+    val alias = "jarvis_cookie_vault_key"
+    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    val key = (store.getKey(alias, null) as? SecretKey) ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").run {
+        init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).setRandomizedEncryptionRequired(true).build())
+        generateKey()
+    }
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    cipher.init(Cipher.ENCRYPT_MODE, key)
+    val encrypted = cipher.doFinal(data)
+    val folder = File(context.filesDir, "cookie_vault").apply { mkdirs() }
+    val safeName = originalName.substringAfterLast('/').replace(Regex("[^A-Za-z0-9._-]"), "_").take(48)
+    File(folder, "${System.currentTimeMillis()}_${safeName}.jvc").writeBytes(cipher.iv + encrypted)
 }
 
 @Composable
