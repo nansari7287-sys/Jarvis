@@ -246,11 +246,10 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                         settingsBtn?.performClick()
                     },
                     onDeveloperClick = {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Developer profile will be connected in the next UI stage.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val profile = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.instagram.com/drakoxnaeem/"))
+                        runCatching { startActivity(profile) }.onFailure {
+                            Toast.makeText(this@MainActivity, "Instagram profile could not be opened.", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     activeProvider = apiPrefs.getString("ACTIVE_PROVIDER", "GEMINI") ?: "GEMINI",
                     onProviderSelected = { provider ->
