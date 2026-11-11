@@ -92,7 +92,7 @@ fun DrakoXTheme(content: @Composable () -> Unit) {
  * Kept isolated from MainActivity so existing voice, accessibility,
  * automation and service lifecycles remain untouched until explicitly wired.
  */
-private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS, PROVIDERS, EXTENSIONS, COOKIES, VOICE, TOOLS, AUTOMATION }
+private enum class DrakoXPage { HOME, HISTORY, CREATOR, SETTINGS, PROVIDERS, EXTENSIONS, COOKIES, VOICE, TOOLS, AUTOMATION, THEMES }
 
 @Composable
 fun DrakoXHomeScreen(
@@ -157,20 +157,17 @@ fun DrakoXHomeScreen(
                         onOpenVault = { page = DrakoXPage.PROVIDERS },
                         onOpenExtensions = { page = DrakoXPage.EXTENSIONS },
                         onOpenCookies = { page = DrakoXPage.COOKIES },
-                        onOpenVoice = { page = DrakoXPage.VOICE }
+                        onOpenVoice = { page = DrakoXPage.VOICE },
+                        onOpenThemes = { page = DrakoXPage.THEMES }
                     )
                     DrakoXPage.PROVIDERS -> ProviderPage(
                         modifier = Modifier.weight(1f), activeProvider = activeProvider,
                         onBack = { page = DrakoXPage.SETTINGS },
                         onSelect = onProviderSelected, onConfigure = onConfigureProviders
                     )
-                    DrakoXPage.EXTENSIONS -> InfoModulePage(
-                        modifier = Modifier.weight(1f), title = "Extensions",
-                        subtitle = "Manage trusted add-ons for JARVIS",
-                        detail = "Extension import and permission controls are being prepared. Only install extensions from sources you trust. APK and ZIP files are not executed inside this screen.",
-                        onBack = { page = DrakoXPage.SETTINGS }
-                    )
+                    DrakoXPage.EXTENSIONS -> ExtensionsHubPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.SETTINGS })
                     DrakoXPage.COOKIES -> CookieVaultPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.SETTINGS })
+                    DrakoXPage.THEMES -> ThemeGalleryPage(modifier = Modifier.weight(1f), onBack = { page = DrakoXPage.SETTINGS })
                     DrakoXPage.VOICE -> InfoModulePage(
                         modifier = Modifier.weight(1f), title = "Voice & Personality",
                         subtitle = "Assistant voice preferences",
@@ -311,6 +308,92 @@ private fun saveEncryptedCookie(context: Context, data: ByteArray, originalName:
     File(folder, "${System.currentTimeMillis()}_${safeName}.jvc").writeBytes(cipher.iv + encrypted)
 }
 
+
+@Composable
+private fun ExtensionsHubPage(modifier: Modifier = Modifier, onBack: () -> Unit) {
+    var showAdd by remember { mutableStateOf(false) }
+    var kind by remember { mutableStateOf("API") }
+    var name by remember { mutableStateOf("") }
+    var endpoint by remember { mutableStateOf("") }
+    var model by remember { mutableStateOf("") }
+    var apiKey by remember { mutableStateOf("") }
+    var notice by remember { mutableStateOf("Only add integrations you own or are authorised to use.") }
+    var entries by remember { mutableStateOf(listOf("Gemini AI" to true, "ChatGPT" to false, "Grok" to false)) }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ScreenHeading("JARVIS MODULE ECOSYSTEM", "Extensions Hub", "Connect and manage your integrations", onBack)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("ALL ${entries.size}", "ACTIVE ${entries.count { it.second }}").forEach {
+                Text(it, color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(9.dp)).background(Panel).border(1.dp, PanelLine, RoundedCornerShape(9.dp)).padding(10.dp))
+            }
+        }
+        entries.forEachIndexed { index, item ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Panel).border(1.dp, PanelLine, RoundedCornerShape(14.dp)).padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("✧", color = Violet, fontSize = 22.sp, modifier = Modifier.padding(end = 10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(item.first, color = Ice, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (item.second) "CONNECTED" else "DISABLED", color = if (item.second) Color(0xFF62F5B0) else Muted, fontSize = 8.sp)
+                }
+                Text(if (item.second) "ON" else "OFF", color = if (item.second) Color(0xFF62F5B0) else Muted, fontSize = 10.sp, modifier = Modifier.clickable { entries = entries.toMutableList().also { it[index] = item.first to !item.second } }.padding(8.dp))
+            }
+        }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(Color(0xFF28133A), Color(0xFF111222)))).border(1.dp, Brush.linearGradient(listOf(Violet, Crimson)), RoundedCornerShape(16.dp)).clickable { showAdd = !showAdd }.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("+ ADD EXTENSION", color = Ice, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+            Text("API • Cookie file • Email • Custom", color = Muted, fontSize = 9.sp)
+        }
+        if (showAdd) {
+            Text("EXTENSION TYPE", color = Crimson, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("API", "Cookie", "Email", "Custom").forEach { type ->
+                    Text(type, color = if (kind == type) Color.White else Muted, modifier = Modifier.weight(1f).clip(RoundedCornerShape(9.dp)).background(if (kind == type) Violet.copy(alpha=.35f) else Panel).border(1.dp, if (kind == type) Violet else PanelLine, RoundedCornerShape(9.dp)).clickable { kind = type }.padding(8.dp), fontSize = 9.sp)
+                }
+            }
+            NeonField("Extension name", name, { name = it })
+            if (kind == "API" || kind == "Custom") {
+                NeonField("API base URL", endpoint, { endpoint = it })
+                NeonField("API key", apiKey, { apiKey = it })
+                NeonField("Model / endpoint (optional)", model, { model = it })
+            } else FeaturePanel(if (kind == "Cookie") "Import cookie file" else "Email connection", if (kind == "Cookie") "Use Cookie Vault to securely import an authorised .txt or .json export." else "Email OAuth and provider-specific secure sign-in are not yet connected.", "◇")
+            Text("SAVE EXTENSION", color = Ice, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Brush.horizontalGradient(listOf(Crimson, Violet))).clickable {
+                if (name.isBlank()) notice = "Enter an extension name first."
+                else if ((kind == "API" || kind == "Custom") && endpoint.isBlank()) notice = "Enter the API base URL."
+                else { entries = entries + (name to false); notice = "$kind extension added to this screen. Provider execution needs its adapter."; showAdd = false; name = ""; endpoint = ""; apiKey = ""; model = "" }
+            }.padding(14.dp))
+        }
+        Text(notice, color = Muted, fontSize = 9.sp)
+    }
+}
+
+@Composable
+private fun NeonField(label: String, value: String, onValue: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(label, color = Muted, fontSize = 9.sp)
+        BasicTextField(value, onValue, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF090A14)).border(1.dp, PanelLine, RoundedCornerShape(10.dp)).padding(12.dp), textStyle = androidx.compose.ui.text.TextStyle(color = Ice, fontSize = 11.sp), singleLine = true, decorationBox = { inner -> if (value.isEmpty()) Text(label, color = Muted, fontSize = 10.sp); inner() })
+    }
+}
+
+@Composable
+private fun ThemeGalleryPage(modifier: Modifier = Modifier, onBack: () -> Unit) {
+    var chosen by remember { mutableStateOf("Quantum Purple") }
+    val themes = listOf("Quantum Purple" to listOf(Color(0xFFB94CFF), Color(0xFF20D9FF)), "Cyber Red" to listOf(Color(0xFFFF3158), Color(0xFFFF8A45)), "Matrix Green" to listOf(Color(0xFF00E68A), Color(0xFF8CFF4D)), "Neon Blue" to listOf(Color(0xFF168BFF), Color(0xFF28E5FF)), "Solar Gold" to listOf(Color(0xFFFFB52E), Color(0xFFFFE18A)), "Stealth" to listOf(Color(0xFF8992A7), Color(0xFFCED5E4)), "Arctic White" to listOf(Color(0xFFB8DFFF), Color(0xFFFFFFFF)), "Deep Space" to listOf(Color(0xFF602CFF), Color(0xFF00D5FF)))
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ScreenHeading("VISUAL EXPERIENCE", "Themes", "Select your JARVIS interface palette", onBack)
+        themes.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                row.forEach { item ->
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Panel).border(1.dp, if (chosen == item.first) item.second.first else PanelLine, RoundedCornerShape(14.dp)).clickable { chosen = item.first }.padding(10.dp)) {
+                        Box(Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(item.second)))
+                        Text(item.first, color = Ice, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                        Text(if (chosen == item.first) "✓ SELECTED" else "TAP TO PREVIEW", color = if (chosen == item.first) Color(0xFF62F5B0) else Muted, fontSize = 8.sp)
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        Text("Selected: $chosen", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("Theme preview selection is local to this screen; applying palette across every component and persisting it is the next integration step.", color = Muted, fontSize = 9.sp)
+    }
+}
+
 @Composable
 private fun InfoModulePage(modifier: Modifier = Modifier, title: String, subtitle: String, detail: String, onBack: () -> Unit) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -424,13 +507,14 @@ private fun CreatorPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpe
 }
 
 @Composable
-private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenVault: () -> Unit, onOpenExtensions: () -> Unit, onOpenCookies: () -> Unit, onOpenVoice: () -> Unit) {
+private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOpenVault: () -> Unit, onOpenExtensions: () -> Unit, onOpenCookies: () -> Unit, onOpenVoice: () -> Unit, onOpenThemes: () -> Unit) {
     var selectedVoice by remember { mutableStateOf("Female") }
     var selectedLanguage by remember { mutableStateOf("Hindi") }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeading("CONFIGURATION", "System Settings", "Manage the existing assistant configuration", onBack)
         Spacer(Modifier.height(6.dp))
         FeaturePanel("AI provider & API vault", "Choose exactly one active provider: Gemini, ChatGPT or Grok. API credentials remain separately saved.", "⌘", onOpenVault)
+        FeaturePanel("Appearance & Themes", "Choose a complete neon interface palette.", "◈", onOpenThemes)
         FeaturePanel("Voice & microphone", "Choose voice and language preferences.", "♫", onOpenVoice)
         FeaturePanel("Extensions Manager", "Explore and manage trusted JARVIS extensions.", "✣", onOpenExtensions)
         FeaturePanel("Cookie Vault", "Import your own exported website session files securely.", "▣", onOpenCookies)
@@ -461,7 +545,7 @@ private fun SettingsPage(modifier: Modifier = Modifier, onBack: () -> Unit, onOp
         FeaturePanel("YouTube & Music", "Voice commands can request YouTube searches. Playback behavior depends on the installed YouTube app and Android permissions.", "♫")
         FeaturePanel("Coding & Study Assistant", "Code explanation, debugging support and study guidance for supported topics.", "</>")
         FeaturePanel("Accessibility & automation", "Existing Android accessibility and automation services are retained.", "⌁")
-        FeaturePanel("Interface", "JARVIS dark-space theme with crimson and electric-violet accents.", "◈")
+        FeaturePanel("Interface", "JARVIS Quantum Neon theme gallery and accent presets.", "◈", onOpenThemes)
         Spacer(Modifier.height(10.dp))
         Text("VOICE CHOICES ARE A UI PREFERENCE PREVIEW; SYSTEM TTS WIRING IS STILL REQUIRED", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp)
     }
