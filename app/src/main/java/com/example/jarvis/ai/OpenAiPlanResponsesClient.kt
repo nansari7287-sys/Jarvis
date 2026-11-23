@@ -98,6 +98,30 @@ class OpenAiPlanResponsesClient(
         }
     }
 
+
+    suspend fun listModels(accessToken: String): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("https://api.openai.com/v1/models")
+            .header("Authorization", "Bearer $accessToken")
+            .get()
+            .build()
+        http.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) throw IOException("Could not load ChatGPT models (${response.code}): ${body.take(500)}")
+            val models = JSONObject(body).optJSONArray("models")
+                ?: throw IOException("ChatGPT model catalog did not contain a models list.")
+            buildList {
+                for (index in 0 until models.length()) {
+                    val item = models.optJSONObject(index) ?: continue
+                    val slug = item.optString("slug")
+                    if (slug.isNotBlank() && item.optString("visibility") == "list") {
+                        add(slug to item.optString("display_name", slug))
+                    }
+                }
+            }
+        }
+    }
+
     private fun message(role: String, text: String) = JSONObject().apply {
         put("role", role)
         put("content", text)
