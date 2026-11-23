@@ -78,6 +78,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.jarvis.accessibility.JarvisAccessibilityService
+import com.example.jarvis.ai.ChatGptSignInManager
+import com.example.jarvis.ai.OpenAiPlanResponsesClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -162,6 +164,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
     private lateinit var crypto: HybridCrypto
     private lateinit var appAutomation: AppAutomation
     private lateinit var aiBrain: MultiLLMBrain
+    private lateinit var chatGptSignInManager: ChatGptSignInManager
     
     private lateinit var audioManager: AudioManager
     private lateinit var sensorManager: SensorManager
@@ -225,6 +228,7 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         crypto = HybridCrypto()
         appAutomation = AppAutomation(this)
         aiBrain = MultiLLMBrain()
+        chatGptSignInManager = ChatGptSignInManager(this)
         
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -432,18 +436,28 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 rawModelPref.trim()
             }
 
-            if (apiKey.isBlank()) {
-                speak("Sir, the API key for $providerStr is missing. Please update your Vault.")
+            val useChatGptPlan = providerEnum == AIProvider.CHATGPT && chatGptSignInManager.hasPlanUsage()
+            if (apiKey.isBlank() && !useChatGptPlan) {
+                val message = if (providerEnum == AIProvider.CHATGPT && chatGptSignInManager.isConnected()) {
+                    "ChatGPT is signed in, but plan usage permission is not enabled. Connect plan usage or add an API key."
+                } else {
+                    "The API key for $providerStr is missing. Open Settings and connect ChatGPT or add the provider key."
+                }
+                speak(message)
                 resumeBackgroundListening()
                 return@launch
             }
 
             try {
-                val decision = aiBrain.query(providerEnum, apiKey, modelName, userText)
+                val decision = if (useChatGptPlan) {
+                    aiBrain.queryWithChatGptPlan(chatGptSignInManager, modelName, userText)
+                } else {
+                    aiBrain.query(providerEnum, apiKey, modelName, userText)
+                }
                 executeAgentProtocol(decision)
             } catch (e: Exception) {
                 Log.e(TAG, "AI Brain Processing Failure", e)
-                speak("I encountered an anomaly in the neural net. Please try again.")
+                speak(e.message?.take(180) ?: "AI request failed. Please try again.")
                 resumeBackgroundListening()
             }
         }
@@ -634,6 +648,29 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
                 Log.e("JarvisLLM", "API Call Error", e)
                 fallbackAgentDecision(userMessage)
             }
+        }
+
+        suspend fun queryWithChatGptPlan(
+            manager: ChatGptSignInManager,
+            preferredModel: String,
+            userMessage: String
+        ): AgentDecision {
+            val accessToken = manager.validAccessToken()
+            val client = OpenAiPlanResponsesClient()
+            val selectedModel = preferredModel.takeIf { it.isNotBlank() }
+                ?: client.listModels(accessToken).firstOrNull()?.first
+                ?: throw IllegalStateException("No ChatGPT plan models are available for this account.")
+            val rawText = client.respond(
+                accessToken = accessToken,
+                model = selectedModel,
+                instructions = corePersonaInstructions,
+                history = conversationHistory.toList(),
+                userMessage = userMessage
+            )
+            val parsed = extractJsonSafely(rawText)
+                ?: throw IllegalStateException("ChatGPT returned a response that Jarvis could not parse.")
+            updateContextHistory(userMessage, rawText)
+            return buildDecisionObject(parsed)
         }
 
         private fun callGeminiAPI(key: String, model: String, msg: String): AgentDecision {
@@ -907,6 +944,30 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         containerLayout.addView(lblGrokKey); containerLayout.addView(etGrokKey)
         containerLayout.addView(lblGrokModel); containerLayout.addView(etGrokModel)
 
+        val chatGptConnectionStatus = TextView(this).apply {
+            text = if (chatGptSignInManager.isConnected()) {
+                "CHATGPT ACCOUNT: ${chatGptSignInManager.connectedEmail()}\\n" +
+                    if (chatGptSignInManager.hasPlanUsage()) "PLAN USAGE: ENABLED" else "PLAN USAGE: NOT ENABLED"
+            } else "CHATGPT ACCOUNT: NOT CONNECTED"
+            setTextColor(Color.parseColor("#8DEBFF"))
+            textSize = 12f
+            setPadding(0, 30, 0, 12)
+        }
+        val chatGptSignInButton = Button(this).apply {
+            text = "CONTINUE WITH CHATGPT"
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setTextColor(Color.parseColor("#111827"))
+        }
+        val chatGptSignOutButton = Button(this).apply {
+            text = "DISCONNECT CHATGPT"
+            setBackgroundColor(Color.parseColor("#241321"))
+            setTextColor(Color.parseColor("#FF8FA3"))
+            visibility = if (chatGptSignInManager.isConnected()) View.VISIBLE else View.GONE
+        }
+        containerLayout.addView(chatGptConnectionStatus)
+        containerLayout.addView(chatGptSignInButton)
+        containerLayout.addView(chatGptSignOutButton)
+
         val saveButton = Button(this).apply {
             text = "INITIALIZE CORE OVERRIDE"
             setBackgroundColor(Color.parseColor("#00F0FF"))
@@ -923,6 +984,46 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
             .setView(rootScrollView).create()
         alertDialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         alertDialog.show()
+
+        chatGptSignInButton.setOnClickListener {
+            chatGptSignInButton.isEnabled = false
+            chatGptSignInButton.text = "WAITING FOR CHATGPT..."
+            lifecycleScope.launch {
+                try {
+                    val account = chatGptSignInManager.signIn(this@MainActivity)
+                    chatGptConnectionStatus.text = "CHATGPT ACCOUNT: ${account.email}\\n" +
+                        if (account.planUsageEnabled) "PLAN USAGE: ENABLED" else "PLAN USAGE: NOT ENABLED — API KEY REQUIRED"
+                    chatGptSignOutButton.visibility = View.VISIBLE
+                    Toast.makeText(
+                        this@MainActivity,
+                        if (account.planUsageEnabled) "ChatGPT plan connected." else "Account connected; plan usage was not authorized.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } catch (e: Exception) {
+                    Log.e(TAG, "ChatGPT sign-in failed", e)
+                    Toast.makeText(this@MainActivity, e.message?.take(220) ?: "ChatGPT sign-in failed.", Toast.LENGTH_LONG).show()
+                } finally {
+                    chatGptSignInButton.isEnabled = true
+                    chatGptSignInButton.text = "CONTINUE WITH CHATGPT"
+                }
+            }
+        }
+
+        chatGptSignOutButton.setOnClickListener {
+            chatGptSignOutButton.isEnabled = false
+            lifecycleScope.launch {
+                try {
+                    chatGptSignInManager.signOut()
+                    chatGptConnectionStatus.text = "CHATGPT ACCOUNT: NOT CONNECTED"
+                    chatGptSignOutButton.visibility = View.GONE
+                    Toast.makeText(this@MainActivity, "ChatGPT disconnected.", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Could not disconnect ChatGPT.", Toast.LENGTH_SHORT).show()
+                } finally {
+                    chatGptSignOutButton.isEnabled = true
+                }
+            }
+        }
 
         saveButton.setOnClickListener {
             val selectedEngine = when {
