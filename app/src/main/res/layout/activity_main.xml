@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#010205"
+    android:background="#050713"
     android:fitsSystemWindows="true"
     tools:context=".MainActivity">
 
@@ -47,7 +47,7 @@
         android:id="@+id/headerSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#D902050A"
+        android:background="@drawable/bg_jarvis_header"
         android:elevation="12dp"
         android:orientation="vertical"
         android:padding="12dp"
@@ -63,7 +63,7 @@
             <FrameLayout
                 android:layout_width="58dp"
                 android:layout_height="58dp"
-                android:background="#3300E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:padding="2dp">
                 
                 <ImageView
@@ -92,8 +92,8 @@
                     android:shadowDx="0"
                     android:shadowDy="0"
                     android:shadowRadius="12"
-                    android:text="J.A.R.V.I.S. TITAN"
-                    android:textColor="#00E5FF"
+                    android:text="NAEEM JARVIS"
+                    android:textColor="#54E8FF"
                     android:textSize="21sp"
                     android:textStyle="bold" />
 
@@ -102,7 +102,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="monospace"
                     android:letterSpacing="0.2"
-                    android:text="ENTERPRISE CORE V500"
+                    android:text="PERSONAL AI  •  VOICE & DEVICE CONTROL"
                     android:textColor="#99FFFFFF"
                     android:textSize="9sp"
                     android:textStyle="bold"/>
@@ -170,7 +170,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:background="#2200E5FF"
+            android:background="@drawable/bg_jarvis_glass"
             android:orientation="horizontal"
             android:padding="8dp">
 
@@ -181,7 +181,7 @@
                 android:fontFamily="monospace"
                 android:gravity="center"
                 android:text="CPU: OPTIMAL"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold"/>
 
@@ -192,7 +192,7 @@
                 android:fontFamily="monospace"
                 android:gravity="center"
                 android:text="RAM: STABLE"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold"/>
 
@@ -227,12 +227,12 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#2200E5FF"
+            android:background="@drawable/bg_jarvis_glass"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
             android:letterSpacing="0.1"
             android:text="[ CHAT MODULE ]"
-            android:textColor="#00E5FF"
+            android:textColor="#54E8FF"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -242,7 +242,7 @@
             android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="#2200E5FF"
+            android:background="@drawable/bg_jarvis_glass"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
             android:letterSpacing="0.1"
@@ -257,7 +257,7 @@
             android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="#2200E5FF"
+            android:background="@drawable/bg_jarvis_glass"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
             android:letterSpacing="0.1"
@@ -311,7 +311,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|start"
                 android:text="┏"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="32sp"
                 android:textStyle="bold"/>
             <TextView
@@ -319,7 +319,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|end"
                 android:text="┓"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="32sp"
                 android:textStyle="bold"/>
             <TextView
@@ -327,7 +327,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|start"
                 android:text="┗"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="32sp"
                 android:textStyle="bold"/>
             <TextView
@@ -335,7 +335,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
                 android:text="┛"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="32sp"
                 android:textStyle="bold"/>
         </FrameLayout>
@@ -350,7 +350,7 @@
             android:shadowDy="0"
             android:shadowRadius="15"
             android:text="N E U R A L   M A T R I X"
-            android:textColor="#00E5FF"
+            android:textColor="#54E8FF"
             android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -378,13 +378,13 @@
                 android:id="@+id/webButton"
                 android:layout_width="85dp"
                 android:layout_height="75dp"
-                android:background="#2200E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="◎\nGLOBAL\nWEB"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -393,13 +393,13 @@
                 android:layout_width="85dp"
                 android:layout_height="75dp"
                 android:layout_marginStart="10dp"
-                android:background="#2200E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="▶\nMEDIA\nSTREAM"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -408,13 +408,13 @@
                 android:layout_width="85dp"
                 android:layout_height="75dp"
                 android:layout_marginStart="10dp"
-                android:background="#2200E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="◈\nSOCIAL\nGRID"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -423,13 +423,13 @@
                 android:layout_width="85dp"
                 android:layout_height="75dp"
                 android:layout_marginStart="10dp"
-                android:background="#2200E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="💬\nSECURE\nCHAT"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -438,13 +438,13 @@
                 android:layout_width="85dp"
                 android:layout_height="75dp"
                 android:layout_marginStart="10dp"
-                android:background="#2200E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="▦\nSYSTEM\nAPPS"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -469,13 +469,13 @@
                 android:layout_width="85dp"
                 android:layout_height="75dp"
                 android:layout_marginStart="10dp"
-                android:background="#2200E5FF"
+                android:background="@drawable/bg_jarvis_glass"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:text="⌖\nOPTICS\nSCAN"
-                android:textColor="#00E5FF"
+                android:textColor="#54E8FF"
                 android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -500,13 +500,13 @@
             android:layout_width="0dp"
             android:layout_height="60dp"
             android:layout_weight="1"
-            android:background="#2200E5FF"
+            android:background="@drawable/bg_jarvis_glass"
             android:fontFamily="monospace"
             android:hint="> AWAITING_COMMAND_INPUT..."
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
             android:paddingHorizontal="16dp"
-            android:textColor="#00E5FF"
+            android:textColor="#54E8FF"
             android:textColorHint="#6600E5FF"
             android:textSize="13sp" />
 
@@ -528,7 +528,7 @@
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:layout_marginStart="8dp"
-            android:background="#3300E5FF"
+            android:background="@drawable/bg_jarvis_glass"
             android:contentDescription="Execute Command"
             android:foreground="?attr/selectableItemBackground"
             android:padding="16dp"
