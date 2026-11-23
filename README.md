@@ -243,7 +243,7 @@ This repository is an **active development project**, not a verified production 
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:06B6D4,35:0891B2,70:6D28D9,100:050816&height=120&section=footer" width="100%" alt="Blue and purple gradient footer"/>
 
-### NA EEM JARVIS
+### NAEEM JARVIS
 **Speak naturally. Let your assistant handle the supported actions.**
 
 <sub>Made with Kotlin · Android · AI</sub>
