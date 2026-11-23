@@ -85,10 +85,14 @@ class ChatGptSignInManager(context: Context) {
         ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
             server.soTimeout = 180_000
             val redirectUri = "http://127.0.0.1:${server.localPort}$CALLBACK_PATH"
-            val auth = Uri.parse(AUTH_URL).buildUpon()
-                .appendQueryParameter("client_id", "dynamic_agent_client")
-                .appendQueryParameter("agent_name_hint", "NAEEM JARVIS")
+            val savedClientId = prefs.getString("client_id", null)
+            val authBuilder = Uri.parse(AUTH_URL).buildUpon()
+                .appendQueryParameter("client_id", savedClientId ?: "dynamic_agent_client")
                 .appendQueryParameter("ext_agent_host_id", hostId)
+            if (savedClientId == null) authBuilder.appendQueryParameter("agent_name_hint", "NAEEM JARVIS")
+            prefs.getString("id_token", null)?.takeIf { savedClientId != null }?.let { authBuilder.appendQueryParameter("id_token_hint", it) }
+            prefs.getString("email", null)?.takeIf { savedClientId != null }?.let { authBuilder.appendQueryParameter("login_hint", it) }
+            val auth = authBuilder
                 .appendQueryParameter("response_type", "code")
                 .appendQueryParameter("redirect_uri", redirectUri)
                 .appendQueryParameter("scope", "openid profile email offline_access resource.invoke $REQUIRED_SCOPE")
@@ -126,13 +130,16 @@ class ChatGptSignInManager(context: Context) {
             if (query["state"] != state) throw SecurityException("OAuth state did not match.")
             query["error"]?.let { throw IllegalStateException("ChatGPT sign-in was not authorized: $it") }
             val code = query["code"] ?: throw IllegalStateException("OpenAI did not return an authorization code.")
-            val issuedClientId = query["client_id"]?.takeIf { it.isNotBlank() }
+            val issuedClientId = query["client_id"]?.takeIf { it.isNotBlank() } ?: savedClientId
                 ?: throw IllegalStateException("OpenAI did not return the issued client ID. Registration is incomplete.")
+            if (savedClientId != null && issuedClientId != savedClientId) throw SecurityException("OpenAI returned a different client registration than the selected account.")
 
             val token = exchangeCode(code, issuedClientId, verifier, redirectUri)
             val idToken = token.optString("id_token")
             if (idToken.isBlank()) throw SecurityException("OpenAI did not return an ID token.")
             val identity = verifyIdToken(idToken, issuedClientId, nonce)
+            val oldSubject = prefs.getString("subject", null)
+            if (savedClientId == issuedClientId && oldSubject != null && oldSubject != identity.optString("sub")) throw SecurityException("The signed-in ChatGPT identity does not match the saved connection.")
             val scopes = token.optString("scope").split(" ").filter { it.isNotBlank() }.toSet()
             val refresh = token.optString("refresh_token")
             val access = token.optString("access_token")
