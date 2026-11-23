@@ -1,123 +1,181 @@
 <div align="center">
 
-# NAEEM JARVIS
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:050816,25:172554,55:6D28D9,80:0891B2,100:06B6D4&height=230&section=header&text=NAEEM%20JARVIS&fontSize=58&fontColor=FFFFFF&fontAlignY=38&desc=Your%20Personal%20AI%20Assistant%20for%20Android&descAlignY=60&descSize=18&animation=fadeIn" width="100%" alt="Naeem JARVIS colorful neon header"/>
 
-### Your personal AI assistant for Android
-
-*A voice-first assistant project with AI provider integration, conversational controls, and Android device actions.*
+<a href="https://github.com/nansari7287-sys/Jarvis">
+  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=600&size=20&pause=1000&color=22D3EE&center=true&vCenter=true&width=650&lines=VOICE-FIRST+ANDROID+ASSISTANT;GEMINI+%2B+CHATGPT+INTEGRATION;SMART+COMMANDS+%7C+PERSONAL+AI+PROJECT" alt="Project tagline"/>
+</a>
 
 <br/>
 
-![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![Language](https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
-![Build](https://img.shields.io/badge/Build-Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)
-![Status](https://img.shields.io/badge/Project-Under_Development-FFB020?style=for-the-badge)
+<img src="https://img.shields.io/badge/ANDROID-111827?style=for-the-badge&logo=android&logoColor=3DDC84"/>
+<img src="https://img.shields.io/badge/KOTLIN-111827?style=for-the-badge&logo=kotlin&logoColor=7F52FF"/>
+<img src="https://img.shields.io/badge/GRADLE-111827?style=for-the-badge&logo=gradle&logoColor=FFFFFF"/>
+<img src="https://img.shields.io/badge/STATUS-IN%20DEVELOPMENT-111827?style=for-the-badge&logo=github&logoColor=FBBF24"/>
+
+<br/><br/>
+
+**A voice-first Android assistant project — bringing AI conversations, speech, and supported phone actions into one experience.**
 
 </div>
 
 ---
 
-## Overview
+## 🌌 About the project
 
-**Naeem JARVIS** is a personal Android assistant project designed to bring AI conversations and useful phone actions together in one place. The project combines a Kotlin-based Android app with voice input, spoken responses, AI provider connectivity, and optional Accessibility Service support.
+**Naeem JARVIS** is a personal Android AI assistant built with Kotlin. The vision is simple: talk naturally, get useful AI responses, and access supported phone actions through a single user-controlled assistant.
 
-The goal is a reliable, user-controlled assistant that can understand requests, respond naturally, and perform supported actions on the device with appropriate permissions.
+The interface and experience are being developed around a modern, futuristic assistant concept. This repository is the source code project; the visual banner above is artwork, **not an in-app screenshot**.
 
-## Core capabilities
+<div align="center">
+  <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=85" width="92%" alt="Close-up of a detailed electronic circuit board"/>
+  <br/>
+  <sub>Technology inspiration · decorative project artwork</sub>
+</div>
 
-| Area | Current project status |
-|---|---|
-| Android application | Kotlin Android app is present |
-| Gemini | Existing API integration is present; runtime configuration and end-to-end behaviour require testing |
-| ChatGPT | Responses API transport added on the development branch; sign-in flow and app integration are still in progress |
-| Voice input and speech output | Speech recognition and text-to-speech components are present |
-| Continuous voice session | Session-management code is present; full end-to-end operation needs testing |
-| Device actions | Command routing and optional Accessibility Service components are present |
-| Conversation storage | Room database components are present; provider-separated history is still to be completed |
+## ⚡ Project highlights
 
-> **Development note:** Feature files in the repository do not automatically mean a feature is production-ready. Items marked as in progress must be integrated and tested on a real Android device.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-## AI providers
+### 🎙️ Voice experience
+- Speech recognition components
+- Text-to-speech responses
+- Voice session management
+- User-controlled microphone flow
 
-### Google Gemini
-The project contains an existing Gemini API integration. Configure it only through the app's intended settings flow. Do not commit API keys to this repository.
+</td>
+<td width="50%" valign="top">
 
-### OpenAI ChatGPT
-The development branch includes a streamed Responses API client intended for the official **Sign in with ChatGPT** open-source authorization flow.
+### 🧠 AI providers
+- Existing Gemini integration
+- OpenAI Responses API transport added
+- Provider connection work in progress
+- Separate provider setup planned
 
-The ChatGPT plan connection is **not ready to use yet**. OAuth setup, redirect handling, token validation and secure token storage, token refresh, provider selection, and app-level conversation integration still need to be completed.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-The OpenAI API-key route is separate from ChatGPT plan sign-in and is billed independently through an OpenAI API account. No paid API usage should be enabled without the user's explicit choice.
+### 📱 Android actions
+- Command routing components
+- App and system action handlers
+- Optional Accessibility Service
+- Permission-aware action design
 
-ChatGPT sign-in does not automatically import existing ChatGPT conversations or memories.
+</td>
+<td width="50%" valign="top">
 
-## Voice and device control
+### 💬 Conversations
+- Room database components
+- Conversation management
+- Provider-separated history planned
+- Persistent chat improvements planned
 
-The project includes speech-recognition, text-to-speech, voice-session, command-routing, and Accessibility Service components. The intended experience is:
+</td>
+</tr>
+</table>
 
-1. The user starts the voice session and grants microphone permission.
-2. JARVIS listens for a request.
-3. The selected AI provider generates a response.
-4. JARVIS displays and speaks the response.
-5. Listening resumes while the session remains active.
+## 🧩 Technology stack
 
-Microphone use must remain visible and user-controlled. Background microphone operation is subject to Android permissions and foreground-service restrictions. Device actions must use supported Android APIs and granted permissions; sensitive actions should require confirmation.
+<div align="center">
+  <img src="https://skillicons.dev/icons?i=kotlin,androidstudio,gradle,git,github&theme=dark" alt="Kotlin, Android Studio, Gradle, Git and GitHub technology icons"/>
+  <br/><br/>
+  <img src="https://img.shields.io/badge/OkHttp-Networking-2563EB?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Room-Local%20Database-7C3AED?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Coroutines-Async%20Tasks-0891B2?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Android%20Speech-Voice%20I%2FO-059669?style=flat-square"/>
+</div>
 
-## Technology
+## 🤖 AI provider status
 
-- **Language:** Kotlin
-- **Platform:** Android
-- **Networking:** OkHttp
-- **Local database:** Room
-- **Asynchronous work:** Kotlin Coroutines
-- **Voice:** Android Speech Recognizer and Text-to-Speech components
-- **AI connectivity:** Gemini integration and OpenAI Responses API transport
+### 🟦 Google Gemini
+The codebase contains an existing Gemini API-key integration. Its current runtime behaviour and compatibility need to be verified with a real build and device test.
 
-## Build locally
+### 🟩 OpenAI ChatGPT
+The development branch contains a streaming client for the OpenAI Responses API. The official ChatGPT sign-in flow is **not yet ready to use**.
 
-Requirements:
-- Android Studio with a compatible Android SDK
+Still required:
+- OAuth application registration and redirect handling
+- Token validation, protected storage, and refresh
+- Provider selection and integration with the main assistant
+- End-to-end testing
+
+**Billing clarity:** ChatGPT plan sign-in and OpenAI API-key usage are different routes. API-key usage is billed separately through an OpenAI API account. No paid usage should be enabled without the user's explicit decision.
+
+Existing ChatGPT conversations and memories are not automatically imported into this app.
+
+## 🎧 Intended voice flow
+
+<div align="center">
+
+`START SESSION`　 ➜　 `LISTEN`　 ➜　 `AI RESPONSE`　 ➜　 `SPEAK`　 ➜　 `LISTEN AGAIN`
+
+</div>
+
+The project includes speech recognition, text-to-speech, and voice-session components. A complete, reliable continuous voice experience still needs integration and real-device testing.
+
+Microphone use must remain visible and user-controlled. Android background microphone access is subject to platform permissions and foreground-service rules.
+
+## 🛠️ Build the project
+
+**Requirements**
+- Android Studio
 - JDK 17
-- Gradle wrapper included in the repository
+- Compatible Android SDK
+- Gradle wrapper included in this repository
 
-Build a debug APK:
+Run a debug build:
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
 
-The generated APK is normally located at:
+Expected output:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Security
+## 🔐 Security first
 
-- Never commit API keys, OAuth tokens, passwords, or GitHub access tokens.
-- Never use browser cookies or copied ChatGPT session data as an authentication method.
-- Store credentials using platform-appropriate protected storage.
-- Client-side credentials can still be extracted from an APK; a backend is recommended for a public production release.
-- Request only the Android permissions required for a feature.
-- Keep microphone activity visible and provide a clear stop control.
+- Never commit API keys, passwords, OAuth tokens, or GitHub tokens.
+- Never use copied browser cookies or ChatGPT session data for authentication.
+- Keep credentials in protected storage; client-side secrets can still be extracted from an APK.
+- A backend is recommended before public production distribution.
+- Request only the Android permissions that a feature actually needs.
+- Require confirmation before sensitive or irreversible device actions.
 
-## Project roadmap
+## 🗺️ Development roadmap
 
-- [ ] Complete official ChatGPT sign-in and secure token lifecycle
-- [ ] Connect ChatGPT and Gemini through a unified provider selector
-- [ ] Keep each provider's conversations separate
-- [ ] Complete the continuous voice conversation loop
-- [ ] Verify supported phone actions and confirmation safeguards
-- [ ] Build, test, and document a release APK
+| Feature | Progress |
+|---|---|
+| Kotlin Android foundation | 🟢 Present |
+| Gemini integration | 🟡 Needs verification |
+| OpenAI Responses streaming transport | 🟡 Added; not yet wired into app |
+| Official ChatGPT sign-in | ⚪ Pending |
+| Unified provider selector | ⚪ Pending |
+| Separate provider chat histories | ⚪ Pending |
+| Complete continuous voice flow | 🟡 Components present; testing pending |
+| Device-action safety and confirmations | 🟡 Needs end-to-end verification |
+| Release APK build and device testing | ⚪ Pending |
 
-## Project status
+**Legend:** 🟢 Present in source · 🟡 In progress / needs verification · ⚪ Pending
 
-Naeem JARVIS is actively being developed. The current development branch is for integration work and has not yet been confirmed as a tested release. Check the commit history and roadmap for the latest progress.
+## 🧪 Current development status
+
+This is an active development project, not a verified production release. The ChatGPT transport change and this README redesign are on the `feature/chatgpt-sign-in-voice-agent` branch. A successful Android build and real-device test have not yet been confirmed.
 
 ---
 
 <div align="center">
 
-**Built with Kotlin for Android.**
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:06B6D4,35:0891B2,70:6D28D9,100:050816&height=120&section=footer" width="100%" alt="Blue and purple gradient footer"/>
+
+**NAEEM JARVIS** · Built with Kotlin for Android
+
+<sub>Designed for a smarter, more helpful mobile assistant.</sub>
 
 </div>
